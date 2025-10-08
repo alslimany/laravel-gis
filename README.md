@@ -48,6 +48,18 @@ See [SPATIAL_FEATURES.md](SPATIAL_FEATURES.md) for detailed documentation.
 
 See [GEOSERVER_INTEGRATION.md](GEOSERVER_INTEGRATION.md) for detailed documentation.
 
+### Data Import System
+- ✅ Multi-format support (Shapefile, GeoJSON, KML, CSV)
+- ✅ Drag-and-drop file upload interface
+- ✅ Background processing with Laravel queues
+- ✅ GDAL/OGR integration for robust spatial data handling
+- ✅ Dynamic PostGIS table creation
+- ✅ Real-time progress tracking
+- ✅ Error handling and user notifications
+- ✅ Organization-based data isolation
+
+See [DATA_IMPORT.md](DATA_IMPORT.md) for detailed documentation and [INSTALLATION_NOTES.md](INSTALLATION_NOTES.md) for setup instructions.
+
 ## Prerequisites
 
 - Docker (20.10 or higher)
