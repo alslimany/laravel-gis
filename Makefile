@@ -81,7 +81,11 @@ install: build up
 	docker compose exec laravel-app php artisan key:generate
 	@echo "Waiting for database to be ready..."
 	@sleep 5
-	docker compose exec laravel-app php artisan migrate
+	docker compose exec laravel-app php artisan migrate --seed
+	@sleep 2
+	@echo "Installation npm packages..."
+	docker compose exec laravel-app npm install
+	docker compose exec laravel-app npm run build
 	@echo "Installation complete!"
-	@echo "Application is running at http://localhost"
+	@echo "Application is running at http://localhost:8080"
 	@echo "GeoServer is running at http://localhost:8080/geoserver"
