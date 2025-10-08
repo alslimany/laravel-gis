@@ -27,11 +27,15 @@ class ProjectFactory extends Factory
         // Create WKT polygon for bounding box
         $polygon = "POLYGON(({$minLon} {$minLat}, {$maxLon} {$minLat}, {$maxLon} {$maxLat}, {$minLon} {$maxLat}, {$minLon} {$minLat}))";
 
+        $boundingBox = DB::connection()->getDriverName() === 'pgsql'
+            ? DB::raw("ST_GeomFromText('{$polygon}', 4326)")
+            : null; // For SQLite, just use null
+
         return [
             'name' => fake()->words(3, true),
             'description' => fake()->sentence(),
             'organization_id' => Organization::factory(),
-            'bounding_box' => DB::raw("ST_GeomFromText('{$polygon}', 4326)"),
+            'bounding_box' => $boundingBox,
         ];
     }
 }

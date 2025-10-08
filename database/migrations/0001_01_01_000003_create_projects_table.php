@@ -20,8 +20,16 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::statement('ALTER TABLE projects ADD COLUMN bounding_box GEOMETRY(POLYGON, 4326)');
-        DB::statement('CREATE INDEX projects_bounding_box_idx ON projects USING GIST (bounding_box)');
+        // Only add spatial column for PostgreSQL
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE projects ADD COLUMN bounding_box GEOMETRY(POLYGON, 4326)');
+            DB::statement('CREATE INDEX projects_bounding_box_idx ON projects USING GIST (bounding_box)');
+        } else {
+            // For SQLite testing, use a simple text column
+            Schema::table('projects', function (Blueprint $table) {
+                $table->text('bounding_box')->nullable();
+            });
+        }
     }
 
     /**
