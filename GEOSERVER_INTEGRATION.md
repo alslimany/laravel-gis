@@ -130,6 +130,8 @@ UpdateLayerStyle::dispatch(
 
 ## Example: Organization-based Layer Publishing
 
+### Using Jobs Directly
+
 ```php
 use App\Models\Organization;
 use App\Jobs\PublishLayerToGeoServer;
@@ -159,6 +161,52 @@ class OrganizationController extends Controller
         ]);
     }
 }
+```
+
+### Using the HasGeoServerLayers Trait
+
+Add the trait to your Organization model:
+
+```php
+use App\Traits\HasGeoServerLayers;
+
+class Organization extends Model
+{
+    use HasGeoServerLayers;
+    
+    // ... rest of your model
+}
+```
+
+Then use the convenient methods:
+
+```php
+$organization = Organization::find(1);
+
+// Publish a single layer
+$organization->publishLayerToGeoServer('projects', [
+    'title' => 'Custom Title',
+    'abstract' => 'Custom description'
+]);
+
+// Publish all organization layers
+$organization->publishAllLayers();
+
+// Delete a layer
+$organization->deleteLayerFromGeoServer('old_layer');
+
+// Update layer style
+$organization->updateLayerStyle('projects', 'custom_style', $sldContent);
+
+// Get workspace name
+$workspace = $organization->getGeoServerWorkspace(); // Returns: 'org_1'
+```
+
+### Using the Console Command
+
+```bash
+# Publish all layers for a specific organization
+php artisan geoserver:publish-org-layers 1
 ```
 
 ## Testing GeoServer Connection
@@ -343,6 +391,34 @@ Once a layer is published, you can view it in:
 - Verify SLD syntax is correct
 - Check if style exists in GeoServer admin
 - Ensure layer and style are in the same workspace
+
+## Helper Utilities
+
+### HasGeoServerLayers Trait
+
+A trait that can be added to any model (typically Organization) to provide convenient GeoServer layer management:
+
+**Available Methods:**
+- `getGeoServerWorkspace()` - Get workspace name for the model
+- `publishLayerToGeoServer($tableName, $options)` - Publish a layer
+- `deleteLayerFromGeoServer($layerName)` - Delete a layer
+- `updateLayerStyle($layerName, $styleName, $sldContent)` - Update layer style
+- `publishAllLayers()` - Publish all standard organization layers
+
+### Console Commands
+
+**geoserver:test**
+Test GeoServer connection and publish a sample layer:
+```bash
+php artisan geoserver:test
+php artisan geoserver:test --workspace=my_workspace --table=users
+```
+
+**geoserver:publish-org-layers**
+Publish all layers for a specific organization:
+```bash
+php artisan geoserver:publish-org-layers {organization_id}
+```
 
 ## Resources
 
