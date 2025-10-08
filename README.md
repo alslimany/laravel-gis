@@ -5,6 +5,7 @@ A Laravel-based WebGIS application with Docker infrastructure including PostGIS,
 ## Features
 
 - **Laravel 12** - Modern PHP framework
+- **Authentication & Authorization** - Complete role-based access control system with organization isolation
 - **PostGIS 13-3.1** - Spatial database extension for PostgreSQL with full spatial database support
 - **Spatial Models** - User, Organization, and Project models with spatial capabilities
 - **Spatial Queries** - withinDistance, near, intersects, and withinPolygon scopes
@@ -14,9 +15,19 @@ A Laravel-based WebGIS application with Docker infrastructure including PostGIS,
 - **Nginx** - High-performance web server
 - **Docker Compose** - Multi-container orchestration
 
-## Spatial Database Features
+## Key Features
 
-This application includes a comprehensive spatial database foundation:
+### Authentication & Authorization
+- ✅ User registration and login with Laravel UI
+- ✅ Role-based access control (Admin, Editor, Viewer)
+- ✅ Organization-based data isolation
+- ✅ Policy-driven authorization for Projects and Organizations
+- ✅ Protected routes with middleware
+- ✅ Comprehensive test coverage (27 tests)
+
+See [AUTH_GUIDE.md](AUTH_GUIDE.md) for detailed documentation.
+
+### Spatial Database
 - ✅ PostGIS extension enabled
 - ✅ Users table with location (GEOGRAPHY POINT)
 - ✅ Projects table with bounding_box (GEOMETRY POLYGON)
@@ -58,9 +69,22 @@ This command will:
 - Generate application key
 - Run database migrations
 
-### 3. Access the Application
+### 3. Seed the Database
+
+```bash
+make seed
+```
+
+This creates:
+- Default roles (admin, editor, viewer)
+- Test user with admin privileges (email: test@example.com, password: password)
+- Sample organization with projects
+
+### 4. Access the Application
 
 - **Laravel Application**: http://localhost
+  - Login: test@example.com / password
+  - Dashboard: http://localhost/dashboard
 - **GeoServer Admin**: http://localhost:8080/geoserver
   - Username: `admin`
   - Password: `geoserver`
