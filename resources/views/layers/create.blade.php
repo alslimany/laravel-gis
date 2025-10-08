@@ -14,7 +14,7 @@
                         <div class="mb-3">
                             <label for="name" class="form-label">Layer Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" name="name" value="{{ old('name') }}" required>
+                                   id="name" name="name" value="{{ old('name', request('name')) }}" required>
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -48,7 +48,7 @@
                         <div class="mb-3">
                             <label for="table_name" class="form-label">Table Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('table_name') is-invalid @enderror" 
-                                   id="table_name" name="table_name" value="{{ old('table_name') }}" required>
+                                   id="table_name" name="table_name" value="{{ old('table_name', request('table_name')) }}" required>
                             <small class="form-text text-muted">
                                 The PostGIS table name that contains the layer data (e.g., from a data import).
                             </small>
