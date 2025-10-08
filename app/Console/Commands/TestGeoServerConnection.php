@@ -28,7 +28,7 @@ class TestGeoServerConnection extends Command
     public function handle(GeoServerService $geoserver): int
     {
         $this->info('Testing GeoServer connection...');
-        $this->info('GeoServer URL: ' . Config::get('geoserver.url'));
+        $this->info('GeoServer URL: '.Config::get('geoserver.url'));
 
         $workspace = $this->option('workspace');
         $datastore = Config::get('geoserver.datastore');
@@ -57,12 +57,13 @@ class TestGeoServerConnection extends Command
             $this->info("\n3. Checking if layer '{$tableName}' exists...");
             if ($geoserver->layerExists($workspace, $tableName)) {
                 $this->info("✓ Layer '{$tableName}' already exists");
-                
+
                 if ($this->confirm('Do you want to delete it and recreate?')) {
                     $geoserver->deleteLayer($workspace, $datastore, $tableName);
                     $this->info("✓ Layer '{$tableName}' deleted");
                 } else {
                     $this->info('Skipping layer creation');
+
                     return self::SUCCESS;
                 }
             }
@@ -70,20 +71,20 @@ class TestGeoServerConnection extends Command
             // Test 4: Publish layer
             $this->info("\n4. Publishing layer '{$tableName}'...");
             $geoserver->publishLayer($workspace, $datastore, $tableName, [
-                'title' => ucfirst($tableName) . ' Layer',
-                'abstract' => 'Test layer published from ' . $tableName . ' table',
+                'title' => ucfirst($tableName).' Layer',
+                'abstract' => 'Test layer published from '.$tableName.' table',
                 'srs' => 'EPSG:4326',
             ]);
             $this->info("✓ Layer '{$tableName}' published successfully");
 
             // Test 5: Create and apply a default style
             $this->info("\n5. Creating and applying default style...");
-            $styleName = $tableName . '_style';
+            $styleName = $tableName.'_style';
             $sldContent = $geoserver->getDefaultPointStyle($styleName, [
                 'color' => '#0000FF',
                 'size' => 8,
             ]);
-            
+
             $geoserver->createOrUpdateStyle($workspace, $styleName, $sldContent);
             $this->info("✓ Style '{$styleName}' created");
 
@@ -94,12 +95,13 @@ class TestGeoServerConnection extends Command
             $this->info('✓ All tests passed successfully!');
             $this->newLine();
             $this->info('You can now view the layer in GeoServer:');
-            $this->info(Config::get('geoserver.url') . "/web/?wicket:bookmarkablePage=:org.geoserver.web.data.layer.LayerPage");
+            $this->info(Config::get('geoserver.url').'/web/?wicket:bookmarkablePage=:org.geoserver.web.data.layer.LayerPage');
 
             return self::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("\n✗ Test failed: " . $e->getMessage());
+            $this->error("\n✗ Test failed: ".$e->getMessage());
             $this->error($e->getTraceAsString());
+
             return self::FAILURE;
         }
     }

@@ -11,8 +11,11 @@ use Illuminate\Support\Facades\Log;
 class GeoServerService
 {
     protected Client $client;
+
     protected string $baseUrl;
+
     protected string $restUrl;
+
     protected array $auth;
 
     /**
@@ -21,11 +24,11 @@ class GeoServerService
     public function __construct()
     {
         $this->baseUrl = rtrim(Config::get('geoserver.url'), '/');
-        $this->restUrl = $this->baseUrl . '/rest';
+        $this->restUrl = $this->baseUrl.'/rest';
 
         $this->auth = [
             Config::get('geoserver.admin_user'),
-            Config::get('geoserver.admin_password')
+            Config::get('geoserver.admin_password'),
         ];
 
         $this->client = new Client([
@@ -36,9 +39,6 @@ class GeoServerService
 
     /**
      * Check if a workspace exists.
-     *
-     * @param string $workspace
-     * @return bool
      */
     public function workspaceExists(string $workspace): bool
     {
@@ -51,6 +51,7 @@ class GeoServerService
             return $response->getStatusCode() === 200;
         } catch (GuzzleException $e) {
             Log::error("Error checking workspace: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -58,26 +59,24 @@ class GeoServerService
     /**
      * Create a new workspace.
      *
-     * @param string $workspace
-     * @param string|null $namespaceUri
-     * @return bool
      * @throws GeoServerException
      */
     public function createWorkspace(string $workspace, ?string $namespaceUri = null): bool
     {
         if ($this->workspaceExists($workspace)) {
             Log::info("Workspace {$workspace} already exists");
+
             return true;
         }
 
         try {
             $namespaceUri = $namespaceUri ?? "http://example.com/{$workspace}";
-            
+
             $payload = [
                 'workspace' => [
                     'name' => $workspace,
-                    'isolated' => false
-                ]
+                    'isolated' => false,
+                ],
             ];
 
             $response = $this->client->post(
@@ -85,12 +84,13 @@ class GeoServerService
                 [
                     'auth' => $this->auth,
                     'headers' => ['Content-Type' => 'application/json'],
-                    'json' => $payload
+                    'json' => $payload,
                 ]
             );
 
             if ($response->getStatusCode() === 201) {
                 Log::info("Workspace {$workspace} created successfully");
+
                 return true;
             }
 
@@ -106,9 +106,6 @@ class GeoServerService
     /**
      * Delete a workspace.
      *
-     * @param string $workspace
-     * @param bool $recurse
-     * @return bool
      * @throws GeoServerException
      */
     public function deleteWorkspace(string $workspace, bool $recurse = true): bool
@@ -118,12 +115,13 @@ class GeoServerService
                 "{$this->restUrl}/workspaces/{$workspace}",
                 [
                     'auth' => $this->auth,
-                    'query' => ['recurse' => $recurse ? 'true' : 'false']
+                    'query' => ['recurse' => $recurse ? 'true' : 'false'],
                 ]
             );
 
             if (in_array($response->getStatusCode(), [200, 404])) {
                 Log::info("Workspace {$workspace} deleted successfully");
+
                 return true;
             }
 
@@ -135,10 +133,6 @@ class GeoServerService
 
     /**
      * Check if a datastore exists.
-     *
-     * @param string $workspace
-     * @param string $datastore
-     * @return bool
      */
     public function datastoreExists(string $workspace, string $datastore): bool
     {
@@ -151,6 +145,7 @@ class GeoServerService
             return $response->getStatusCode() === 200;
         } catch (GuzzleException $e) {
             Log::error("Error checking datastore: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -158,10 +153,6 @@ class GeoServerService
     /**
      * Create a PostGIS datastore.
      *
-     * @param string $workspace
-     * @param string $datastoreName
-     * @param array|null $connectionParams
-     * @return bool
      * @throws GeoServerException
      */
     public function createPostGISDatastore(
@@ -171,6 +162,7 @@ class GeoServerService
     ): bool {
         if ($this->datastoreExists($workspace, $datastoreName)) {
             Log::info("Datastore {$datastoreName} already exists in workspace {$workspace}");
+
             return true;
         }
 
@@ -185,16 +177,16 @@ class GeoServerService
                     'connectionParameters' => [
                         'entry' => [
                             ['@key' => 'host', '$' => $connectionParams['host']],
-                            ['@key' => 'port', '$' => (string)$connectionParams['port']],
+                            ['@key' => 'port', '$' => (string) $connectionParams['port']],
                             ['@key' => 'database', '$' => $connectionParams['database']],
                             ['@key' => 'schema', '$' => $connectionParams['schema'] ?? 'public'],
                             ['@key' => 'user', '$' => $connectionParams['user']],
                             ['@key' => 'passwd', '$' => $connectionParams['password']],
                             ['@key' => 'dbtype', '$' => 'postgis'],
                             ['@key' => 'Expose primary keys', '$' => 'true'],
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ];
 
             $response = $this->client->post(
@@ -202,12 +194,13 @@ class GeoServerService
                 [
                     'auth' => $this->auth,
                     'headers' => ['Content-Type' => 'application/json'],
-                    'json' => $payload
+                    'json' => $payload,
                 ]
             );
 
             if ($response->getStatusCode() === 201) {
                 Log::info("Datastore {$datastoreName} created successfully in workspace {$workspace}");
+
                 return true;
             }
 
@@ -222,10 +215,6 @@ class GeoServerService
 
     /**
      * Check if a layer exists.
-     *
-     * @param string $workspace
-     * @param string $layer
-     * @return bool
      */
     public function layerExists(string $workspace, string $layer): bool
     {
@@ -238,6 +227,7 @@ class GeoServerService
             return $response->getStatusCode() === 200;
         } catch (GuzzleException $e) {
             Log::error("Error checking layer: {$e->getMessage()}");
+
             return false;
         }
     }
@@ -245,11 +235,6 @@ class GeoServerService
     /**
      * Publish a PostGIS table as a layer.
      *
-     * @param string $workspace
-     * @param string $datastore
-     * @param string $tableName
-     * @param array $options
-     * @return bool
      * @throws GeoServerException
      */
     public function publishLayer(
@@ -269,7 +254,7 @@ class GeoServerService
                     'enabled' => true,
                     'srs' => $options['srs'] ?? 'EPSG:4326',
                     'projectionPolicy' => 'FORCE_DECLARED',
-                ]
+                ],
             ];
 
             // Add native bounding box if provided
@@ -287,18 +272,18 @@ class GeoServerService
                 [
                     'auth' => $this->auth,
                     'headers' => ['Content-Type' => 'application/json'],
-                    'json' => $payload
+                    'json' => $payload,
                 ]
             );
 
             if ($response->getStatusCode() === 201) {
                 Log::info("Layer {$tableName} published successfully in workspace {$workspace}");
-                
+
                 // Apply default style if specified
                 if (isset($options['defaultStyle'])) {
                     $this->applyStyleToLayer($workspace, $tableName, $options['defaultStyle']);
                 }
-                
+
                 return true;
             }
 
@@ -314,11 +299,6 @@ class GeoServerService
     /**
      * Delete a layer from GeoServer.
      *
-     * @param string $workspace
-     * @param string $datastore
-     * @param string $layerName
-     * @param bool $recurse
-     * @return bool
      * @throws GeoServerException
      */
     public function deleteLayer(
@@ -333,12 +313,13 @@ class GeoServerService
                 "{$this->restUrl}/workspaces/{$workspace}/datastores/{$datastore}/featuretypes/{$layerName}",
                 [
                     'auth' => $this->auth,
-                    'query' => ['recurse' => $recurse ? 'true' : 'false']
+                    'query' => ['recurse' => $recurse ? 'true' : 'false'],
                 ]
             );
 
             if (in_array($response->getStatusCode(), [200, 404])) {
                 Log::info("Layer {$layerName} deleted successfully from workspace {$workspace}");
+
                 return true;
             }
 
@@ -354,10 +335,6 @@ class GeoServerService
     /**
      * Apply a style to a layer.
      *
-     * @param string $workspace
-     * @param string $layerName
-     * @param string $styleName
-     * @return bool
      * @throws GeoServerException
      */
     public function applyStyleToLayer(string $workspace, string $layerName, string $styleName): bool
@@ -366,9 +343,9 @@ class GeoServerService
             $payload = [
                 'layer' => [
                     'defaultStyle' => [
-                        'name' => $styleName
-                    ]
-                ]
+                        'name' => $styleName,
+                    ],
+                ],
             ];
 
             $response = $this->client->put(
@@ -376,12 +353,13 @@ class GeoServerService
                 [
                     'auth' => $this->auth,
                     'headers' => ['Content-Type' => 'application/json'],
-                    'json' => $payload
+                    'json' => $payload,
                 ]
             );
 
             if ($response->getStatusCode() === 200) {
                 Log::info("Style {$styleName} applied to layer {$layerName}");
+
                 return true;
             }
 
@@ -397,10 +375,6 @@ class GeoServerService
     /**
      * Create or update a style with SLD content.
      *
-     * @param string $workspace
-     * @param string $styleName
-     * @param string $sldContent
-     * @return bool
      * @throws GeoServerException
      */
     public function createOrUpdateStyle(string $workspace, string $styleName, string $sldContent): bool
@@ -420,7 +394,7 @@ class GeoServerService
             $options = [
                 'auth' => $this->auth,
                 'headers' => ['Content-Type' => 'application/vnd.ogc.sld+xml'],
-                'body' => $sldContent
+                'body' => $sldContent,
             ];
 
             if ($method === 'post') {
@@ -431,6 +405,7 @@ class GeoServerService
 
             if (in_array($response->getStatusCode(), [200, 201])) {
                 Log::info("Style {$styleName} created/updated successfully in workspace {$workspace}");
+
                 return true;
             }
 
@@ -445,10 +420,6 @@ class GeoServerService
 
     /**
      * Get the default SLD style for a simple point layer.
-     *
-     * @param string $styleName
-     * @param array $options
-     * @return string
      */
     public function getDefaultPointStyle(string $styleName, array $options = []): string
     {
@@ -489,10 +460,6 @@ SLD;
 
     /**
      * Get the default SLD style for a simple polygon layer.
-     *
-     * @param string $styleName
-     * @param array $options
-     * @return string
      */
     public function getDefaultPolygonStyle(string $styleName, array $options = []): string
     {
@@ -531,10 +498,9 @@ SLD;
     /**
      * Execute a request with retry logic.
      *
-     * @param callable $callback
-     * @param int|null $retryTimes
-     * @param int|null $retryDelay milliseconds
+     * @param  int|null  $retryDelay  milliseconds
      * @return mixed
+     *
      * @throws GeoServerException
      */
     protected function executeWithRetry(callable $callback, ?int $retryTimes = null, ?int $retryDelay = null)
@@ -549,8 +515,8 @@ SLD;
                 return $callback();
             } catch (\Exception $e) {
                 $lastException = $e;
-                Log::warning("Retry attempt " . ($i + 1) . " failed: " . $e->getMessage());
-                
+                Log::warning('Retry attempt '.($i + 1).' failed: '.$e->getMessage());
+
                 if ($i < $retryTimes - 1) {
                     usleep($retryDelay * 1000);
                 }

@@ -16,24 +16,20 @@ class UpdateLayerStyle implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 5;
+
     public int $timeout = 60;
+
     public int $backoff = 10;
 
     /**
      * Create a new job instance.
-     *
-     * @param string $workspace
-     * @param string $layerName
-     * @param string $styleName
-     * @param string|null $sldContent
      */
     public function __construct(
         public string $workspace,
         public string $layerName,
         public string $styleName,
         public ?string $sldContent = null
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.

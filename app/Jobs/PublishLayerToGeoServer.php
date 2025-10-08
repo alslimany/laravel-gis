@@ -16,24 +16,20 @@ class PublishLayerToGeoServer implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 120;
+
     public int $backoff = 10;
 
     /**
      * Create a new job instance.
-     *
-     * @param string $workspace
-     * @param string $datastore
-     * @param string $tableName
-     * @param array $options
      */
     public function __construct(
         public string $workspace,
         public string $datastore,
         public string $tableName,
         public array $options = []
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -47,12 +43,12 @@ class PublishLayerToGeoServer implements ShouldQueue
             ]);
 
             // Ensure workspace exists
-            if (!$geoserver->workspaceExists($this->workspace)) {
+            if (! $geoserver->workspaceExists($this->workspace)) {
                 $geoserver->createWorkspace($this->workspace);
             }
 
             // Ensure datastore exists
-            if (!$geoserver->datastoreExists($this->workspace, $this->datastore)) {
+            if (! $geoserver->datastoreExists($this->workspace, $this->datastore)) {
                 $geoserver->createPostGISDatastore($this->workspace, $this->datastore);
             }
 

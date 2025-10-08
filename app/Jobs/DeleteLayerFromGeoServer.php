@@ -16,24 +16,20 @@ class DeleteLayerFromGeoServer implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 60;
+
     public int $backoff = 5;
 
     /**
      * Create a new job instance.
-     *
-     * @param string $workspace
-     * @param string $datastore
-     * @param string $layerName
-     * @param bool $recurse
      */
     public function __construct(
         public string $workspace,
         public string $datastore,
         public string $layerName,
         public bool $recurse = true
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
