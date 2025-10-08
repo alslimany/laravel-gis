@@ -4,6 +4,7 @@ use App\Http\Controllers\AttributeTableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataImportController;
 use App\Http\Controllers\LayerController;
+use App\Http\Controllers\MapController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,9 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+// Public shared map route
+Route::get('/maps/shared/{token}', [MapController::class, 'viewShared'])->name('maps.shared');
 
 // Protected routes - require authentication
 Route::middleware('auth')->group(function () {
@@ -33,6 +37,11 @@ Route::middleware('auth')->group(function () {
     // Attribute table routes
     Route::get('/layers/{layer}/attributes', [AttributeTableController::class, 'index'])->name('layers.attributes');
     Route::get('/layers/{layer}/geojson', [AttributeTableController::class, 'geojson'])->name('layers.geojson');
+
+    // Map routes
+    Route::get('/maps/builder/{id?}', [MapController::class, 'builder'])->name('maps.builder');
+    Route::get('/maps/{map}/share', [MapController::class, 'share'])->name('maps.share');
+    Route::resource('maps', MapController::class);
 
     // Organization routes - require organization membership
     Route::middleware('organization')->group(function () {
