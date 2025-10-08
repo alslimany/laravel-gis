@@ -60,6 +60,14 @@ class Project extends Model
     }
 
     /**
+     * Get the layers for this project.
+     */
+    public function layers()
+    {
+        return $this->hasMany(Layer::class);
+    }
+
+    /**
      * Scope a query to only include projects for a given organization.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
