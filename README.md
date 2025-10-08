@@ -62,7 +62,7 @@ If you prefer to set up manually:
 ```bash
 make build
 # or
-docker-compose build
+docker compose build
 ```
 
 ### 2. Start containers
@@ -70,7 +70,7 @@ docker-compose build
 ```bash
 make up
 # or
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3. Install dependencies
@@ -78,14 +78,14 @@ docker-compose up -d
 ```bash
 make composer
 # or
-docker-compose exec laravel-app composer install
+docker compose exec laravel-app composer install
 ```
 
 ### 4. Configure environment
 
 ```bash
-docker-compose exec laravel-app cp .env.example .env
-docker-compose exec laravel-app php artisan key:generate
+docker compose exec laravel-app cp .env.example .env
+docker compose exec laravel-app php artisan key:generate
 ```
 
 ### 5. Run migrations
@@ -93,7 +93,7 @@ docker-compose exec laravel-app php artisan key:generate
 ```bash
 make migrate
 # or
-docker-compose exec laravel-app php artisan migrate
+docker compose exec laravel-app php artisan migrate
 ```
 
 ## Available Make Commands
@@ -181,7 +181,7 @@ GEOSERVER_DATASTORE=postgis_store
 ```bash
 make artisan CMD="migrate:status"
 # or
-docker-compose exec laravel-app php artisan migrate:status
+docker compose exec laravel-app php artisan migrate:status
 ```
 
 ### Accessing Container Shell
@@ -189,7 +189,7 @@ docker-compose exec laravel-app php artisan migrate:status
 ```bash
 make shell
 # or
-docker-compose exec laravel-app bash
+docker compose exec laravel-app bash
 ```
 
 ### Viewing Logs
@@ -197,7 +197,7 @@ docker-compose exec laravel-app bash
 ```bash
 make logs
 # or
-docker-compose logs -f laravel-app
+docker compose logs -f laravel-app
 ```
 
 ### Database Operations
@@ -210,7 +210,7 @@ make migrate-fresh
 make seed
 
 # Access PostgreSQL
-docker-compose exec postgis psql -U postgres -d laravel_gis
+docker compose exec postgis psql -U postgres -d laravel_gis
 ```
 
 ### Running Tests
@@ -218,7 +218,7 @@ docker-compose exec postgis psql -U postgres -d laravel_gis
 ```bash
 make test
 # or
-docker-compose exec laravel-app php artisan test
+docker compose exec laravel-app php artisan test
 ```
 
 ## Volume Management
@@ -266,7 +266,7 @@ To connect GeoServer to PostGIS:
 ### Containers won't start
 ```bash
 # Check container status
-docker-compose ps
+docker compose ps
 
 # View logs
 make logs
@@ -280,16 +280,16 @@ make up
 ### Permission issues
 ```bash
 # Fix storage permissions
-docker-compose exec laravel-app chmod -R 775 storage bootstrap/cache
+docker compose exec laravel-app chmod -R 775 storage bootstrap/cache
 ```
 
 ### Database connection errors
 ```bash
 # Wait for PostGIS to be ready
-docker-compose exec postgis pg_isready -U postgres
+docker compose exec postgis pg_isready -U postgres
 
 # Check database exists
-docker-compose exec postgis psql -U postgres -l
+docker compose exec postgis psql -U postgres -l
 ```
 
 ## Development

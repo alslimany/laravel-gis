@@ -21,67 +21,67 @@ help:
 
 # Build Docker images
 build:
-	docker-compose build
+	docker compose build
 
 # Start containers
 up:
-	docker-compose up -d
+	docker compose up -d
 
 # Stop containers
 down:
-	docker-compose down
+	docker compose down
 
 # Restart containers
 restart:
-	docker-compose restart
+	docker compose restart
 
 # View logs
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # Access Laravel app shell
 shell:
-	docker-compose exec laravel-app bash
+	docker compose exec laravel-app bash
 
 # Run composer install
 composer:
-	docker-compose exec laravel-app composer install
+	docker compose exec laravel-app composer install
 
 # Run artisan commands
 artisan:
-	docker-compose exec laravel-app php artisan $(CMD)
+	docker compose exec laravel-app php artisan $(CMD)
 
 # Run migrations
 migrate:
-	docker-compose exec laravel-app php artisan migrate
+	docker compose exec laravel-app php artisan migrate
 
 # Fresh database with migrations
 migrate-fresh:
-	docker-compose exec laravel-app php artisan migrate:fresh
+	docker compose exec laravel-app php artisan migrate:fresh
 
 # Seed database
 seed:
-	docker-compose exec laravel-app php artisan db:seed
+	docker compose exec laravel-app php artisan db:seed
 
 # Run tests
 test:
-	docker-compose exec laravel-app php artisan test
+	docker compose exec laravel-app php artisan test
 
 # Clean up containers and volumes
 clean:
-	docker-compose down -v
+	docker compose down -v
 	docker system prune -f
 
 # Complete installation
 install: build up
 	@echo "Waiting for containers to start..."
 	@sleep 5
-	docker-compose exec laravel-app composer install
-	docker-compose exec laravel-app cp .env.example .env || true
-	docker-compose exec laravel-app php artisan key:generate
+	docker compose exec laravel-app composer install
+	docker compose exec laravel-app cp .env.example .env || true
+	docker compose exec laravel-app php artisan key:generate
 	@echo "Waiting for database to be ready..."
 	@sleep 5
-	docker-compose exec laravel-app php artisan migrate
+	docker compose exec laravel-app php artisan migrate
 	@echo "Installation complete!"
 	@echo "Application is running at http://localhost"
 	@echo "GeoServer is running at http://localhost:8080/geoserver"
