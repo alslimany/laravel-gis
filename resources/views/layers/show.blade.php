@@ -190,9 +190,16 @@
             </div>
             <div class="modal-body">
                 <div id="map" style="height: 500px; width: 100%;"></div>
-                <p class="text-muted mt-2">
-                    <small>Map preview functionality requires additional JavaScript libraries (e.g., Leaflet or OpenLayers).</small>
-                </p>
+                <div id="map-loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading map...</span>
+                    </div>
+                    <p class="text-muted mt-2">Loading map data...</p>
+                </div>
+                <div id="map-error" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="map-error-message">Unable to load map data.</span>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -201,3 +208,114 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+@endpush
+
+@push('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let map = null;
+    let geojsonLayer = null;
+    
+    // Initialize map when modal is shown
+    const previewModal = document.getElementById('previewModal');
+    if (previewModal) {
+        previewModal.addEventListener('shown.bs.modal', function () {
+            // Initialize map if not already done
+            if (!map) {
+                map = L.map('map').setView([0, 0], 2);
+                
+                // Add OpenStreetMap tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                // Show loading indicator
+                document.getElementById('map-loading').style.display = 'block';
+                document.getElementById('map').style.display = 'block';
+                
+                // Load GeoJSON data
+                fetch('{{ route('layers.geojson', $layer) }}')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to load layer data');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Hide loading indicator
+                        document.getElementById('map-loading').style.display = 'none';
+                        
+                        if (!data.features || data.features.length === 0) {
+                            document.getElementById('map-error-message').textContent = 'No features found in this layer.';
+                            document.getElementById('map-error').style.display = 'block';
+                            return;
+                        }
+                        
+                        // Add GeoJSON layer to map
+                        geojsonLayer = L.geoJSON(data, {
+                            style: function(feature) {
+                                return {
+                                    color: '{{ $layer->style_config['stroke_color'] ?? '#3388ff' }}',
+                                    weight: {{ $layer->style_config['stroke_width'] ?? 3 }},
+                                    opacity: {{ $layer->style_config['stroke_opacity'] ?? 1 }},
+                                    fillColor: '{{ $layer->style_config['fill_color'] ?? '#3388ff' }}',
+                                    fillOpacity: {{ $layer->style_config['fill_opacity'] ?? 0.2 }}
+                                };
+                            },
+                            pointToLayer: function(feature, latlng) {
+                                return L.circleMarker(latlng, {
+                                    radius: {{ $layer->style_config['point_radius'] ?? 6 }},
+                                    fillColor: '{{ $layer->style_config['fill_color'] ?? '#3388ff' }}',
+                                    color: '{{ $layer->style_config['stroke_color'] ?? '#3388ff' }}',
+                                    weight: {{ $layer->style_config['stroke_width'] ?? 2 }},
+                                    opacity: {{ $layer->style_config['stroke_opacity'] ?? 1 }},
+                                    fillOpacity: {{ $layer->style_config['fill_opacity'] ?? 0.8 }}
+                                });
+                            },
+                            onEachFeature: function(feature, layer) {
+                                // Add popup with feature properties
+                                if (feature.properties) {
+                                    let popupContent = '<div class="feature-popup"><strong>Feature Properties:</strong><br>';
+                                    for (let key in feature.properties) {
+                                        if (feature.properties.hasOwnProperty(key)) {
+                                            popupContent += `<strong>${key}:</strong> ${feature.properties[key]}<br>`;
+                                        }
+                                    }
+                                    popupContent += '</div>';
+                                    layer.bindPopup(popupContent);
+                                }
+                            }
+                        }).addTo(map);
+                        
+                        // Fit map bounds to layer
+                        if (geojsonLayer.getBounds().isValid()) {
+                            map.fitBounds(geojsonLayer.getBounds(), { padding: [50, 50] });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading layer:', error);
+                        document.getElementById('map-loading').style.display = 'none';
+                        document.getElementById('map-error-message').textContent = error.message;
+                        document.getElementById('map-error').style.display = 'block';
+                    });
+            } else {
+                // Map already exists, just invalidate size for proper display
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+        });
+    }
+});
+</script>
+@endpush

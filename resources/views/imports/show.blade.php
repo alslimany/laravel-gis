@@ -162,10 +162,13 @@
                                 <strong>Next Steps:</strong>
                                 <ul class="mb-0">
                                     <li>The data is now available in PostGIS table: <code>{{ $import->table_name }}</code></li>
-                                    <li>You can publish this layer to GeoServer for visualization</li>
-                                    <li>The layer can be queried using SQL or displayed on maps</li>
+                                    <li>Create a layer from this import to visualize and manage the data</li>
+                                    <li>Once created, you can publish the layer to GeoServer for visualization</li>
                                 </ul>
                             </div>
+                            <a href="{{ route('layers.create', ['table_name' => $import->table_name, 'name' => $import->file_name]) }}" class="btn btn-primary">
+                                <i class="fas fa-layer-group"></i> Create Layer from Import
+                            </a>
                         </div>
                     @endif
 
