@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,7 +71,7 @@ class AuthenticationTest extends TestCase
     public function test_user_with_role_can_be_identified(): void
     {
         Role::create(['name' => 'admin', 'description' => 'Administrator']);
-        
+
         $user = User::factory()->create();
         $user->roles()->attach(Role::where('name', 'admin')->first());
 
@@ -84,7 +83,7 @@ class AuthenticationTest extends TestCase
     {
         Role::create(['name' => 'admin', 'description' => 'Administrator']);
         Role::create(['name' => 'editor', 'description' => 'Editor']);
-        
+
         $user = User::factory()->create();
         $user->roles()->attach(Role::whereIn('name', ['admin', 'editor'])->get());
 

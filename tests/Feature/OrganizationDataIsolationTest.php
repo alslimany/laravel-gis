@@ -74,7 +74,7 @@ class OrganizationDataIsolationTest extends TestCase
         $org2 = Organization::factory()->create();
 
         $user1 = User::factory()->create(['organization_id' => $org1->id]);
-        
+
         Project::factory()->count(3)->create(['organization_id' => $org1->id]);
         Project::factory()->count(2)->create(['organization_id' => $org2->id]);
 
@@ -118,7 +118,7 @@ class OrganizationDataIsolationTest extends TestCase
     public function test_organization_settings_page_shows_correct_organization(): void
     {
         $organization = Organization::factory()->create(['name' => 'Test Org']);
-        
+
         $admin = User::factory()->create(['organization_id' => $organization->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
 

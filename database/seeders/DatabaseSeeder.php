@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
         $user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'location' => DB::raw("ST_MakePoint(-122.4194, 37.7749)::geography"), // San Francisco
+            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'), // San Francisco
         ]);
 
         // Create organization for the test user
@@ -50,18 +50,18 @@ class DatabaseSeeder extends Seeder
 
         // Create additional users with organizations and projects
         $additionalUsers = User::factory(5)->create();
-        
+
         foreach ($additionalUsers as $additionalUser) {
             $org = Organization::factory()->create([
                 'user_id' => $additionalUser->id,
             ]);
-            
+
             $additionalUser->update(['organization_id' => $org->id]);
-            
+
             // Assign viewer role to additional users
             $viewerRole = \App\Models\Role::where('name', 'viewer')->first();
             $additionalUser->roles()->attach($viewerRole);
-            
+
             // Create projects
             Project::factory(3)->create([
                 'organization_id' => $org->id,

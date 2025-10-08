@@ -43,7 +43,7 @@ class AuthorizationTest extends TestCase
     public function test_admin_can_edit_users_in_same_organization(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $admin = User::factory()->create(['organization_id' => $organization->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
 
@@ -57,7 +57,7 @@ class AuthorizationTest extends TestCase
     {
         $org1 = Organization::factory()->create();
         $org2 = Organization::factory()->create();
-        
+
         $admin = User::factory()->create(['organization_id' => $org1->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
 
@@ -70,7 +70,7 @@ class AuthorizationTest extends TestCase
     public function test_editor_can_create_projects(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $editor = User::factory()->create(['organization_id' => $organization->id]);
         $editor->roles()->attach(Role::where('name', 'editor')->first());
 
@@ -80,7 +80,7 @@ class AuthorizationTest extends TestCase
     public function test_viewer_cannot_create_projects(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $viewer = User::factory()->create(['organization_id' => $organization->id]);
         $viewer->roles()->attach(Role::where('name', 'viewer')->first());
 
@@ -90,7 +90,7 @@ class AuthorizationTest extends TestCase
     public function test_user_can_view_project_in_same_organization(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $user = User::factory()->create(['organization_id' => $organization->id]);
         $project = Project::factory()->create(['organization_id' => $organization->id]);
 
@@ -101,7 +101,7 @@ class AuthorizationTest extends TestCase
     {
         $org1 = Organization::factory()->create();
         $org2 = Organization::factory()->create();
-        
+
         $user = User::factory()->create(['organization_id' => $org1->id]);
         $project = Project::factory()->create(['organization_id' => $org2->id]);
 
@@ -111,10 +111,10 @@ class AuthorizationTest extends TestCase
     public function test_admin_can_delete_projects(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $admin = User::factory()->create(['organization_id' => $organization->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
-        
+
         $project = Project::factory()->create(['organization_id' => $organization->id]);
 
         $this->assertTrue($admin->can('delete', $project));
@@ -123,10 +123,10 @@ class AuthorizationTest extends TestCase
     public function test_editor_cannot_delete_projects(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $editor = User::factory()->create(['organization_id' => $organization->id]);
         $editor->roles()->attach(Role::where('name', 'editor')->first());
-        
+
         $project = Project::factory()->create(['organization_id' => $organization->id]);
 
         $this->assertFalse($editor->can('delete', $project));
@@ -143,7 +143,7 @@ class AuthorizationTest extends TestCase
     public function test_admin_can_update_organization_settings(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $admin = User::factory()->create(['organization_id' => $organization->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
 
@@ -153,7 +153,7 @@ class AuthorizationTest extends TestCase
     public function test_viewer_cannot_update_organization_settings(): void
     {
         $organization = Organization::factory()->create();
-        
+
         $viewer = User::factory()->create(['organization_id' => $organization->id]);
         $viewer->roles()->attach(Role::where('name', 'viewer')->first());
 

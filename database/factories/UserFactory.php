@@ -27,7 +27,7 @@ class UserFactory extends Factory
         $longitude = fake()->longitude();
         $latitude = fake()->latitude();
 
-        $location = DB::connection()->getDriverName() === 'pgsql' 
+        $location = DB::connection()->getDriverName() === 'pgsql'
             ? DB::raw("ST_MakePoint({$longitude}, {$latitude})::geography")
             : null; // For SQLite, just use null
 

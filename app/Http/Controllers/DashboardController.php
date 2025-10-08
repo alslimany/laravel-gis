@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -22,8 +21,8 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $organization = $user->organization;
-        
-        $projects = $organization 
+
+        $projects = $organization
             ? $organization->projects()->latest()->paginate(10)
             : collect();
 

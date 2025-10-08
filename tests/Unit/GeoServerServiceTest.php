@@ -14,7 +14,7 @@ class GeoServerServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock configuration
         Config::set('geoserver.url', 'http://test-geoserver:8080/geoserver');
         Config::set('geoserver.admin_user', 'admin');
@@ -32,8 +32,8 @@ class GeoServerServiceTest extends TestCase
             'user' => 'postgres',
             'password' => 'secret',
         ]);
-        
-        $this->geoserver = new GeoServerService();
+
+        $this->geoserver = new GeoServerService;
     }
 
     public function test_geoserver_service_can_be_instantiated(): void

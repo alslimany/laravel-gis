@@ -21,7 +21,7 @@ class OrganizationController extends Controller
     public function settings(Request $request)
     {
         $organization = $request->user()->organization;
-        
+
         $this->authorize('view', $organization);
 
         return view('organization.settings', compact('organization'));
@@ -33,7 +33,7 @@ class OrganizationController extends Controller
     public function update(Request $request)
     {
         $organization = $request->user()->organization;
-        
+
         $this->authorize('update', $organization);
 
         $validated = $request->validate([

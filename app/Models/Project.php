@@ -45,8 +45,6 @@ class Project extends Model
 
     /**
      * Get the bounding box as WKT.
-     *
-     * @return string|null
      */
     public function getBoundingBoxWKTAttribute(): ?string
     {
@@ -55,8 +53,6 @@ class Project extends Model
 
     /**
      * Get the bounding box as GeoJSON.
-     *
-     * @return array|null
      */
     public function getBoundingBoxGeoJSONAttribute(): ?array
     {

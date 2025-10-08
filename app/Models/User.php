@@ -63,8 +63,6 @@ class User extends Authenticatable
 
     /**
      * Get the location as WKT.
-     *
-     * @return string|null
      */
     public function getLocationWKTAttribute(): ?string
     {
@@ -73,8 +71,6 @@ class User extends Authenticatable
 
     /**
      * Get the location as GeoJSON.
-     *
-     * @return array|null
      */
     public function getLocationGeoJSONAttribute(): ?array
     {

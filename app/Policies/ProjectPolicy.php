@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
@@ -29,7 +28,7 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        return $user->organization_id !== null && 
+        return $user->organization_id !== null &&
                $user->hasAnyRole(['admin', 'editor']);
     }
 
