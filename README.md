@@ -38,6 +38,16 @@ See [AUTH_GUIDE.md](AUTH_GUIDE.md) for detailed documentation.
 
 See [SPATIAL_FEATURES.md](SPATIAL_FEATURES.md) for detailed documentation.
 
+### GeoServer Integration
+- ✅ Complete REST API client for GeoServer
+- ✅ Workspace and datastore management
+- ✅ Layer publishing from PostGIS tables
+- ✅ Style management with default SLD templates
+- ✅ Queueable jobs with retry logic
+- ✅ Automatic error handling and logging
+
+See [GEOSERVER_INTEGRATION.md](GEOSERVER_INTEGRATION.md) for detailed documentation.
+
 ## Prerequisites
 
 - Docker (20.10 or higher)
