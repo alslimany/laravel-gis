@@ -3,14 +3,16 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\SpatialTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SpatialTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'location',
     ];
 
     /**
@@ -43,6 +46,35 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'location' => 'string',
         ];
+    }
+
+    /**
+     * Get the organizations for the user.
+     */
+    public function organizations(): HasMany
+    {
+        return $this->hasMany(Organization::class);
+    }
+
+    /**
+     * Get the location as WKT.
+     *
+     * @return string|null
+     */
+    public function getLocationWKTAttribute(): ?string
+    {
+        return $this->toWKT('location');
+    }
+
+    /**
+     * Get the location as GeoJSON.
+     *
+     * @return array|null
+     */
+    public function getLocationGeoJSONAttribute(): ?array
+    {
+        return $this->toGeoJSON('location');
     }
 }
