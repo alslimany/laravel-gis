@@ -40,7 +40,7 @@ class DataImportService
         $process->setTimeout($this->timeout);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             throw new ProcessFailedException($process);
         }
 
@@ -133,7 +133,7 @@ class DataImportService
         $process->setTimeout($this->timeout);
         $process->run();
 
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             Log::error('ogr2ogr failed', [
                 'output' => $process->getOutput(),
                 'error' => $process->getErrorOutput(),

@@ -15,11 +15,11 @@ class EnsureUserHasOrganization
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return redirect()->route('login');
         }
 
-        if (!$request->user()->organization_id) {
+        if (! $request->user()->organization_id) {
             abort(403, 'You must belong to an organization to access this resource.');
         }
 

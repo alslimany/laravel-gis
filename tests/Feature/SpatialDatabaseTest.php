@@ -16,14 +16,14 @@ class SpatialDatabaseTest extends TestCase
 
     public function test_postgis_extension_is_enabled(): void
     {
-        $result = DB::selectOne("SELECT PostGIS_Version()");
+        $result = DB::selectOne('SELECT PostGIS_Version()');
         $this->assertNotNull($result);
     }
 
     public function test_user_can_be_created_with_location(): void
     {
         $user = User::factory()->create([
-            'location' => DB::raw("ST_MakePoint(-122.4194, 37.7749)::geography"),
+            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
         ]);
 
         $this->assertDatabaseHas('users', [
@@ -31,7 +31,7 @@ class SpatialDatabaseTest extends TestCase
         ]);
 
         $result = DB::selectOne(
-            "SELECT ST_AsText(location) as location FROM users WHERE id = ?",
+            'SELECT ST_AsText(location) as location FROM users WHERE id = ?',
             [$user->id]
         );
 
@@ -65,7 +65,7 @@ class SpatialDatabaseTest extends TestCase
         ]);
 
         $result = DB::selectOne(
-            "SELECT ST_AsText(bounding_box) as bbox FROM projects WHERE id = ?",
+            'SELECT ST_AsText(bounding_box) as bbox FROM projects WHERE id = ?',
             [$project->id]
         );
 
@@ -86,7 +86,7 @@ class SpatialDatabaseTest extends TestCase
     {
         $geojson = [
             'type' => 'Point',
-            'coordinates' => [-122.4194, 37.7749]
+            'coordinates' => [-122.4194, 37.7749],
         ];
 
         $wkt = SpatialHelper::geoJsonToWkt($geojson);
@@ -105,11 +105,11 @@ class SpatialDatabaseTest extends TestCase
     public function test_user_within_distance_scope(): void
     {
         User::factory()->create([
-            'location' => DB::raw("ST_MakePoint(-122.4194, 37.7749)::geography"),
+            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
         ]);
 
         User::factory()->create([
-            'location' => DB::raw("ST_MakePoint(0, 0)::geography"),
+            'location' => DB::raw('ST_MakePoint(0, 0)::geography'),
         ]);
 
         $users = User::withinDistance('location', 37.7749, -122.4194, 10000)->get();
@@ -121,12 +121,12 @@ class SpatialDatabaseTest extends TestCase
     {
         User::factory()->create([
             'name' => 'Close User',
-            'location' => DB::raw("ST_MakePoint(-122.4194, 37.7749)::geography"),
+            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
         ]);
 
         User::factory()->create([
             'name' => 'Far User',
-            'location' => DB::raw("ST_MakePoint(0, 0)::geography"),
+            'location' => DB::raw('ST_MakePoint(0, 0)::geography'),
         ]);
 
         $users = User::near('location', 37.7749, -122.4194)->get();

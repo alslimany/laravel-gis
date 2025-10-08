@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\DataImport;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class DataImportPolicy
 {
@@ -21,7 +20,7 @@ class DataImportPolicy
      */
     public function view(User $user, DataImport $dataImport): bool
     {
-        return $user->id === $dataImport->user_id || 
+        return $user->id === $dataImport->user_id ||
                $user->organization_id === $dataImport->organization_id;
     }
 

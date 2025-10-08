@@ -7,7 +7,6 @@ use App\Jobs\ProcessGeoJSONJob;
 use App\Jobs\ProcessKMLJob;
 use App\Jobs\ProcessShapefileJob;
 use App\Models\DataImport;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -104,7 +103,7 @@ class DataImportController extends Controller
         $disk = config('dataimport.upload_disk');
         Storage::disk($disk)->delete($import->file_path);
 
-        if (!empty($import->metadata['additional_files'])) {
+        if (! empty($import->metadata['additional_files'])) {
             foreach ($import->metadata['additional_files'] as $filePath) {
                 Storage::disk($disk)->delete($filePath);
             }

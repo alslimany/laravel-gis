@@ -38,7 +38,7 @@ class ProcessShapefileJob implements ShouldQueue
         $import = DataImport::findOrFail($this->dataImportId);
 
         try {
-            Log::info("Processing Shapefile import", ['import_id' => $import->id]);
+            Log::info('Processing Shapefile import', ['import_id' => $import->id]);
 
             $import->markAsProcessing();
 
@@ -69,12 +69,12 @@ class ProcessShapefileJob implements ShouldQueue
             $import->update(['metadata' => array_merge($import->metadata ?? [], $fileInfo)]);
             $import->markAsCompleted($tableName, $geometryType, $featureCount);
 
-            Log::info("Successfully processed Shapefile import", [
+            Log::info('Successfully processed Shapefile import', [
                 'import_id' => $import->id,
                 'table_name' => $tableName,
             ]);
         } catch (Exception $e) {
-            Log::error("Failed to process Shapefile import", [
+            Log::error('Failed to process Shapefile import', [
                 'import_id' => $import->id,
                 'error' => $e->getMessage(),
             ]);
@@ -94,7 +94,7 @@ class ProcessShapefileJob implements ShouldQueue
             $import->markAsFailed($exception->getMessage());
         }
 
-        Log::error("Job failed to process Shapefile import", [
+        Log::error('Job failed to process Shapefile import', [
             'import_id' => $this->dataImportId,
             'error' => $exception->getMessage(),
         ]);

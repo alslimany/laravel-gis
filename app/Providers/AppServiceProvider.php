@@ -12,7 +12,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\App\Services\GeoServerService::class, function ($app) {
-            return new \App\Services\GeoServerService();
+            return new \App\Services\GeoServerService;
         });
     }
 

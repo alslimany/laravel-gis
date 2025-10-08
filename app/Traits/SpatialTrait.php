@@ -9,12 +9,7 @@ trait SpatialTrait
     /**
      * Scope to find records within a given distance from a point.
      *
-     * @param Builder $query
-     * @param string $column
-     * @param float $latitude
-     * @param float $longitude
-     * @param float $distance Distance in meters
-     * @return Builder
+     * @param  float  $distance  Distance in meters
      */
     public function scopeWithinDistance(Builder $query, string $column, float $latitude, float $longitude, float $distance): Builder
     {
@@ -26,12 +21,6 @@ trait SpatialTrait
 
     /**
      * Scope to find records near a point, ordered by distance.
-     *
-     * @param Builder $query
-     * @param string $column
-     * @param float $latitude
-     * @param float $longitude
-     * @return Builder
      */
     public function scopeNear(Builder $query, string $column, float $latitude, float $longitude): Builder
     {
@@ -44,10 +33,7 @@ trait SpatialTrait
     /**
      * Scope to find records within a polygon.
      *
-     * @param Builder $query
-     * @param string $column
-     * @param string $polygon WKT polygon string
-     * @return Builder
+     * @param  string  $polygon  WKT polygon string
      */
     public function scopeWithinPolygon(Builder $query, string $column, string $polygon): Builder
     {
@@ -60,10 +46,7 @@ trait SpatialTrait
     /**
      * Scope to find records that intersect with a geometry.
      *
-     * @param Builder $query
-     * @param string $column
-     * @param string $geometry WKT geometry string
-     * @return Builder
+     * @param  string  $geometry  WKT geometry string
      */
     public function scopeIntersects(Builder $query, string $column, string $geometry): Builder
     {
@@ -75,40 +58,34 @@ trait SpatialTrait
 
     /**
      * Convert spatial attribute to WKT format.
-     *
-     * @param string $attribute
-     * @return string|null
      */
     public function toWKT(string $attribute): ?string
     {
         $value = $this->attributes[$attribute] ?? null;
-        
-        if (!$value) {
+
+        if (! $value) {
             return null;
         }
 
         return \DB::selectOne(
-            "SELECT ST_AsText(?) as wkt",
+            'SELECT ST_AsText(?) as wkt',
             [$value]
         )->wkt ?? null;
     }
 
     /**
      * Convert spatial attribute to GeoJSON format.
-     *
-     * @param string $attribute
-     * @return array|null
      */
     public function toGeoJSON(string $attribute): ?array
     {
         $value = $this->attributes[$attribute] ?? null;
-        
-        if (!$value) {
+
+        if (! $value) {
             return null;
         }
 
         $geojson = \DB::selectOne(
-            "SELECT ST_AsGeoJSON(?) as geojson",
+            'SELECT ST_AsGeoJSON(?) as geojson',
             [$value]
         )->geojson ?? null;
 
@@ -117,10 +94,6 @@ trait SpatialTrait
 
     /**
      * Set spatial attribute from WKT format.
-     *
-     * @param string $attribute
-     * @param string $wkt
-     * @return void
      */
     public function setFromWKT(string $attribute, string $wkt): void
     {
@@ -129,11 +102,6 @@ trait SpatialTrait
 
     /**
      * Set spatial attribute from latitude and longitude.
-     *
-     * @param string $attribute
-     * @param float $latitude
-     * @param float $longitude
-     * @return void
      */
     public function setFromCoordinates(string $attribute, float $latitude, float $longitude): void
     {
