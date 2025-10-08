@@ -15,7 +15,9 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     unzip \
-    postgresql-client
+    postgresql-client \
+    gdal-bin \
+    libgdal-dev
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
