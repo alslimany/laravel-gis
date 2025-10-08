@@ -39,6 +39,9 @@
                                     <a class="nav-link" href="{{ route('imports.index') }}">Data Imports</a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('layers.index') }}">Layers</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="{{ route('organization.settings') }}">Organization</a>
                                 </li>
                             @endif

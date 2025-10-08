@@ -47,6 +47,14 @@ class Organization extends Model
     }
 
     /**
+     * Get the layers for the organization.
+     */
+    public function layers(): HasMany
+    {
+        return $this->hasMany(Layer::class);
+    }
+
+    /**
      * Scope a query to only include organizations for a given user.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query

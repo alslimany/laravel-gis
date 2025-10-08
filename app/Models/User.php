@@ -116,4 +116,12 @@ class User extends Authenticatable
     {
         return $this->hasRole('admin');
     }
+
+    /**
+     * Get the layers created by the user.
+     */
+    public function layers(): HasMany
+    {
+        return $this->hasMany(Layer::class);
+    }
 }
