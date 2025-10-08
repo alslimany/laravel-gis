@@ -5,11 +5,27 @@ A Laravel-based WebGIS application with Docker infrastructure including PostGIS,
 ## Features
 
 - **Laravel 12** - Modern PHP framework
-- **PostGIS 13-3.1** - Spatial database extension for PostgreSQL
+- **PostGIS 13-3.1** - Spatial database extension for PostgreSQL with full spatial database support
+- **Spatial Models** - User, Organization, and Project models with spatial capabilities
+- **Spatial Queries** - withinDistance, near, intersects, and withinPolygon scopes
+- **Helper Functions** - WKT/GeoJSON conversion, distance calculations, and more
 - **GeoServer 2.21.x** - Open source server for sharing geospatial data with CORS enabled
 - **Redis** - In-memory data structure store for caching and queues
 - **Nginx** - High-performance web server
 - **Docker Compose** - Multi-container orchestration
+
+## Spatial Database Features
+
+This application includes a comprehensive spatial database foundation:
+- ✅ PostGIS extension enabled
+- ✅ Users table with location (GEOGRAPHY POINT)
+- ✅ Projects table with bounding_box (GEOMETRY POLYGON)
+- ✅ Spatial indexes for efficient queries
+- ✅ Eloquent models with spatial traits
+- ✅ Helper functions for WKT/GeoJSON conversion
+- ✅ Factory support for spatial test data
+
+See [SPATIAL_FEATURES.md](SPATIAL_FEATURES.md) for detailed documentation.
 
 ## Prerequisites
 
