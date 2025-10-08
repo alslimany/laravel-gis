@@ -31,10 +31,30 @@ class Organization extends Model
     }
 
     /**
+     * Get the members of the organization.
+     */
+    public function members(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    /**
      * Get the projects for the organization.
      */
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    /**
+     * Scope a query to only include organizations for a given user.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $userId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

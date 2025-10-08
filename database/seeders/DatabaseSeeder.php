@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed roles first
+        $this->call(RoleSeeder::class);
+
         // Create test user with specific location
         $user = User::factory()->create([
             'name' => 'Test User',
@@ -30,6 +33,13 @@ class DatabaseSeeder extends Seeder
             'description' => 'A test organization for spatial data',
         ]);
 
+        // Assign user to organization
+        $user->update(['organization_id' => $organization->id]);
+
+        // Assign admin role to test user
+        $adminRole = \App\Models\Role::where('name', 'admin')->first();
+        $user->roles()->attach($adminRole);
+
         // Create project for the organization with bounding box
         Project::factory()->create([
             'organization_id' => $organization->id,
@@ -39,12 +49,23 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create additional users with organizations and projects
-        User::factory(5)
-            ->has(
-                Organization::factory()
-                    ->count(2)
-                    ->has(Project::factory()->count(3))
-            )
-            ->create();
+        $additionalUsers = User::factory(5)->create();
+        
+        foreach ($additionalUsers as $additionalUser) {
+            $org = Organization::factory()->create([
+                'user_id' => $additionalUser->id,
+            ]);
+            
+            $additionalUser->update(['organization_id' => $org->id]);
+            
+            // Assign viewer role to additional users
+            $viewerRole = \App\Models\Role::where('name', 'viewer')->first();
+            $additionalUser->roles()->attach($viewerRole);
+            
+            // Create projects
+            Project::factory(3)->create([
+                'organization_id' => $org->id,
+            ]);
+        }
     }
 }

@@ -62,4 +62,16 @@ class Project extends Model
     {
         return $this->toGeoJSON('bounding_box');
     }
+
+    /**
+     * Scope a query to only include projects for a given organization.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $organizationId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForOrganization($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
 }

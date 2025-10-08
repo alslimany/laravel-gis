@@ -22,8 +22,16 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::statement('ALTER TABLE users ADD COLUMN location GEOGRAPHY(POINT, 4326)');
-        DB::statement('CREATE INDEX users_location_idx ON users USING GIST (location)');
+        // Only add spatial column for PostgreSQL
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE users ADD COLUMN location GEOGRAPHY(POINT, 4326)');
+            DB::statement('CREATE INDEX users_location_idx ON users USING GIST (location)');
+        } else {
+            // For SQLite testing, use a simple text column
+            Schema::table('users', function (Blueprint $table) {
+                $table->text('location')->nullable();
+            });
+        }
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

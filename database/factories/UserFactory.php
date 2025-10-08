@@ -27,13 +27,17 @@ class UserFactory extends Factory
         $longitude = fake()->longitude();
         $latitude = fake()->latitude();
 
+        $location = DB::connection()->getDriverName() === 'pgsql' 
+            ? DB::raw("ST_MakePoint({$longitude}, {$latitude})::geography")
+            : null; // For SQLite, just use null
+
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'location' => DB::raw("ST_MakePoint({$longitude}, {$latitude})::geography"),
+            'location' => $location,
         ];
     }
 
