@@ -17,6 +17,19 @@ A Laravel-based WebGIS application with Docker infrastructure including PostGIS,
 
 ## Key Features
 
+### GIS Tools & Analysis ✨ NEW
+- ✅ **Measurement Tools**: Distance, area, and coordinate display
+- ✅ **Drawing Tools**: Point, line, and polygon drawing
+- ✅ **Spatial Analysis**: Buffer analysis, spatial queries (within, contains, intersects)
+- ✅ **Attribute Queries**: Advanced query builder with multiple conditions
+- ✅ **Export Tools**: GeoJSON, CSV, JSON, and PNG export
+- ✅ **Analysis API**: 6 endpoints for spatial operations
+- ✅ **Export API**: 5 endpoints for data export
+- ✅ **UI Components**: Analysis panel with intuitive interface
+- ✅ **Comprehensive Tests**: 29 tests covering all features
+
+See [GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md) for detailed documentation and [GIS_TOOLS_QUICK_REFERENCE.md](GIS_TOOLS_QUICK_REFERENCE.md) for quick start guide.
+
 ### Authentication & Authorization
 - ✅ User registration and login with Laravel UI
 - ✅ Role-based access control (Admin, Editor, Viewer)
