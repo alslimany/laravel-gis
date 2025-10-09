@@ -27,3 +27,24 @@ Thumbs.db
 docker-compose.override.yml
 .docker/
 /tmp-screenshots
+
+# SSL Certificates (never commit private keys!)
+docker/ssl/*.key
+docker/ssl/*.crt
+docker/ssl/*.pem
+
+# Backups
+docker/postgres/backups/*.sql
+docker/postgres/backups/*.sql.gz
+docker/postgres/backups/*.dump
+
+# Logs
+docker/logs/
+storage/logs/*.log
+
+# Test coverage
+coverage/
+.phpunit.cache/
+
+# Temporary files
+/tmp/

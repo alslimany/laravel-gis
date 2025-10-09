@@ -5,11 +5,17 @@ use App\Http\Controllers\AttributeTableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataImportController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\LayerController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Health check endpoints (no authentication required)
+Route::get('/health', [HealthCheckController::class, 'index'])->name('health.check');
+Route::get('/health/detailed', [HealthCheckController::class, 'detailed'])->name('health.detailed');
+Route::get('/health/metrics', [HealthCheckController::class, 'metrics'])->name('health.metrics');
 
 Route::get('/', function () {
     return view('welcome');
