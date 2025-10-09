@@ -41,6 +41,9 @@
                             </li>
                             @if(auth()->user()->organization_id)
                                 <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="{{ route('imports.index') }}">Data Imports</a>
                                 </li>
                                 <li class="nav-item">
