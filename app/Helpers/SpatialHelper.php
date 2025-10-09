@@ -140,4 +140,128 @@ class SpatialHelper
             (float) $result->max_lat,
         ];
     }
+
+    /**
+     * Create a buffer around a geometry.
+     *
+     * @param  string  $wkt  Geometry in WKT format
+     * @param  float  $distance  Buffer distance in meters
+     * @return string Buffered geometry in WKT format
+     */
+    public static function buffer(string $wkt, float $distance): string
+    {
+        $result = DB::selectOne(
+            'SELECT ST_AsText(ST_Buffer(ST_GeomFromText(?, 4326)::geography, ?)::geometry) as wkt',
+            [$wkt, $distance]
+        );
+
+        return $result->wkt;
+    }
+
+    /**
+     * Check if two geometries intersect.
+     *
+     * @param  string  $wkt1  First geometry in WKT format
+     * @param  string  $wkt2  Second geometry in WKT format
+     * @return bool
+     */
+    public static function intersects(string $wkt1, string $wkt2): bool
+    {
+        $result = DB::selectOne(
+            'SELECT ST_Intersects(
+                ST_GeomFromText(?, 4326),
+                ST_GeomFromText(?, 4326)
+            ) as intersects',
+            [$wkt1, $wkt2]
+        );
+
+        return (bool) $result->intersects;
+    }
+
+    /**
+     * Check if first geometry contains the second.
+     *
+     * @param  string  $wkt1  Container geometry in WKT format
+     * @param  string  $wkt2  Contained geometry in WKT format
+     * @return bool
+     */
+    public static function contains(string $wkt1, string $wkt2): bool
+    {
+        $result = DB::selectOne(
+            'SELECT ST_Contains(
+                ST_GeomFromText(?, 4326),
+                ST_GeomFromText(?, 4326)
+            ) as contains',
+            [$wkt1, $wkt2]
+        );
+
+        return (bool) $result->contains;
+    }
+
+    /**
+     * Check if first geometry is within the second.
+     *
+     * @param  string  $wkt1  Inner geometry in WKT format
+     * @param  string  $wkt2  Outer geometry in WKT format
+     * @return bool
+     */
+    public static function within(string $wkt1, string $wkt2): bool
+    {
+        $result = DB::selectOne(
+            'SELECT ST_Within(
+                ST_GeomFromText(?, 4326),
+                ST_GeomFromText(?, 4326)
+            ) as within',
+            [$wkt1, $wkt2]
+        );
+
+        return (bool) $result->within;
+    }
+
+    /**
+     * Calculate the area of a geometry in square meters.
+     *
+     * @param  string  $wkt  Geometry in WKT format
+     * @return float Area in square meters
+     */
+    public static function area(string $wkt): float
+    {
+        $result = DB::selectOne(
+            'SELECT ST_Area(ST_GeomFromText(?, 4326)::geography) as area',
+            [$wkt]
+        );
+
+        return (float) $result->area;
+    }
+
+    /**
+     * Calculate the length/perimeter of a geometry in meters.
+     *
+     * @param  string  $wkt  Geometry in WKT format
+     * @return float Length in meters
+     */
+    public static function length(string $wkt): float
+    {
+        $result = DB::selectOne(
+            'SELECT ST_Length(ST_GeomFromText(?, 4326)::geography) as length',
+            [$wkt]
+        );
+
+        return (float) $result->length;
+    }
+
+    /**
+     * Create a LineString from coordinates array.
+     *
+     * @param  array  $coordinates  Array of [longitude, latitude] pairs
+     * @return string WKT linestring
+     */
+    public static function makeLineString(array $coordinates): string
+    {
+        $points = array_map(function ($coord) {
+            return "{$coord[0]} {$coord[1]}";
+        }, $coordinates);
+
+        return 'LINESTRING('.implode(', ', $points).')';
+    }
 }
