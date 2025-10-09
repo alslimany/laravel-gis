@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\AttributeTableController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataImportController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\LayerController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\OrganizationController;
@@ -37,6 +39,11 @@ Route::middleware('auth')->group(function () {
     // Attribute table routes
     Route::get('/layers/{layer}/attributes', [AttributeTableController::class, 'index'])->name('layers.attributes');
     Route::get('/layers/{layer}/geojson', [AttributeTableController::class, 'geojson'])->name('layers.geojson');
+
+    // Export routes
+    Route::get('/export/layer/{layer}/geojson', [ExportController::class, 'exportGeoJSON'])->name('export.layer.geojson');
+    Route::get('/export/layer/{layer}/csv', [ExportController::class, 'exportCSV'])->name('export.layer.csv');
+    Route::get('/export/map/{map}/config', [ExportController::class, 'exportMapConfig'])->name('export.map.config');
 
     // Map routes
     Route::get('/maps/builder/{id?}', [MapController::class, 'builder'])->name('maps.builder');

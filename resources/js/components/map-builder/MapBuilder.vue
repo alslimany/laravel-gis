@@ -3,6 +3,9 @@
         <div class="map-builder-header">
             <h3>Map Builder</h3>
             <div class="header-actions">
+                <button @click="toggleAnalysis" class="btn btn-info btn-sm">
+                    <i class="fas fa-chart-area"></i> Analysis
+                </button>
                 <button @click="saveMap" class="btn btn-primary btn-sm">
                     <i class="fas fa-save"></i> Save Map
                 </button>
@@ -18,8 +21,15 @@
             </div>
 
             <div class="map-container">
-                <MapComponent />
-                <ToolPanel />
+                <MapComponent ref="mapComponent" />
+                <ToolPanel :map="mapInstance" @tool-selected="handleToolSelection" />
+                <AnalysisPanel 
+                    v-if="showAnalysis" 
+                    :selected-layer="selectedLayer"
+                    :selected-geometry="drawnGeometry"
+                    @close="showAnalysis = false"
+                    @analysis-complete="handleAnalysisComplete"
+                />
             </div>
 
             <div class="right-panel">
@@ -30,15 +40,42 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useMapStore } from '../../stores/mapStore';
 import MapComponent from './MapComponent.vue';
 import LayerPanel from './LayerPanel.vue';
 import ToolPanel from './ToolPanel.vue';
 import StyleEditor from './StyleEditor.vue';
+import AnalysisPanel from './AnalysisPanel.vue';
 
 const mapStore = useMapStore();
 const selectedLayer = computed(() => mapStore.selectedLayer);
+const mapComponent = ref(null);
+const mapInstance = computed(() => mapStore.map);
+const showAnalysis = ref(false);
+const drawnGeometry = ref(null);
+const currentTool = ref(null);
+
+const toggleAnalysis = () => {
+    showAnalysis.value = !showAnalysis.value;
+};
+
+const handleToolSelection = (toolId) => {
+    currentTool.value = toolId;
+    console.log('Tool selected in MapBuilder:', toolId);
+    
+    // Handle drawing tools
+    if (toolId && toolId.startsWith('draw-')) {
+        // Initialize drawing interaction based on tool type
+        // This would be implemented in a more complete version
+        console.log('Drawing tool activated:', toolId);
+    }
+};
+
+const handleAnalysisComplete = (result) => {
+    console.log('Analysis complete:', result);
+    // Handle analysis results - could display on map, show in panel, etc.
+};
 
 const saveMap = async () => {
     try {
