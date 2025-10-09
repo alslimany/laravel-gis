@@ -19,8 +19,9 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-// Public shared map route
+// Public shared routes
 Route::get('/maps/shared/{token}', [MapController::class, 'viewShared'])->name('maps.shared');
+Route::get('/projects/shared/{token}', [App\Http\Controllers\ProjectController::class, 'viewShared'])->name('projects.shared');
 
 // Protected routes - require authentication
 Route::middleware('auth')->group(function () {
@@ -49,6 +50,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/maps/builder/{id?}', [MapController::class, 'builder'])->name('maps.builder');
     Route::get('/maps/{map}/share', [MapController::class, 'share'])->name('maps.share');
     Route::resource('maps', MapController::class);
+
+    // Project routes
+    Route::get('/projects/{project}/share', [App\Http\Controllers\ProjectController::class, 'share'])->name('projects.share');
+    Route::get('/projects/{project}/invite', [App\Http\Controllers\ProjectController::class, 'invite'])->name('projects.invite');
+    Route::post('/projects/{project}/invite', [App\Http\Controllers\ProjectController::class, 'storeInvite'])->name('projects.invite.store');
+    Route::delete('/projects/{project}/collaborators/{user}', [App\Http\Controllers\ProjectController::class, 'removeCollaborator'])->name('projects.collaborators.remove');
+    Route::put('/projects/{project}/collaborators/{user}/role', [App\Http\Controllers\ProjectController::class, 'updateRole'])->name('projects.collaborators.role');
+    Route::post('/projects/{project}/comments', [App\Http\Controllers\ProjectController::class, 'storeComment'])->name('projects.comments.store');
+    Route::delete('/projects/{project}/comments/{comment}', [App\Http\Controllers\ProjectController::class, 'destroyComment'])->name('projects.comments.destroy');
+    Route::resource('projects', App\Http\Controllers\ProjectController::class);
 
     // Organization routes - require organization membership
     Route::middleware('organization')->group(function () {
