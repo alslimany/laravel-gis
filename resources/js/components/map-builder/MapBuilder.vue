@@ -47,6 +47,10 @@ import LayerPanel from './LayerPanel.vue';
 import ToolPanel from './ToolPanel.vue';
 import StyleEditor from './StyleEditor.vue';
 import AnalysisPanel from './AnalysisPanel.vue';
+import Draw from 'ol/interaction/Draw';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
 
 const mapStore = useMapStore();
 const selectedLayer = computed(() => mapStore.selectedLayer);
@@ -55,6 +59,8 @@ const mapInstance = computed(() => mapStore.map);
 const showAnalysis = ref(false);
 const drawnGeometry = ref(null);
 const currentTool = ref(null);
+let currentDraw = null;
+let drawLayer = null;
 
 const toggleAnalysis = () => {
     showAnalysis.value = !showAnalysis.value;
@@ -64,12 +70,78 @@ const handleToolSelection = (toolId) => {
     currentTool.value = toolId;
     console.log('Tool selected in MapBuilder:', toolId);
     
-    // Handle drawing tools
-    if (toolId && toolId.startsWith('draw-')) {
-        // Initialize drawing interaction based on tool type
-        // This would be implemented in a more complete version
-        console.log('Drawing tool activated:', toolId);
+    // Remove existing draw interaction
+    if (currentDraw && mapInstance.value) {
+        mapInstance.value.removeInteraction(currentDraw);
+        currentDraw = null;
     }
+    
+    // Handle drawing tools
+    if (toolId && toolId.startsWith('draw-') && mapInstance.value) {
+        initializeDrawing(toolId);
+    }
+};
+
+const initializeDrawing = (toolId) => {
+    const map = mapInstance.value;
+    if (!map) {
+        console.warn('Map instance not available');
+        return;
+    }
+
+    // Create draw layer if it doesn't exist
+    if (!drawLayer) {
+        const source = new VectorSource();
+        drawLayer = new VectorLayer({
+            source: source,
+            style: new Style({
+                fill: new Fill({
+                    color: 'rgba(0, 123, 255, 0.2)'
+                }),
+                stroke: new Stroke({
+                    color: '#007bff',
+                    width: 2
+                }),
+                image: new CircleStyle({
+                    radius: 7,
+                    fill: new Fill({
+                        color: '#007bff'
+                    })
+                })
+            })
+        });
+        map.addLayer(drawLayer);
+    }
+
+    // Determine geometry type
+    let geometryType;
+    switch (toolId) {
+        case 'draw-point':
+            geometryType = 'Point';
+            break;
+        case 'draw-line':
+            geometryType = 'LineString';
+            break;
+        case 'draw-polygon':
+            geometryType = 'Polygon';
+            break;
+        default:
+            return;
+    }
+
+    // Create draw interaction
+    currentDraw = new Draw({
+        source: drawLayer.getSource(),
+        type: geometryType
+    });
+
+    // Handle draw end event
+    currentDraw.on('drawend', (event) => {
+        drawnGeometry.value = event.feature.getGeometry();
+        console.log('Feature drawn:', event.feature);
+    });
+
+    map.addInteraction(currentDraw);
 };
 
 const handleAnalysisComplete = (result) => {
