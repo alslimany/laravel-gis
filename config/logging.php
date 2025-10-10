@@ -127,6 +127,34 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'gis' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/gis.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+
+        'performance' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/performance.log'),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => 7,
+        ],
+
+        'geoserver' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/geoserver.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+
+        'import' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/import.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+        ],
+
     ],
 
 ];
