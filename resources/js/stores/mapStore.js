@@ -13,6 +13,10 @@ export const useMapStore = defineStore('map', {
         basemap: 'osm',
         availableBasemaps: [
             { id: 'osm', name: 'OpenStreetMap', type: 'tile' },
+            { id: 'satellite', name: 'Satellite', type: 'tile' },
+            { id: 'terrain', name: 'Terrain', type: 'tile' },
+            { id: 'light', name: 'Light', type: 'tile' },
+            { id: 'dark', name: 'Dark', type: 'tile' },
             { id: 'bing-aerial', name: 'Bing Aerial', type: 'tile' },
             { id: 'bing-road', name: 'Bing Road', type: 'tile' }
         ]

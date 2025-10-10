@@ -77,29 +77,29 @@
                         <div class="mb-3">
                             <label for="fillColor" class="form-label">Fill Color</label>
                             <input type="color" class="form-control form-control-color" 
-                                   id="fillColor" name="style_config[fillColor]" 
-                                   value="{{ $layer->style_config['fillColor'] ?? '#AAAAAA' }}">
+                                   id="fillColor" name="style_config[fill_color]" 
+                                   value="{{ $layer->style_config['fill_color'] ?? $layer->style_config['fillColor'] ?? '#AAAAAA' }}">
                         </div>
 
                         <div class="mb-3">
                             <label for="strokeColor" class="form-label">Stroke Color</label>
                             <input type="color" class="form-control form-control-color" 
-                                   id="strokeColor" name="style_config[strokeColor]" 
-                                   value="{{ $layer->style_config['strokeColor'] ?? '#000000' }}">
+                                   id="strokeColor" name="style_config[stroke_color]" 
+                                   value="{{ $layer->style_config['stroke_color'] ?? $layer->style_config['strokeColor'] ?? '#000000' }}">
                         </div>
 
                         <div class="mb-3">
                             <label for="strokeWidth" class="form-label">Stroke Width</label>
                             <input type="number" class="form-control" 
-                                   id="strokeWidth" name="style_config[strokeWidth]" 
-                                   value="{{ $layer->style_config['strokeWidth'] ?? 1 }}" min="1" max="10">
+                                   id="strokeWidth" name="style_config[stroke_width]" 
+                                   value="{{ $layer->style_config['stroke_width'] ?? $layer->style_config['strokeWidth'] ?? 1 }}" min="1" max="10">
                         </div>
 
                         <div class="mb-3">
                             <label for="fillOpacity" class="form-label">Fill Opacity</label>
                             <input type="number" class="form-control" 
-                                   id="fillOpacity" name="style_config[fillOpacity]" 
-                                   value="{{ $layer->style_config['fillOpacity'] ?? 0.5 }}" 
+                                   id="fillOpacity" name="style_config[fill_opacity]" 
+                                   value="{{ $layer->style_config['fill_opacity'] ?? $layer->style_config['fillOpacity'] ?? 0.5 }}" 
                                    min="0" max="1" step="0.1">
                         </div>
 

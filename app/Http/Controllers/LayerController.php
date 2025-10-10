@@ -235,25 +235,104 @@ class LayerController extends Controller
 
         $validated = $request->validate([
             'style_config' => 'required|array',
+            'fillColor' => 'nullable|string',
+            'strokeColor' => 'nullable|string',
+            'strokeWidth' => 'nullable|numeric',
+            'fillOpacity' => 'nullable|numeric',
         ]);
 
+        // Merge style config
+        $styleConfig = array_merge(
+            $layer->style_config ?? [],
+            $validated['style_config'] ?? []
+        );
+
+        // Add individual style properties if provided
+        if (isset($validated['fillColor'])) {
+            $styleConfig['fill_color'] = $validated['fillColor'];
+        }
+        if (isset($validated['strokeColor'])) {
+            $styleConfig['stroke_color'] = $validated['strokeColor'];
+        }
+        if (isset($validated['strokeWidth'])) {
+            $styleConfig['stroke_width'] = $validated['strokeWidth'];
+        }
+        if (isset($validated['fillOpacity'])) {
+            $styleConfig['fill_opacity'] = $validated['fillOpacity'];
+        }
+
         $layer->update([
-            'style_config' => $validated['style_config'],
+            'style_config' => $styleConfig,
         ]);
 
         // If published, update style in GeoServer
         if ($layer->isPublished()) {
             try {
                 $organization = $layer->organization;
-                // You would implement style update logic here
-                // $organization->updateLayerStyle($layer->geoserver_layer_name, ...);
+                // Generate SLD from style config
+                $sldContent = $this->generateSLD($layer, $styleConfig);
+                
+                // Update style in GeoServer if method exists
+                if (method_exists($organization, 'updateLayerStyle')) {
+                    $styleName = $layer->geoserver_layer_name . '_style';
+                    $organization->updateLayerStyle(
+                        $layer->geoserver_layer_name,
+                        $styleName,
+                        $sldContent
+                    );
+                }
             } catch (\Exception $e) {
-                // Log error but style is saved to DB
+                \Log::warning('Failed to update style in GeoServer: ' . $e->getMessage());
+                // Style is still saved to DB
             }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'style' => $styleConfig
+            ]);
         }
 
         return redirect()
             ->route('layers.show', $layer)
             ->with('success', 'Layer style updated successfully.');
+    }
+
+    /**
+     * Generate SLD XML for GeoServer from style config.
+     */
+    protected function generateSLD(Layer $layer, array $styleConfig)
+    {
+        $fillColor = $styleConfig['fill_color'] ?? '#0000ff';
+        $strokeColor = $styleConfig['stroke_color'] ?? '#000000';
+        $strokeWidth = $styleConfig['stroke_width'] ?? 1;
+        $fillOpacity = $styleConfig['fill_opacity'] ?? 0.5;
+        
+        return <<<SLD
+<?xml version="1.0" encoding="UTF-8"?>
+<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld">
+  <NamedLayer>
+    <Name>{$layer->geoserver_layer_name}</Name>
+    <UserStyle>
+      <Name>custom_style</Name>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">{$fillColor}</CssParameter>
+              <CssParameter name="fill-opacity">{$fillOpacity}</CssParameter>
+            </Fill>
+            <Stroke>
+              <CssParameter name="stroke">{$strokeColor}</CssParameter>
+              <CssParameter name="stroke-width">{$strokeWidth}</CssParameter>
+            </Stroke>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>
+SLD;
     }
 }
