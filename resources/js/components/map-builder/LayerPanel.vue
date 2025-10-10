@@ -65,27 +65,63 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Layer Type:</label>
-                        <select v-model="newLayer.type" class="form-select">
-                            <option value="wms">WMS Layer</option>
-                            <option value="wfs">WFS Layer</option>
-                            <option value="vector">Vector Layer (GeoJSON)</option>
+                        <label class="form-label">Layer Source:</label>
+                        <select v-model="layerSource" @change="onSourceChange" class="form-select">
+                            <option value="custom">Custom URL</option>
+                            <option value="geoserver">From GeoServer</option>
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Layer Name:</label>
-                        <input v-model="newLayer.name" type="text" class="form-control" placeholder="Enter layer name">
+                    <div v-if="layerSource === 'geoserver'" class="mb-3">
+                        <label class="form-label">Published Layers:</label>
+                        <select v-model="selectedGeoServerLayer" @change="onGeoServerLayerSelect" class="form-select">
+                            <option value="">Select a published layer...</option>
+                            <option v-for="layer in publishedLayers" :key="layer.id" :value="layer.id">
+                                {{ layer.name }} ({{ layer.geometry_type }})
+                            </option>
+                        </select>
+                        <small class="text-muted">Only published layers are shown</small>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">URL:</label>
-                        <input v-model="newLayer.url" type="text" class="form-control" placeholder="Enter layer URL">
+                    <div v-if="layerSource === 'custom'">
+                        <div class="mb-3">
+                            <label class="form-label">Layer Type:</label>
+                            <select v-model="newLayer.type" class="form-select">
+                                <option value="wms">WMS Layer</option>
+                                <option value="wfs">WFS Layer</option>
+                                <option value="vector">Vector Layer (GeoJSON)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Layer Name:</label>
+                            <input v-model="newLayer.name" type="text" class="form-control" placeholder="Enter layer name">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">URL:</label>
+                            <input v-model="newLayer.url" type="text" class="form-control" placeholder="Enter layer URL">
+                        </div>
+
+                        <div v-if="newLayer.type === 'wms'" class="mb-3">
+                            <label class="form-label">Layer Names:</label>
+                            <input v-model="newLayer.layers" type="text" class="form-control" placeholder="e.g., workspace:layername">
+                        </div>
                     </div>
 
-                    <div v-if="newLayer.type === 'wms'" class="mb-3">
-                        <label class="form-label">Layer Names:</label>
-                        <input v-model="newLayer.layers" type="text" class="form-control" placeholder="e.g., workspace:layername">
+                    <div v-if="layerSource === 'geoserver' && selectedGeoServerLayer">
+                        <div class="mb-3">
+                            <label class="form-label">Layer Name:</label>
+                            <input v-model="newLayer.name" type="text" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">GeoServer URL:</label>
+                            <input v-model="newLayer.url" type="text" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Layer:</label>
+                            <input v-model="newLayer.layers" type="text" class="form-control" readonly>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -98,12 +134,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useMapStore } from '../../stores/mapStore';
 import draggable from 'vuedraggable';
 
 const mapStore = useMapStore();
 const showModal = ref(false);
+const layerSource = ref('custom');
+const selectedGeoServerLayer = ref('');
+const publishedLayers = ref([]);
 const newLayer = ref({
     type: 'wms',
     name: '',
@@ -119,6 +158,11 @@ const layersList = computed({
 const selectedLayerId = computed(() => mapStore.selectedLayer);
 const availableBasemaps = computed(() => mapStore.availableBasemaps);
 const selectedBasemap = ref(mapStore.basemap);
+
+// Load published layers when component mounts
+onMounted(async () => {
+    await loadPublishedLayers();
+});
 
 const selectLayer = (layerId) => {
     mapStore.selectLayer(layerId);
@@ -148,6 +192,8 @@ const showAddLayerModal = () => {
 
 const closeModal = () => {
     showModal.value = false;
+    layerSource.value = 'custom';
+    selectedGeoServerLayer.value = '';
     newLayer.value = {
         type: 'wms',
         name: '',
@@ -175,6 +221,39 @@ const addLayer = () => {
 
     mapStore.addLayer(layer);
     closeModal();
+};
+
+const loadPublishedLayers = async () => {
+    try {
+        // Fetch published layers from the backend
+        const response = await window.axios.get('/layers');
+        if (response.data && response.data.data) {
+            publishedLayers.value = response.data.data.filter(layer => layer.published);
+        }
+    } catch (error) {
+        console.error('Error loading published layers:', error);
+    }
+};
+
+const onSourceChange = () => {
+    if (layerSource.value === 'geoserver') {
+        loadPublishedLayers();
+    }
+};
+
+const onGeoServerLayerSelect = () => {
+    const layer = publishedLayers.value.find(l => l.id === parseInt(selectedGeoServerLayer.value));
+    if (layer) {
+        // Get GeoServer base URL from config or use default
+        const geoserverUrl = import.meta.env.VITE_GEOSERVER_URL || 'http://localhost:8080/geoserver';
+        
+        newLayer.value = {
+            type: 'wms',
+            name: layer.name,
+            url: `${geoserverUrl}/wms`,
+            layers: layer.geoserver_layer_name || `${layer.geoserver_workspace}:${layer.table_name}`
+        };
+    }
 };
 </script>
 
