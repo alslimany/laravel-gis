@@ -15,6 +15,17 @@ A Laravel-based WebGIS application with Docker infrastructure including PostGIS,
 - **Nginx** - High-performance web server
 - **Docker Compose** - Multi-container orchestration
 
+### Production Ready ✨ NEW
+- ✅ **Production Docker Setup**: Optimized containers with health checks
+- ✅ **SSL/HTTPS Support**: Nginx configuration with Let's Encrypt
+- ✅ **Automated Backups**: Daily PostgreSQL backups with retention
+- ✅ **Health Monitoring**: Endpoints for app, database, cache, and queue status
+- ✅ **Enhanced Logging**: Specialized channels for GIS, performance, and imports
+- ✅ **Test Infrastructure**: 132 tests with spatial test helpers
+- ✅ **Comprehensive Documentation**: 70,000+ words covering API, deployment, testing, and monitoring
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for production deployment and [TESTING_GUIDE.md](TESTING_GUIDE.md) for testing documentation.
+
 ## Key Features
 
 ### GIS Tools & Analysis ✨ NEW
@@ -366,6 +377,95 @@ docker compose exec postgis pg_isready -U postgres
 # Check database exists
 docker compose exec postgis psql -U postgres -l
 ```
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+php artisan test
+
+# Run specific test suite
+php artisan test --testsuite=Unit
+php artisan test --testsuite=Feature
+
+# Run with coverage (requires Xdebug)
+php artisan test --coverage
+```
+
+### Test Database Setup
+
+For full spatial test coverage, configure PostgreSQL:
+
+```bash
+# Create test database
+docker compose exec postgis psql -U postgres -c "CREATE DATABASE laravel_gis_test;"
+docker compose exec postgis psql -U postgres -d laravel_gis_test -c "CREATE EXTENSION postgis;"
+
+# Update phpunit.xml to use PostgreSQL instead of SQLite
+```
+
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing documentation.
+
+## Production Deployment
+
+### Quick Production Setup
+
+```bash
+# 1. Configure environment
+cp .env.production.example .env
+nano .env  # Update passwords and domain
+
+# 2. Generate SSL certificates (see docker/ssl/README.md)
+
+# 3. Start production containers
+docker compose -f docker-compose.production.yml up -d
+
+# 4. Run migrations and optimize
+docker compose -f docker-compose.production.yml exec laravel-app php artisan migrate --force
+docker compose -f docker-compose.production.yml exec laravel-app php artisan config:cache
+docker compose -f docker-compose.production.yml exec laravel-app php artisan route:cache
+```
+
+### Health Monitoring
+
+```bash
+# Check application health
+curl https://your-domain.com/health
+
+# Detailed status
+curl https://your-domain.com/health/detailed
+
+# Performance metrics
+curl https://your-domain.com/health/metrics
+```
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment documentation.
+
+## Documentation
+
+### Comprehensive Guides
+
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete REST API reference
+- **[USER_GUIDE.md](USER_GUIDE.md)** - End-user documentation and tutorials
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Production deployment instructions
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing framework and practices
+- **[MONITORING_AND_LOGGING.md](MONITORING_AND_LOGGING.md)** - Monitoring and logging setup
+
+### Feature-Specific Documentation
+
+- **[AUTH_GUIDE.md](AUTH_GUIDE.md)** - Authentication and authorization
+- **[SPATIAL_FEATURES.md](SPATIAL_FEATURES.md)** - Spatial database capabilities
+- **[GEOSERVER_INTEGRATION.md](GEOSERVER_INTEGRATION.md)** - GeoServer integration
+- **[DATA_IMPORT.md](DATA_IMPORT.md)** - Data import system
+- **[GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md)** - GIS analysis tools
+- **[MAP_BUILDER_DOCUMENTATION.md](MAP_BUILDER_DOCUMENTATION.md)** - Map builder interface
+
+### Quick References
+
+- **[GIS_TOOLS_QUICK_REFERENCE.md](GIS_TOOLS_QUICK_REFERENCE.md)** - GIS tools quick reference
+- **[MAP_BUILDER_QUICK_REFERENCE.md](MAP_BUILDER_QUICK_REFERENCE.md)** - Map builder quick reference
 
 ## Development
 
