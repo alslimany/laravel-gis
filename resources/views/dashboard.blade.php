@@ -60,6 +60,111 @@
                 </div>
             </div>
 
+            @if($organization && isset($stats))
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-primary">{{ $stats['total_layers'] }}</h3>
+                                <p class="mb-0">Total Layers</p>
+                                <small class="text-muted">{{ $stats['published_layers'] }} published</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-success">{{ $stats['total_maps'] }}</h3>
+                                <p class="mb-0">Maps</p>
+                                <a href="{{ route('maps.index') }}" class="btn btn-sm btn-link">View all</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-info">{{ $stats['total_projects'] }}</h3>
+                                <p class="mb-0">Projects</p>
+                                <a href="{{ route('projects.index') }}" class="btn btn-sm btn-link">View all</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-warning">{{ $stats['storage_usage'] }}</h3>
+                                <p class="mb-0">Storage Used</p>
+                                <small class="text-muted">Estimated</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Recent Layers</span>
+                                <a href="{{ route('layers.index') }}" class="btn btn-sm btn-primary">View All</a>
+                            </div>
+                            <div class="card-body">
+                                @if($stats['recent_layers']->count() > 0)
+                                    <div class="list-group list-group-flush">
+                                        @foreach($stats['recent_layers'] as $layer)
+                                            <a href="{{ route('layers.show', $layer) }}" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1">{{ $layer->name }}</h6>
+                                                    <small>{{ $layer->created_at->diffForHumans() }}</small>
+                                                </div>
+                                                <p class="mb-1 text-muted small">
+                                                    {{ $layer->geometry_type }} | {{ number_format($layer->feature_count) }} features
+                                                    @if($layer->published)
+                                                        <span class="badge bg-success">Published</span>
+                                                    @endif
+                                                </p>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="text-muted">No layers yet. <a href="{{ route('imports.create') }}">Import data</a> to get started.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Recent Maps</span>
+                                <a href="{{ route('maps.builder') }}" class="btn btn-sm btn-success">Create Map</a>
+                            </div>
+                            <div class="card-body">
+                                @if($stats['recent_maps']->count() > 0)
+                                    <div class="list-group list-group-flush">
+                                        @foreach($stats['recent_maps'] as $map)
+                                            <a href="{{ route('maps.show', $map) }}" class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1">{{ $map->name }}</h6>
+                                                    <small>{{ $map->created_at->diffForHumans() }}</small>
+                                                </div>
+                                                <p class="mb-1 text-muted small">
+                                                    {{ count($map->layers ?? []) }} layers
+                                                    @if($map->is_public)
+                                                        <span class="badge bg-info">Public</span>
+                                                    @endif
+                                                </p>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="text-muted">No maps yet. <a href="{{ route('maps.builder') }}">Create your first map</a>.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if($organization && $projects->count() > 0)
                 <div class="card">
                     <div class="card-header">

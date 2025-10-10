@@ -10,7 +10,7 @@ import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import OSM from 'ol/source/OSM';
-import BingMaps from 'ol/source/BingMaps';
+import XYZ from 'ol/source/XYZ';
 import VectorSource from 'ol/source/Vector';
 import TileWMS from 'ol/source/TileWMS';
 import GeoJSON from 'ol/format/GeoJSON';
@@ -120,20 +120,27 @@ const initializeMap = () => {
 };
 
 const createBaseLayer = (basemapId) => {
+    // MapBox access token - should be configured in environment
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+    
     switch (basemapId) {
         case 'satellite':
-        case 'bing-aerial':
+        case 'mapbox-satellite':
             return new TileLayer({
-                source: new BingMaps({
-                    key: 'YOUR_BING_MAPS_KEY', // Should be from config
-                    imagerySet: 'Aerial'
+                source: new XYZ({
+                    url: `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
+                    tileSize: 512,
+                    maxZoom: 19,
+                    attributions: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 })
             });
-        case 'bing-road':
+        case 'mapbox-streets':
             return new TileLayer({
-                source: new BingMaps({
-                    key: 'YOUR_BING_MAPS_KEY', // Should be from config
-                    imagerySet: 'Road'
+                source: new XYZ({
+                    url: `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
+                    tileSize: 512,
+                    maxZoom: 19,
+                    attributions: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 })
             });
         case 'terrain':

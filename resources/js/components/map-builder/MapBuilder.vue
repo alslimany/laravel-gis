@@ -225,18 +225,43 @@ const handleAnalysisComplete = (result) => {
 
 const saveMap = async () => {
     try {
+        // Prompt for map name if not set
+        const mapName = prompt('Enter a name for your map:', 'My Map');
+        if (!mapName) {
+            return; // User cancelled
+        }
+
         const mapData = {
-            name: 'My Map',
+            name: mapName,
+            description: '',
             viewport: mapStore.viewport,
             basemap: mapStore.basemap,
-            layers: mapStore.layers
+            layers: mapStore.layers,
+            is_public: false
         };
 
+        console.log('Saving map with data:', mapData);
         const response = await window.axios.post('/api/maps', mapData);
-        alert('Map saved successfully!');
+        console.log('Map saved successfully:', response.data);
+        alert('Map saved successfully! Redirecting...');
+        
+        // Redirect to the map view
+        if (response.data.map && response.data.map.id) {
+            window.location.href = `/maps/${response.data.map.id}`;
+        }
     } catch (error) {
         console.error('Error saving map:', error);
-        alert('Failed to save map');
+        if (error.response) {
+            console.error('Response data:', error.response.data);
+            console.error('Response status:', error.response.status);
+            alert(`Failed to save map: ${error.response.data.message || error.response.statusText}`);
+        } else if (error.request) {
+            console.error('No response received:', error.request);
+            alert('Failed to save map: No response from server. Please check your connection.');
+        } else {
+            console.error('Error message:', error.message);
+            alert(`Failed to save map: ${error.message}`);
+        }
     }
 };
 

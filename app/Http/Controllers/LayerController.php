@@ -13,7 +13,7 @@ class LayerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Layer::class);
 
@@ -21,6 +21,11 @@ class LayerController extends Controller
             ->with(['user', 'project', 'organization'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
+
+        // Return JSON for API requests
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json($layers);
+        }
 
         return view('layers.index', compact('layers'));
     }
