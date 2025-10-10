@@ -56,6 +56,14 @@ class Organization extends Model
     }
 
     /**
+     * Get the maps for the organization.
+     */
+    public function maps(): HasMany
+    {
+        return $this->hasMany(Map::class);
+    }
+
+    /**
      * Scope a query to only include organizations for a given user.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
