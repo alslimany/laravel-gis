@@ -19,6 +19,7 @@ import { defaults as defaultControls, FullScreen, ScaleLine, ZoomSlider } from '
 import Select from 'ol/interaction/Select';
 import { click } from 'ol/events/condition';
 import Overlay from 'ol/Overlay';
+import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
 import 'ol/ol.css';
 
 const mapContainer = ref(null);
@@ -120,6 +121,7 @@ const initializeMap = () => {
 
 const createBaseLayer = (basemapId) => {
     switch (basemapId) {
+        case 'satellite':
         case 'bing-aerial':
             return new TileLayer({
                 source: new BingMaps({
@@ -132,6 +134,27 @@ const createBaseLayer = (basemapId) => {
                 source: new BingMaps({
                     key: 'YOUR_BING_MAPS_KEY', // Should be from config
                     imagerySet: 'Road'
+                })
+            });
+        case 'terrain':
+            return new TileLayer({
+                source: new OSM({
+                    url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                    attributions: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+                })
+            });
+        case 'dark':
+            return new TileLayer({
+                source: new OSM({
+                    url: 'https://{a-c}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                    attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                })
+            });
+        case 'light':
+            return new TileLayer({
+                source: new OSM({
+                    url: 'https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                    attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 })
             });
         case 'osm':
@@ -181,14 +204,42 @@ const addLayerToMap = (layerConfig) => {
                     'TILED': true
                 },
                 serverType: 'geoserver'
-            })
+            }),
+            opacity: layerConfig.opacity || 1
         });
     } else if (layerConfig.type === 'vector') {
+        // Create style from layer config
+        const layerStyle = layerConfig.style || {};
+        const fillColor = layerStyle.fill_color || layerStyle.fillColor || '#3388ff';
+        const strokeColor = layerStyle.stroke_color || layerStyle.strokeColor || '#3388ff';
+        const strokeWidth = layerStyle.stroke_width || layerStyle.strokeWidth || 2;
+        const fillOpacity = layerStyle.fill_opacity || layerStyle.fillOpacity || 0.2;
+        
         layer = new VectorLayer({
             source: new VectorSource({
                 url: layerConfig.url,
                 format: new GeoJSON()
-            })
+            }),
+            style: new Style({
+                fill: new Fill({
+                    color: fillColor.replace(/^#/, '') + Math.round(fillOpacity * 255).toString(16).padStart(2, '0')
+                }),
+                stroke: new Stroke({
+                    color: strokeColor,
+                    width: strokeWidth
+                }),
+                image: new CircleStyle({
+                    radius: 6,
+                    fill: new Fill({
+                        color: fillColor
+                    }),
+                    stroke: new Stroke({
+                        color: strokeColor,
+                        width: strokeWidth
+                    })
+                })
+            }),
+            opacity: layerConfig.opacity || 1
         });
     }
 

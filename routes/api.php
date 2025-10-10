@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth')->group(function () {
     // Layer API endpoints
     Route::prefix('layers/{layer}')->group(function () {
         Route::get('/geojson', [AttributeTableController::class, 'geojson'])->name('api.layers.geojson');

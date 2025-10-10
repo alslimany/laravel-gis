@@ -132,12 +132,12 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-2">
-                            <a href="{{ route('layers.attributes', $layer) }}" class="btn btn-outline-primary w-100">
+                            <a href="{{ route('layers.attributes', ['layer' => $layer->id]) }}" class="btn btn-outline-primary w-100">
                                 <i class="fas fa-table"></i> View Attribute Table
                             </a>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <a href="{{ route('layers.geojson', $layer) }}" class="btn btn-outline-info w-100" target="_blank">
+                            <a href="{{ route('layers.geojson', ['layer' => $layer->id]) }}" class="btn btn-outline-info w-100" target="_blank">
                                 <i class="fas fa-download"></i> Download as GeoJSON
                             </a>
                         </div>
