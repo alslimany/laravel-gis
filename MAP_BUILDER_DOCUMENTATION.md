@@ -8,7 +8,7 @@ The Map Builder is a comprehensive OpenLayers-based interactive map creation too
 
 ### 1. Interactive Map Builder
 - **OpenLayers Integration**: Full-featured OpenLayers map with zoom, pan, and interaction controls
-- **Base Map Selection**: Choose from multiple base maps (OpenStreetMap, Bing Aerial, Bing Road)
+- **Base Map Selection**: Street (OpenStreetMap) and Satellite, from `resources/js/map-workspace/store/mapStore.js`
 - **Layer Management**: Add, remove, and reorder layers with drag-and-drop functionality
 - **Real-time Preview**: See changes immediately as you build your map
 
@@ -60,22 +60,26 @@ Map interaction tools including:
 
 ## Architecture
 
-### Frontend Components
+### Frontend
 
-#### Vue Components
-1. **MapBuilder.vue**: Main container component
-2. **MapComponent.vue**: OpenLayers map implementation
-3. **LayerPanel.vue**: Layer management interface
-4. **ToolPanel.vue**: Map interaction tools
-5. **StyleEditor.vue**: Layer styling controls
+The builder is React with Inertia. `app/Http/Controllers/MapController.php` renders Inertia pages under `resources/js/Pages/Maps/`. `Builder.tsx` hydrates the Zustand store and mounts `MapWorkspace`.
 
-#### State Management
-- **Pinia Store** (`mapStore.js`): Centralized state management for:
+#### React components (`resources/js/map-workspace/`)
+1. **MapWorkspace.jsx**: Workspace container (`mode` is `edit` or `view`)
+2. **map/MapView.jsx**: OpenLayers map
+3. **panels/LayerPanel.jsx**: Layer list, visibility, and `@dnd-kit` reordering
+4. **panels/ToolPanel.jsx**: Map interaction tools
+5. **panels/StyleEditor.jsx**: Layer styling controls
+6. **panels/AnalysisPanel.jsx**: Spatial and attribute analysis
+
+#### State management
+- **Zustand** (`resources/js/map-workspace/store/mapStore.js`, `useMapStore`):
   - Map instance
   - Layers array
   - Selected layer
   - Viewport (center, zoom, rotation)
   - Base map selection
+  - Active tool
 
 ### Backend Components
 
@@ -158,26 +162,18 @@ To add layers from your GeoServer instance:
 
 ## Configuration
 
-### Base Maps
-Configure available base maps in the `mapStore.js`:
+### Base maps
+
+Basemaps are declared in `resources/js/map-workspace/store/mapStore.js` and drawn by `map/MapView.jsx`:
 
 ```javascript
-availableBasemaps: [
-    { id: 'osm', name: 'OpenStreetMap', type: 'tile' },
-    { id: 'bing-aerial', name: 'Bing Aerial', type: 'tile' },
-    { id: 'bing-road', name: 'Bing Road', type: 'tile' }
-]
+const availableBasemaps = [
+    { id: 'osm', name: 'Street', type: 'tile' },
+    { id: 'imagery', name: 'Satellite', type: 'tile' },
+];
 ```
 
-### Bing Maps API Key
-To use Bing Maps, update the API key in `MapComponent.vue`:
-
-```javascript
-new BingMaps({
-    key: 'YOUR_BING_MAPS_KEY',
-    imagerySet: 'Aerial'
-})
-```
+The current builder does not use a Bing Maps key.
 
 ## Integration with Existing Features
 
@@ -199,11 +195,15 @@ The map builder complements the existing layer management:
 ## Technical Details
 
 ### Dependencies
-- **OpenLayers 9**: Modern mapping library
-- **Vue 3**: Progressive JavaScript framework
-- **Pinia**: State management
-- **vuedraggable**: Drag-and-drop layer ordering
-- **Laravel Vite Plugin**: Asset building
+
+`composer.json` and `package.json` are the source of truth.
+
+- **OpenLayers** (`ol` ^10)
+- **React** ^19 and `@inertiajs/react`
+- **Laravel** 13 (`laravel/framework` ^13.0) and `inertiajs/inertia-laravel` on PHP ^8.3
+- **Zustand**: map workspace state
+- **@dnd-kit**: drag-and-drop layer ordering in `LayerPanel.jsx`
+- **Vite** with `@vitejs/plugin-react`
 
 ### Browser Support
 - Chrome (latest)

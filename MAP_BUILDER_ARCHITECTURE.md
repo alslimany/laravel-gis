@@ -1,5 +1,7 @@
 # Map Builder Architecture
 
+> **Historical snapshot (not the current stack).** This note describes an earlier Vue 3 and Laravel 12 map builder. The application now uses Laravel 13, React 19, Inertia, Zustand, and OpenLayers 10. Start at [MAP_BUILDER_README.md](MAP_BUILDER_README.md). Versions live in `composer.json` and `package.json`.
+
 ## System Architecture Overview
 
 ```

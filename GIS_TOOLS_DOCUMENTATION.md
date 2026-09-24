@@ -160,12 +160,14 @@ window.location.href = `/export/layer/${layerId}/geojson`;
 window.location.href = `/export/map/${mapId}/config`;
 ```
 
-### 2. Frontend Components
+### 2. Frontend components
 
-#### ToolPanel.vue
-Located in `resources/js/components/map-builder/ToolPanel.vue`
+These panels are React components in the Inertia map workspace. `resources/js/Pages/Maps/Builder.tsx` mounts `MapWorkspace`, which renders them.
 
-**Enhanced Tools:**
+#### ToolPanel
+Located in `resources/js/map-workspace/panels/ToolPanel.jsx`. Props: `map`, `onToolSelected`, `mode`. The active tool is also kept on the Zustand store (`useMapStore`).
+
+**Tools:**
 - Pan
 - Select features
 - Draw Point
@@ -177,11 +179,10 @@ Located in `resources/js/components/map-builder/ToolPanel.vue`
 - Zoom In/Out
 - Zoom to Extent
 
-**Events:**
-- `tool-selected` - Emitted when a tool is activated
+`onToolSelected` is called with the tool id when a tool is activated.
 
-#### AnalysisPanel.vue
-Located in `resources/js/components/map-builder/AnalysisPanel.vue`
+#### AnalysisPanel
+Located in `resources/js/map-workspace/panels/AnalysisPanel.jsx`. Props: `selectedLayer`, `selectedGeometry`, `onClose`, `onAnalysisComplete`.
 
 **Features:**
 
@@ -206,12 +207,10 @@ Located in `resources/js/components/map-builder/AnalysisPanel.vue`
    - Indicates if more features exist
 
 **Props:**
-- `selectedLayer` - Currently selected layer object
-- `selectedGeometry` - Currently drawn/selected geometry in WKT
-
-**Events:**
-- `close` - Emitted when panel is closed
-- `analysis-complete` - Emitted when analysis completes with results
+- `selectedLayer` — currently selected layer object
+- `selectedGeometry` — currently drawn or selected geometry in WKT
+- `onClose` — called when the panel is closed
+- `onAnalysisComplete` — called when analysis completes with results
 
 ## Usage Examples
 

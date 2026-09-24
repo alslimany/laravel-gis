@@ -2,9 +2,24 @@
 
 A Laravel-based WebGIS application with Docker infrastructure including PostGIS, GeoServer, Redis, and Nginx.
 
+## Current stack
+
+`composer.json` and `package.json` are the source of truth. If this README disagrees with those files, trust the manifests.
+
+| Piece | Constraint | Manifest |
+| --- | --- | --- |
+| PHP | `^8.3` (app image is PHP 8.4-FPM in `Dockerfile`) | `composer.json` |
+| Laravel | `laravel/framework` `^13.0` | `composer.json` |
+| Inertia (server) | `inertiajs/inertia-laravel` | `composer.json` |
+| React | `^19` | `package.json` |
+| Inertia (client) | `@inertiajs/react` | `package.json` |
+| OpenLayers | `ol` `^10` | `package.json` |
+
+The UI is React with Inertia and OpenLayers.
+
 ## Features
 
-- **Laravel 12** - Modern PHP framework
+- **Laravel 13** on PHP 8.3+, with a React 19, Inertia, and OpenLayers 10 frontend
 - **Authentication & Authorization** - Complete role-based access control system with organization isolation
 - **PostGIS 13-3.1** - Spatial database extension for PostgreSQL with full spatial database support
 - **Spatial Models** - User, Organization, and Project models with spatial capabilities
@@ -216,7 +231,7 @@ make install        # Complete installation
 
 ### Laravel App
 - **Container**: `laravel-app`
-- **Image**: Custom (PHP 8.2-FPM)
+- **Image**: Custom (PHP 8.4-FPM; `composer.json` requires PHP `^8.3`)
 - **Extensions**: PDO PostgreSQL, GD, ZIP, Redis
 - **Port**: 9000 (internal)
 
@@ -479,6 +494,7 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment documenta
 - **[GEOSERVER_INTEGRATION.md](GEOSERVER_INTEGRATION.md)** - GeoServer integration
 - **[DATA_IMPORT.md](DATA_IMPORT.md)** - Data import system
 - **[GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md)** - GIS analysis tools
+- **[MAP_BUILDER_README.md](MAP_BUILDER_README.md)** - Map builder getting started (React / Inertia)
 - **[MAP_BUILDER_DOCUMENTATION.md](MAP_BUILDER_DOCUMENTATION.md)** - Map builder interface
 
 ### Quick References
@@ -486,14 +502,33 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment documenta
 - **[GIS_TOOLS_QUICK_REFERENCE.md](GIS_TOOLS_QUICK_REFERENCE.md)** - GIS tools quick reference
 - **[MAP_BUILDER_QUICK_REFERENCE.md](MAP_BUILDER_QUICK_REFERENCE.md)** - Map builder quick reference
 
+Living guides stay in the repository root. They were not moved under `docs/`.
+
+### Historical snapshots
+
+These files describe an earlier Vue 3 / Laravel 12 map builder. They are not the current stack. Start with [MAP_BUILDER_README.md](MAP_BUILDER_README.md) instead.
+
+- [MAP_BUILDER_ARCHITECTURE.md](MAP_BUILDER_ARCHITECTURE.md)
+- [MAP_BUILDER_CHECKLIST.md](MAP_BUILDER_CHECKLIST.md)
+- [MAP_BUILDER_EXAMPLES.md](MAP_BUILDER_EXAMPLES.md)
+- [MAP_BUILDER_FIXES.md](MAP_BUILDER_FIXES.md)
+- [MAP_BUILDER_FINAL_SUMMARY.md](MAP_BUILDER_FINAL_SUMMARY.md)
+- [MAP_BUILDER_IMPLEMENTATION_SUMMARY.md](MAP_BUILDER_IMPLEMENTATION_SUMMARY.md)
+- [GIS_TOOLS_FEATURES.md](GIS_TOOLS_FEATURES.md)
+- [GIS_TOOLS_IMPLEMENTATION_SUMMARY.md](GIS_TOOLS_IMPLEMENTATION_SUMMARY.md)
+- [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)
+- [IMPLEMENTATION_COMPLETE_SUMMARY.md](IMPLEMENTATION_COMPLETE_SUMMARY.md)
+- [ENHANCEMENTS_SUMMARY.md](ENHANCEMENTS_SUMMARY.md)
+- [WEBGIS_FIXES_SUMMARY.md](WEBGIS_FIXES_SUMMARY.md)
+
 ## Development
 
 This project follows Docker best practices from [webgis.dev](https://webgis.dev) for optimal service communication and volume management.
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Issues and pull requests are welcome on this repository.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the [MIT license](https://opensource.org/licenses/MIT).
