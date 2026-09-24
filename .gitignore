@@ -49,3 +49,6 @@ coverage/
 
 # Temporary files
 /tmp/
+
+# Graphify analysis artifacts (local only; not product runtime assets)
+/graphify-out/
