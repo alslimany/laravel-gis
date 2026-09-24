@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\DB;
 $user = User::create([
     'name' => 'John Doe',
     'email' => 'john@example.com',
+    // Local example only. Never reuse this password on a public host.
     'password' => bcrypt('password'),
     'location' => DB::raw("ST_MakePoint(-122.4194, 37.7749)::geography")
 ]);

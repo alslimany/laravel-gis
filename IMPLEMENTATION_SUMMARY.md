@@ -111,12 +111,14 @@ This document summarizes the complete GeoServer integration implementation for t
 
 ## Configuration
 
-All settings can be configured via environment variables:
+All settings can be configured via environment variables.
+
+**Local demo only.** `CHANGE_ME` is a placeholder. **Change it before any network exposure. Never use the stock localhost password (`geoserver`) on a public host.** See [Public repo security](README.md#public-repo-security).
 
 ```env
 GEOSERVER_URL=http://geoserver:8080/geoserver
 GEOSERVER_ADMIN_USER=admin
-GEOSERVER_ADMIN_PASSWORD=geoserver
+GEOSERVER_ADMIN_PASSWORD=CHANGE_ME
 GEOSERVER_WORKSPACE=webgis
 GEOSERVER_DATASTORE=postgis_store
 GEOSERVER_TIMEOUT=30

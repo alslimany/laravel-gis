@@ -91,13 +91,19 @@ cp .env.production.example .env
 nano .env
 ```
 
-Update the following:
+Update the following. Each secret must be unique and strong. **Never use the local demo passwords** `password`, `geoserver`, or `secret`.
+
 - `APP_URL`: Your domain (https://your-domain.com)
-- `DB_PASSWORD`: Strong database password
-- `REDIS_PASSWORD`: Strong Redis password
-- `GEOSERVER_ADMIN_PASSWORD`: Strong GeoServer password
+- `DB_PASSWORD`: Unique strong database password
+- `REDIS_PASSWORD`: Unique strong Redis password
+- `GEOSERVER_ADMIN_PASSWORD`: Unique strong GeoServer admin password
+- `APP_KEY`: Generated below; do not reuse a committed or demo key
 - Mail settings
 - Other API keys as needed
+
+#### Public repo security
+
+This repository is public. Never commit `.env` or any real secret. Placeholders in `.env.production.example` are not passwords. If a local demo password (`password`, `geoserver`, or `secret`) was ever used outside localhost, rotate it before this host is reachable. See [Public repo security](README.md#public-repo-security) in the README.
 
 ### 3. Generate Application Key
 
@@ -127,8 +133,9 @@ sleep 10
 # Run migrations
 docker compose -f docker-compose.production.yml exec laravel-app php artisan migrate --force
 
-# Seed initial data (optional)
-docker compose -f docker-compose.production.yml exec laravel-app php artisan db:seed --force
+# Do not seed the stock demo user on a public host.
+# DatabaseSeeder creates test@example.com with the local demo password.
+# Skip db:seed here unless you have replaced that seeder with production data.
 ```
 
 ### 6. Build Frontend Assets
@@ -257,15 +264,18 @@ DB_HOST=postgis
 DB_PORT=5432
 DB_DATABASE=laravel_gis_prod
 DB_USERNAME=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=CHANGE_ME
 ```
+
+`CHANGE_ME` is a placeholder. Set a unique strong password. Do not use the local demo value `secret`.
 
 ### Create Additional Users
 
 ```bash
 docker compose -f docker-compose.production.yml exec postgis psql -U postgres
 
-CREATE USER app_user WITH PASSWORD 'secure_password';
+-- Replace CHANGE_ME with a unique strong password. Never use local demo passwords.
+CREATE USER app_user WITH PASSWORD 'CHANGE_ME';
 GRANT ALL PRIVILEGES ON DATABASE laravel_gis_prod TO app_user;
 GRANT ALL ON SCHEMA public TO app_user;
 \q
@@ -275,9 +285,11 @@ GRANT ALL ON SCHEMA public TO app_user;
 
 ### Access GeoServer Admin
 
-1. Navigate to `http://localhost:8081/geoserver`
-2. Login with credentials from `.env`
+1. Navigate to `http://localhost:8081/geoserver` only from the server itself (the production compose file binds this port to localhost)
+2. Log in with the unique `GEOSERVER_ADMIN_USER` / `GEOSERVER_ADMIN_PASSWORD` from `.env`
 3. Configure workspaces and data stores
+
+Do not use the local demo GeoServer password `geoserver`.
 
 ### Create Workspace
 
@@ -287,7 +299,7 @@ docker compose -f docker-compose.production.yml exec laravel-app php artisan geo
 
 ### Production Settings
 
-1. **Security**: Change default passwords
+1. **Security**: Set a unique strong admin password. Never keep the local demo password `geoserver`
 2. **CORS**: Configure allowed origins
 3. **Caching**: Enable tile caching
 4. **Logging**: Set appropriate log level
@@ -568,7 +580,7 @@ sudo certbot renew --force-renewal
 
 ## Security Checklist
 
-- [ ] Change all default passwords
+- [ ] Set unique strong secrets for the database, Redis, GeoServer, and app key. Never reuse local demo passwords (`password`, `geoserver`, `secret`)
 - [ ] Configure firewall rules
 - [ ] Enable SSL/HTTPS
 - [ ] Set secure cookie settings

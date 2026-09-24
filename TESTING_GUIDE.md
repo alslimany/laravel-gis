@@ -558,7 +558,8 @@ jobs:
         env:
           POSTGRES_DB: laravel_gis_test
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          # Throwaway CI database only. Do not reuse local demo passwords.
+          POSTGRES_PASSWORD: CHANGE_ME
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -587,7 +588,7 @@ jobs:
           DB_PORT: 5432
           DB_DATABASE: laravel_gis_test
           DB_USERNAME: postgres
-          DB_PASSWORD: postgres
+          DB_PASSWORD: CHANGE_ME
         run: php artisan test --coverage
 ```
 
