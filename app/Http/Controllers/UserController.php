@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -27,7 +28,9 @@ class UserController extends Controller
             })
             ->paginate(15);
 
-        return view('users.index', compact('users'));
+        return Inertia::render('Users/Index', [
+            'users' => $users,
+        ]);
     }
 
     /**
@@ -38,8 +41,12 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         $roles = Role::all();
+        $user->load(['roles', 'organization']);
 
-        return view('users.edit', compact('user', 'roles'));
+        return Inertia::render('Users/Edit', [
+            'user' => $user,
+            'roles' => $roles,
+        ]);
     }
 
     /**

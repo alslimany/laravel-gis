@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -34,7 +35,7 @@ class DataImportTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('imports.index'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('imports.index');
+        $response->assertInertia(fn ($page) => $page->component('Imports/Index'));
     }
 
     public function test_user_can_access_import_create_form()
@@ -42,12 +43,61 @@ class DataImportTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('imports.create'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('imports.create');
+        $response->assertInertia(fn ($page) => $page->component('Imports/Create'));
+        $response->assertSee('Feature data');
+        $response->assertSee('Imagery');
+    }
+
+    public function test_imagery_page_explains_georeferencing(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('imports.create', ['kind' => 'imagery']));
+
+        $response->assertStatus(200);
+        $response->assertSee('world file');
+        $response->assertSee('satellite basemap');
+    }
+
+    public function test_geotiff_upload_is_queued_as_imagery(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        $file = UploadedFile::fake()->create('coast.tif', 40, 'image/tiff');
+
+        $response = $this->actingAs($this->user)->post(route('imports.imagery.store'), [
+            'files' => [$file],
+            'acquired_at' => '2026-09-23',
+            'name' => 'Coast',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('data_imports', [
+            'user_id' => $this->user->id,
+            'file_type' => 'imagery',
+            'file_name' => 'coast.tif',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_png_without_world_file_is_rejected(): void
+    {
+        Storage::fake('local');
+
+        $file = UploadedFile::fake()->create('photo.png', 20, 'image/png');
+
+        $response = $this->actingAs($this->user)->post(route('imports.imagery.store'), [
+            'files' => [$file],
+            'acquired_at' => '2026-09-23',
+        ]);
+
+        $response->assertSessionHasErrors('files');
+        $this->assertDatabaseCount('data_imports', 0);
     }
 
     public function test_user_can_upload_geojson_file()
     {
         Storage::fake('local');
+        Queue::fake();
 
         $file = UploadedFile::fake()->create('test.geojson', 100, 'application/geo+json');
 
@@ -74,8 +124,9 @@ class DataImportTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('imports.show', $import));
 
         $response->assertStatus(200);
-        $response->assertViewIs('imports.show');
-        $response->assertViewHas('import', $import);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Imports/Show')
+            ->where('import.id', $import->id));
     }
 
     public function test_user_cannot_view_other_users_import()
@@ -121,15 +172,59 @@ class DataImportTest extends TestCase
     public function test_upload_validates_file_size()
     {
         Storage::fake('local');
+        config(['dataimport.max_file_size' => 1024]);
 
-        // Create a file larger than 100MB (mocked)
-        $file = UploadedFile::fake()->create('large.geojson', 200000, 'application/geo+json');
+        $file = UploadedFile::fake()->create('large.geojson', 5, 'application/geo+json');
 
         $response = $this->actingAs($this->user)->post(route('imports.store'), [
             'file' => $file,
         ]);
 
         $response->assertSessionHasErrors('file');
+    }
+
+    public function test_kml_is_accepted_when_detected_as_xml()
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        $file = UploadedFile::fake()->create('places.kml', 20, 'text/xml');
+
+        $response = $this->actingAs($this->user)->post(route('imports.store'), [
+            'file' => $file,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('data_imports', [
+            'file_name' => 'places.kml',
+            'file_type' => 'kml',
+        ]);
+    }
+
+    public function test_shapefile_octet_stream_and_zip_package_are_accepted()
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        $shp = UploadedFile::fake()->create('bounds.shp', 40, 'application/octet-stream');
+        $response = $this->actingAs($this->user)->post(route('imports.store'), [
+            'file' => $shp,
+        ]);
+        $response->assertRedirect();
+        $this->assertDatabaseHas('data_imports', [
+            'file_type' => 'shapefile',
+            'file_name' => 'bounds.shp',
+        ]);
+
+        $zip = UploadedFile::fake()->create('bounds.zip', 80, 'application/zip');
+        $zipResponse = $this->actingAs($this->user)->post(route('imports.store'), [
+            'files' => [$zip],
+        ]);
+        $zipResponse->assertRedirect();
+        $this->assertDatabaseHas('data_imports', [
+            'file_type' => 'shapefile',
+            'file_name' => 'bounds.zip',
+        ]);
     }
 
     public function test_import_status_endpoint_returns_json()

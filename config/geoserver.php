@@ -16,6 +16,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Browser-facing GeoServer URL
+    |--------------------------------------------------------------------------
+    |
+    | Maps in the browser cannot use the Docker hostname. Imagery layers
+    | request WMS from this address.
+    |
+    */
+
+    'public_url' => rtrim(env('GEOSERVER_PUBLIC_URL', 'http://127.0.0.1:8081/geoserver'), '/'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Point icon URL GeoServer can fetch
+    |--------------------------------------------------------------------------
+    |
+    | Published SLD files reference this base. Inside Docker, GeoServer reaches
+    | nginx by its service name. The browser uses the relative /map-icons path.
+    |
+    */
+
+    'icon_base_url' => rtrim(env('MAP_ICON_BASE_URL', 'http://nginx/map-icons'), '/'),
+
+    /*
+    |--------------------------------------------------------------------------
     | GeoServer Admin Credentials
     |--------------------------------------------------------------------------
     |

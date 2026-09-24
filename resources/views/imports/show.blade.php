@@ -162,13 +162,25 @@
                                 <strong>Next Steps:</strong>
                                 <ul class="mb-0">
                                     <li>The data is now available in PostGIS table: <code>{{ $import->table_name }}</code></li>
-                                    <li>Create a layer from this import to visualize and manage the data</li>
-                                    <li>Once created, you can publish the layer to GeoServer for visualization</li>
+                                    @if(!empty($import->metadata['layer_id']))
+                                        <li>A layer was created automatically from this Excel import.</li>
+                                    @else
+                                        <li>Create a layer from this import to visualize and manage the data</li>
+                                    @endif
                                 </ul>
                             </div>
-                            <a href="{{ route('layers.create', ['table_name' => $import->table_name, 'name' => $import->file_name]) }}" class="btn btn-primary">
-                                <i class="fas fa-layer-group"></i> Create Layer from Import
-                            </a>
+                            @if(!empty($import->metadata['layer_id']))
+                                <a href="{{ url('/maps/builder?layer='.$import->metadata['layer_id']) }}" class="btn btn-primary">
+                                    <i class="fas fa-map"></i> Open on map
+                                </a>
+                                <a href="{{ route('layers.show', $import->metadata['layer_id']) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-layer-group"></i> View layer
+                                </a>
+                            @else
+                                <a href="{{ route('layers.create', ['table_name' => $import->table_name, 'name' => $import->file_name]) }}" class="btn btn-primary">
+                                    <i class="fas fa-layer-group"></i> Create Layer from Import
+                                </a>
+                            @endif
                         </div>
                     @endif
 

@@ -7,6 +7,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class LayerController extends Controller
 {
@@ -17,17 +18,30 @@ class LayerController extends Controller
     {
         $this->authorize('viewAny', Layer::class);
 
-        $layers = Layer::where('organization_id', Auth::user()->organization_id)
+        $user = Auth::user();
+        $access = app(\App\Services\ContentAccessService::class);
+        $all = Layer::where('organization_id', $user->organization_id)
             ->with(['user', 'project', 'organization'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->get();
+        $visible = $access->filterVisible($user, 'layer', $all);
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = 15;
+        $layers = new \Illuminate\Pagination\LengthAwarePaginator(
+            $visible->forPage($page, $perPage)->values(),
+            $visible->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
-        // Return JSON for API requests
-        if ($request->expectsJson() || $request->is('api/*')) {
+        if (($request->expectsJson() || $request->is('api/*')) && ! $request->header('X-Inertia')) {
             return response()->json($layers);
         }
 
-        return view('layers.index', compact('layers'));
+        return Inertia::render('Layers/Index', [
+            'layers' => $layers,
+        ]);
     }
 
     /**
@@ -41,7 +55,9 @@ class LayerController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('layers.create', compact('projects'));
+        return Inertia::render('Layers/Create', [
+            'projects' => $projects,
+        ]);
     }
 
     /**
@@ -93,9 +109,21 @@ class LayerController extends Controller
     {
         $this->authorize('view', $layer);
 
-        $layer->load(['user', 'project', 'organization']);
+        $layer->load(['user', 'project', 'organization', 'fields']);
 
-        return view('layers.show', compact('layer'));
+        $shapes = [];
+        if ($layer->table_name) {
+            try {
+                $shapes = app(\App\Services\FeatureService::class)->shapeCounts($layer->table_name);
+            } catch (\Throwable) {
+                $shapes = [];
+            }
+        }
+
+        return Inertia::render('Layers/Show', [
+            'layer' => $layer,
+            'shapes' => $shapes,
+        ]);
     }
 
     /**
@@ -109,7 +137,10 @@ class LayerController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('layers.edit', compact('layer', 'projects'));
+        return Inertia::render('Layers/Edit', [
+            'layer' => $layer,
+            'projects' => $projects,
+        ]);
     }
 
     /**
@@ -286,7 +317,7 @@ class LayerController extends Controller
                         $sldContent
                     );
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 \Log::warning('Failed to update style in GeoServer: ' . $e->getMessage());
                 // Style is still saved to DB
             }
@@ -309,35 +340,6 @@ class LayerController extends Controller
      */
     protected function generateSLD(Layer $layer, array $styleConfig)
     {
-        $fillColor = $styleConfig['fill_color'] ?? '#0000ff';
-        $strokeColor = $styleConfig['stroke_color'] ?? '#000000';
-        $strokeWidth = $styleConfig['stroke_width'] ?? 1;
-        $fillOpacity = $styleConfig['fill_opacity'] ?? 0.5;
-        
-        return <<<SLD
-<?xml version="1.0" encoding="UTF-8"?>
-<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld">
-  <NamedLayer>
-    <Name>{$layer->geoserver_layer_name}</Name>
-    <UserStyle>
-      <Name>custom_style</Name>
-      <FeatureTypeStyle>
-        <Rule>
-          <PolygonSymbolizer>
-            <Fill>
-              <CssParameter name="fill">{$fillColor}</CssParameter>
-              <CssParameter name="fill-opacity">{$fillOpacity}</CssParameter>
-            </Fill>
-            <Stroke>
-              <CssParameter name="stroke">{$strokeColor}</CssParameter>
-              <CssParameter name="stroke-width">{$strokeWidth}</CssParameter>
-            </Stroke>
-          </PolygonSymbolizer>
-        </Rule>
-      </FeatureTypeStyle>
-    </UserStyle>
-  </NamedLayer>
-</StyledLayerDescriptor>
-SLD;
+        return app(\App\Services\SldGenerator::class)->generate($layer, $styleConfig);
     }
 }

@@ -109,7 +109,7 @@
                                     </tr>
                                     <tr>
                                         <th>Published At:</th>
-                                        <td>{{ $layer->published_at->format('Y-m-d H:i:s') }}</td>
+                                        <td>{{ optional($layer->published_at)->format('Y-m-d H:i:s') ?? '—' }}</td>
                                     </tr>
                                 @endif
                                 <tr>
@@ -131,6 +131,7 @@
                 <div class="card-header">Quick Actions</div>
                 <div class="card-body">
                     <div class="row">
+                        @if($layer->geometry_type !== 'Raster')
                         <div class="col-md-6 mb-2">
                             <a href="{{ route('layers.attributes', ['layer' => $layer->id]) }}" class="btn btn-outline-primary w-100">
                                 <i class="fas fa-table"></i> View Attribute Table
@@ -141,6 +142,14 @@
                                 <i class="fas fa-download"></i> Download as GeoJSON
                             </a>
                         </div>
+                        @else
+                        <div class="col-12 mb-2">
+                            <p class="small mb-0" style="color:#3f4c5e;">
+                                Imagery layer. Latest capture {{ $layer->metadata['acquired_at'] ?? 'date not set' }}.
+                                {{ count($layer->metadata['granules'] ?? []) }} scene{{ count($layer->metadata['granules'] ?? []) === 1 ? '' : 's' }}.
+                            </p>
+                        </div>
+                        @endif
                         <div class="col-md-6 mb-2">
                             <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#previewModal">
                                 <i class="fas fa-map"></i> Preview on Map
@@ -151,6 +160,34 @@
                                 <i class="fas fa-palette"></i> Edit Style
                             </a>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            @if($layer->geometry_type !== 'Raster')
+            <!-- Field registry -->
+            <div class="card mt-3" id="layer-fields-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Field registry</span>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-layer-field">Add field</button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Aliases, domains, required flags, and calculated expressions for this layer.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="layer-fields-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Alias</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Domain</th>
+                                    <th>Calculated</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -175,6 +212,7 @@
                     </div>
                 </div>
             </div>
+            @endif
             @endif
         </div>
     </div>
@@ -235,16 +273,38 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!map) {
                 map = L.map('map').setView([0, 0], 2);
                 
-                // Add OpenStreetMap tile layer
+                @if($layer->geometry_type === 'Raster')
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+                    maxZoom: 19
+                }).addTo(map);
+                @else
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     maxZoom: 19
                 }).addTo(map);
-                
-                // Show loading indicator
+                @endif
+
                 document.getElementById('map-loading').style.display = 'block';
                 document.getElementById('map').style.display = 'block';
-                
+
+                @if($layer->geometry_type === 'Raster')
+                const imagery = L.tileLayer.wms(@json(rtrim(config('geoserver.public_url'), '/').'/wms'), {
+                    layers: @json(($layer->geoserver_workspace ? $layer->geoserver_workspace.':' : '').($layer->geoserver_layer_name ?: $layer->table_name)),
+                    format: 'image/png',
+                    transparent: true,
+                    version: '1.1.1',
+                    SORTING: 'acquired D'
+                }).addTo(map);
+                const bbox = @json($layer->metadata['bbox'] ?? null);
+                document.getElementById('map-loading').style.display = 'none';
+                if (Array.isArray(bbox) && bbox.length === 4) {
+                    map.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]]);
+                }
+                setTimeout(() => map.invalidateSize(), 100);
+                return;
+                @endif
+
                 // Load GeoJSON data
                 fetch('{{ route('layers.geojson', $layer) }}')
                     .then(response => {
@@ -317,5 +377,86 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<script>
+(function () {
+    const layerId = {{ $layer->id }};
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    const tbody = document.querySelector('#layer-fields-table tbody');
+    if (!tbody) return;
+
+    function headers(json) {
+        const h = { 'X-CSRF-TOKEN': csrf || '', 'Accept': 'application/json' };
+        if (json) h['Content-Type'] = 'application/json';
+        return h;
+    }
+
+    async function loadFields() {
+        const res = await fetch(`/api/layers/${layerId}/fields`, { headers: headers() });
+        const data = await res.json();
+        const fields = data.fields || data.data || [];
+        tbody.innerHTML = '';
+        fields.forEach((field) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><code>${field.name}</code></td>
+                <td><input class="form-control form-control-sm" data-k="alias" value="${field.alias || ''}"></td>
+                <td><input class="form-control form-control-sm" data-k="type" value="${field.type || 'text'}"></td>
+                <td><input type="checkbox" data-k="required" ${field.required ? 'checked' : ''}></td>
+                <td><input class="form-control form-control-sm" data-k="domain" value="${(field.domain_values || []).join(',')}"></td>
+                <td><input class="form-control form-control-sm" data-k="calc" value="${field.calculated_expression || ''}"></td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary save-field">Save</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger del-field">Delete</button>
+                </td>`;
+            tr.dataset.id = field.id;
+            tbody.appendChild(tr);
+        });
+    }
+
+    tbody.addEventListener('click', async (event) => {
+        const tr = event.target.closest('tr');
+        if (!tr) return;
+        const id = tr.dataset.id;
+        if (event.target.classList.contains('save-field')) {
+            const payload = {
+                alias: tr.querySelector('[data-k="alias"]').value || null,
+                type: tr.querySelector('[data-k="type"]').value || 'text',
+                required: tr.querySelector('[data-k="required"]').checked,
+                domain_values: tr.querySelector('[data-k="domain"]').value
+                    .split(',').map((s) => s.trim()).filter(Boolean),
+                calculated_expression: tr.querySelector('[data-k="calc"]').value || null,
+            };
+            await fetch(`/api/layers/${layerId}/fields/${id}`, {
+                method: 'PUT',
+                headers: headers(true),
+                body: JSON.stringify(payload),
+            });
+            await loadFields();
+        }
+        if (event.target.classList.contains('del-field')) {
+            if (!confirm('Delete this field definition?')) return;
+            await fetch(`/api/layers/${layerId}/fields/${id}`, {
+                method: 'DELETE',
+                headers: headers(),
+            });
+            await loadFields();
+        }
+    });
+
+    document.getElementById('add-layer-field')?.addEventListener('click', async () => {
+        const name = prompt('Column name (must exist on the table):');
+        if (!name) return;
+        await fetch(`/api/layers/${layerId}/fields`, {
+            method: 'POST',
+            headers: headers(true),
+            body: JSON.stringify({ name, type: 'string', alias: name }),
+        });
+        await loadFields();
+    });
+
+    loadFields();
+})();
 </script>
 @endpush

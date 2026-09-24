@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Layer;
 use App\Models\Map;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class MapController extends Controller
 {
@@ -13,12 +15,25 @@ class MapController extends Controller
      */
     public function index()
     {
-        $maps = Map::where('organization_id', Auth::user()->organization_id)
+        $user = Auth::user();
+        $access = app(\App\Services\ContentAccessService::class);
+        $all = Map::where('organization_id', $user->organization_id)
             ->with('user')
             ->latest()
-            ->paginate(15);
+            ->get();
+        $visible = $access->filterVisible($user, 'map', $all);
+        $page = max(1, (int) request('page', 1));
+        $maps = new \Illuminate\Pagination\LengthAwarePaginator(
+            $visible->forPage($page, 15)->values(),
+            $visible->count(),
+            15,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
-        return view('maps.index', compact('maps'));
+        return Inertia::render('Maps/Index', [
+            'maps' => $maps,
+        ]);
     }
 
     /**
@@ -26,21 +41,31 @@ class MapController extends Controller
      */
     public function create()
     {
-        return view('maps.create');
+        return Inertia::render('Maps/Form');
     }
 
     /**
      * Display the map builder
      */
-    public function builder($id = null)
+    public function builder(Request $request, $id = null)
     {
         $map = null;
         if ($id) {
             $map = Map::where('organization_id', Auth::user()->organization_id)
                 ->findOrFail($id);
+            $this->assertCanViewMap($map);
         }
 
-        return view('maps.builder', compact('map'));
+        $seedLayer = null;
+        if ($request->filled('layer')) {
+            $seedLayer = \App\Models\Layer::where('organization_id', Auth::user()->organization_id)
+                ->findOrFail((int) $request->query('layer'));
+            $this->authorize('view', $seedLayer);
+        }
+
+        return Inertia::render('Maps/Builder', [
+            'initialMap' => $this->initialMapData($map, $seedLayer),
+        ]);
     }
 
     /**
@@ -78,12 +103,14 @@ class MapController extends Controller
      */
     public function show(Map $map)
     {
-        // Check access
-        if ($map->organization_id !== Auth::user()->organization_id && !$map->is_public) {
+        if ($map->organization_id !== Auth::user()->organization_id && ! $map->is_public) {
             abort(403);
         }
+        $this->assertCanViewMap($map);
 
-        return view('maps.show', compact('map'));
+        return Inertia::render('Maps/Show', [
+            'initialMap' => $this->initialMapData($map->load('user'), null),
+        ]);
     }
 
     /**
@@ -91,12 +118,14 @@ class MapController extends Controller
      */
     public function edit(Map $map)
     {
-        // Check access
         if ($map->organization_id !== Auth::user()->organization_id) {
             abort(403);
         }
+        $this->assertCanViewMap($map);
 
-        return view('maps.edit', compact('map'));
+        return Inertia::render('Maps/Form', [
+            'map' => $map,
+        ]);
     }
 
     /**
@@ -157,7 +186,9 @@ class MapController extends Controller
             abort(403);
         }
 
-        return view('maps.share', compact('map'));
+        return Inertia::render('Maps/Share', [
+            'map' => $map,
+        ]);
     }
 
     /**
@@ -169,6 +200,97 @@ class MapController extends Controller
             ->where('is_public', true)
             ->firstOrFail();
 
-        return view('maps.shared', compact('map'));
+        return Inertia::render('Maps/Shared', [
+            'map' => $map,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function initialMapData(?Map $map, ?Layer $seedLayer): array
+    {
+        $seedLayers = [];
+        $seedViewport = null;
+        $seedBasemap = 'osm';
+
+        if ($seedLayer) {
+            $isRaster = $seedLayer->geometry_type === 'Raster';
+            $seedBasemap = $isRaster ? 'imagery' : 'osm';
+
+            if ($isRaster) {
+                $workspace = $seedLayer->geoserver_workspace;
+                $coverage = $seedLayer->geoserver_layer_name ?: $seedLayer->table_name;
+                $seedLayers[] = [
+                    'id' => $seedLayer->id,
+                    'name' => $seedLayer->name,
+                    'type' => 'wms',
+                    'visible' => true,
+                    'url' => rtrim((string) config('geoserver.public_url'), '/').'/wms',
+                    'layers' => $workspace ? $workspace.':'.$coverage : $coverage,
+                    'wmsParams' => data_get($seedLayer->metadata, 'wms_params', ['SORTING' => 'acquired D']),
+                    'geometry_type' => 'Raster',
+                    'opacity' => 1,
+                ];
+                $bbox = data_get($seedLayer->metadata, 'bbox');
+                if (is_array($bbox) && count($bbox) === 4) {
+                    $seedViewport = [
+                        'center' => [($bbox[0] + $bbox[2]) / 2, ($bbox[1] + $bbox[3]) / 2],
+                        'zoom' => 12,
+                        'rotation' => 0,
+                    ];
+                }
+            } else {
+                $seedLayers[] = [
+                    'id' => $seedLayer->id,
+                    'name' => $seedLayer->name,
+                    'type' => 'mvt',
+                    'visible' => true,
+                    'mvtUrl' => "/api/layers/{$seedLayer->id}/tiles/{z}/{x}/{y}.mvt",
+                    'style_config' => $seedLayer->style_config ?: ['renderer' => 'simple'],
+                    'geometry_type' => $seedLayer->geometry_type,
+                ];
+            }
+        }
+
+        $initialLayers = $map && is_array($map->layers) ? $map->layers : $seedLayers;
+        if ($seedLayer && $map && is_array($map->layers)) {
+            $ids = collect($map->layers)->pluck('id')->all();
+            if (! in_array($seedLayer->id, $ids, true)) {
+                $initialLayers = array_merge($seedLayers, $map->layers);
+            }
+        }
+
+        if ($map) {
+            return [
+                'id' => $map->id,
+                'name' => $map->name,
+                'description' => $map->description ?? '',
+                'viewport' => $map->viewport,
+                'basemap' => $map->basemap,
+                'layers' => $initialLayers,
+            ];
+        }
+
+        return [
+            'id' => null,
+            'name' => $seedLayer->name ?? 'Untitled map',
+            'description' => '',
+            'viewport' => $seedViewport,
+            'basemap' => $seedBasemap,
+            'layers' => $initialLayers,
+        ];
+    }
+
+    protected function assertCanViewMap(Map $map): void
+    {
+        if (! app(\App\Services\ContentAccessService::class)->canView(
+            Auth::user(),
+            'map',
+            $map->id,
+            $map->organization_id
+        )) {
+            abort(403);
+        }
     }
 }

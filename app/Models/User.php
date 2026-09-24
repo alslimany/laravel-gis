@@ -10,11 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SpatialTrait;
+    use HasApiTokens, HasFactory, Notifiable, SpatialTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -91,6 +92,14 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * Get the access groups for the user.
+     */
+    public function groups(): BelongsToMany
+    {
+        return $this->belongsToMany(Group::class)->withPivot('role')->withTimestamps();
     }
 
     /**

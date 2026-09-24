@@ -21,7 +21,12 @@ class LayerPolicy
      */
     public function view(User $user, Layer $layer): bool
     {
-        return $user->organization_id === $layer->organization_id;
+        if ($user->organization_id !== $layer->organization_id) {
+            return false;
+        }
+
+        return app(\App\Services\ContentAccessService::class)
+            ->canView($user, 'layer', $layer->id, $layer->organization_id);
     }
 
     /**

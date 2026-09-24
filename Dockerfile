@@ -1,5 +1,5 @@
-# Use PHP 8.2 FPM as base image (matching composer.json requirement)
-FROM php:8.2-fpm
+# Use PHP 8.4 FPM as base image (Laravel 13 requires PHP 8.3+)
+FROM php:8.4-fpm
 
 # Set working directory
 WORKDIR /var/www/html
@@ -30,6 +30,9 @@ RUN docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Allow Esri-sized packages (zipped shapefile, KML, GeoJSON) through PHP.
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 # Copy existing application directory contents
 COPY . /var/www/html

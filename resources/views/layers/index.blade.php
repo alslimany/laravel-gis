@@ -1,114 +1,79 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Layers</span>
-                    <a href="{{ route('layers.create') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus"></i> New Layer
-                    </a>
-                </div>
+<div class="desk">
+    <header class="desk-intro">
+        <h1>Layers</h1>
+        <a href="{{ route('layers.create') }}" class="desk-primary">New layer</a>
+    </header>
 
-                <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+    @if(session('success'))
+        <p class="desk-flash">{{ session('success') }}</p>
+    @endif
 
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
+    @if(session('error'))
+        <p class="desk-flash desk-flash-error">{{ session('error') }}</p>
+    @endif
 
-                    @if($layers->isEmpty())
-                        <div class="text-center py-5">
-                            <p class="text-muted">No layers yet.</p>
-                            <a href="{{ route('layers.create') }}" class="btn btn-primary">
-                                Create Your First Layer
-                            </a>
-                        </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Project</th>
-                                        <th>Type</th>
-                                        <th>Features</th>
-                                        <th>Status</th>
-                                        <th>Created By</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($layers as $layer)
-                                        <tr>
-                                            <td>
-                                                <a href="{{ route('layers.show', $layer) }}">
-                                                    {{ $layer->name }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                @if($layer->project)
-                                                    {{ $layer->project->name }}
-                                                @else
-                                                    <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($layer->geometry_type)
-                                                    <span class="badge bg-secondary">{{ $layer->geometry_type }}</span>
-                                                @else
-                                                    <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ number_format($layer->feature_count) }}</td>
-                                            <td>
-                                                @if($layer->published)
-                                                    <span class="badge bg-success">Published</span>
-                                                @else
-                                                    <span class="badge bg-secondary">Not Published</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ $layer->user->name }}</td>
-                                            <td>{{ $layer->created_at->diffForHumans() }}</td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <a href="{{ route('layers.show', $layer) }}" class="btn btn-sm btn-info">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{{ route('layers.edit', $layer) }}" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <form action="{{ route('layers.destroy', $layer) }}" method="POST" style="display: inline;">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this layer?')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="d-flex justify-content-center">
-                            {{ $layers->links() }}
-                        </div>
-                    @endif
-                </div>
+    <section class="desk-panel">
+        @if($layers->isEmpty())
+            <p class="desk-empty">
+                No layers yet.
+                <a href="{{ route('layers.create') }}">Create a layer</a>
+                after you import a dataset.
+            </p>
+        @else
+            <div class="desk-table-wrap">
+                <table class="desk-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th class="desk-hide-sm">Project</th>
+                            <th class="desk-hide-sm">Type</th>
+                            <th class="num desk-hide-sm">Features</th>
+                            <th class="desk-status">Status</th>
+                            <th class="desk-hide-sm">Created by</th>
+                            <th class="desk-hide-sm">Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($layers as $layer)
+                            <tr>
+                                <td>
+                                    <a href="{{ route('layers.show', $layer) }}" class="desk-name">{{ $layer->name }}</a>
+                                </td>
+                                <td class="desk-hide-sm">{{ $layer->project?->name ?? '—' }}</td>
+                                <td class="mono desk-hide-sm">{{ $layer->geometry_type ?: '—' }}</td>
+                                <td class="num mono desk-hide-sm">{{ number_format($layer->feature_count) }}</td>
+                                <td class="desk-status">
+                                    <span class="{{ $layer->published ? 'pill pill-live' : 'pill' }}">
+                                        {{ $layer->published ? 'Published' : 'Draft' }}
+                                    </span>
+                                </td>
+                                <td class="desk-hide-sm">{{ $layer->user->name ?? '—' }}</td>
+                                <td class="desk-sub desk-sub-inline desk-hide-sm">{{ $layer->created_at->diffForHumans() }}</td>
+                                <td>
+                                    <div class="desk-row-actions">
+                                        <a href="{{ route('layers.show', $layer) }}">View</a>
+                                        <a href="{{ route('layers.edit', $layer) }}">Edit</a>
+                                        <form action="{{ route('layers.destroy', $layer) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" onclick="return confirm('Delete this layer?')">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
-    </div>
+
+            @if($layers->hasPages())
+                <div class="desk-pages">{{ $layers->links() }}</div>
+            @endif
+        @endif
+    </section>
 </div>
 @endsection

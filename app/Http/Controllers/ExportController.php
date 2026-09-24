@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeometryColumnHelper;
 use App\Models\Layer;
 use App\Models\Map;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ExportController extends Controller
 {
@@ -161,6 +165,68 @@ class ExportController extends Controller
                 'layers' => $map->layers,
             ],
         ]);
+    }
+
+    /**
+     * Export layer attributes to Excel (xlsx).
+     */
+    public function exportExcel(Layer $layer)
+    {
+        if ($layer->organization_id !== auth()->user()->organization_id) {
+            abort(403, 'Unauthorized');
+        }
+
+        try {
+            $geometryColumn = GeometryColumnHelper::resolve($layer->table_name);
+
+            $features = DB::select(
+                "SELECT *, ST_AsText({$geometryColumn}) as wkt FROM {$layer->table_name}"
+            );
+
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle(substr($layer->name, 0, 31) ?: 'Layer');
+
+            if (empty($features)) {
+                $sheet->setCellValue('A1', 'No data');
+            } else {
+                $first = (array) $features[0];
+                unset($first[$geometryColumn]);
+                $headers = array_keys($first);
+
+                foreach ($headers as $index => $header) {
+                    $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1).'1', $header);
+                }
+
+                $rowNum = 2;
+                foreach ($features as $feature) {
+                    $row = (array) $feature;
+                    unset($row[$geometryColumn]);
+                    $col = 1;
+                    foreach ($headers as $header) {
+                        $value = $row[$header] ?? null;
+                        if (is_bool($value)) {
+                            $value = $value ? '1' : '0';
+                        }
+                        $sheet->setCellValue(Coordinate::stringFromColumnIndex($col).$rowNum, $value);
+                        $col++;
+                    }
+                    $rowNum++;
+                }
+            }
+
+            $filename = str_replace(' ', '_', $layer->name).'_'.date('Y-m-d').'.xlsx';
+            $tempPath = storage_path('app/temp_'.$layer->id.'_'.uniqid().'.xlsx');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($tempPath);
+
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

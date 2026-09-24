@@ -21,6 +21,8 @@ class Organization extends Model
         'name',
         'description',
         'user_id',
+        'logo_path',
+        'primary_color',
     ];
 
     /**
@@ -61,6 +63,22 @@ class Organization extends Model
     public function maps(): HasMany
     {
         return $this->hasMany(Map::class);
+    }
+
+    /**
+     * Get the access groups for the organization.
+     */
+    public function groups(): HasMany
+    {
+        return $this->hasMany(Group::class);
+    }
+
+    /**
+     * Get the webhooks for the organization.
+     */
+    public function webhooks(): HasMany
+    {
+        return $this->hasMany(Webhook::class);
     }
 
     /**

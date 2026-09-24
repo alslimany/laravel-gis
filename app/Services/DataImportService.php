@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\DataImport;
+use App\Models\Layer;
 use Exception;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -31,8 +34,7 @@ class DataImportService
     public function getFileInfo(string $filePath, string $fileType): array
     {
         $command = match ($fileType) {
-            'shapefile' => [$this->ogrinfoPath, '-al', '-so', $filePath],
-            'geojson', 'kml' => [$this->ogrinfoPath, '-al', '-so', $filePath],
+            'shapefile', 'geojson', 'kml', 'csv' => [$this->ogrinfoPath, '-al', '-so', $filePath],
             default => throw new Exception("Unsupported file type: {$fileType}"),
         };
 
@@ -113,6 +115,7 @@ class DataImportService
             '-lco', 'FID=id',
             '-lco', 'SPATIAL_INDEX=GIST',
             '-t_srs', "EPSG:{$targetSrid}",
+            '-gt', '65536',
             '-overwrite',
             '-progress',
         ];
@@ -147,6 +150,82 @@ class DataImportService
         ]);
 
         return true;
+    }
+
+    /**
+     * Publish an imported PostGIS table as a feature layer.
+     */
+    public function publishLayer(
+        DataImport $import,
+        string $tableName,
+        ?string $geometryType,
+        int $featureCount
+    ): Layer {
+        $name = pathinfo($import->file_name, PATHINFO_FILENAME) ?: $tableName;
+
+        return Layer::create([
+            'user_id' => $import->user_id,
+            'organization_id' => $import->organization_id,
+            'name' => $name,
+            'description' => 'Feature layer published from '.$import->file_name,
+            'table_name' => $tableName,
+            'geometry_type' => $geometryType ?: 'Geometry',
+            'feature_count' => $featureCount,
+            'style_config' => [
+                'renderer' => 'simple',
+                'fill_color' => '#0f766e',
+                'stroke_color' => '#0b1220',
+                'stroke_width' => 1,
+                'fill_opacity' => 0.35,
+            ],
+            'metadata' => [
+                'source' => $import->file_type,
+                'import_id' => $import->id,
+            ],
+        ]);
+    }
+
+    /**
+     * Inspect, load, and publish a spatial file. Shapefile zips use GDAL /vsizip.
+     */
+    public function importDataset(DataImport $import): void
+    {
+        $disk = config('dataimport.upload_disk');
+        $filePath = Storage::disk($disk)->path($import->file_path);
+        $source = $this->resolveDatasetPath($filePath);
+        $fileType = $import->file_type === 'csv' ? 'csv' : $import->file_type;
+
+        $import->updateProgress(20);
+        $fileInfo = $this->getFileInfo($source, $fileType);
+
+        $tableName = $this->generateTableName($import->file_name, $import->organization_id);
+
+        $import->updateProgress(40);
+        $this->importToPostGIS($source, $tableName, $fileType);
+
+        $import->updateProgress(80);
+        $geometryType = $this->getTableGeometryType($tableName);
+        $featureCount = $this->getTableFeatureCount($tableName);
+        $layer = $this->publishLayer($import, $tableName, $geometryType, $featureCount);
+
+        $import->update([
+            'metadata' => array_merge($import->metadata ?? [], $fileInfo, [
+                'layer_id' => $layer->id,
+            ]),
+        ]);
+        $import->markAsCompleted($tableName, $geometryType, $featureCount);
+    }
+
+    /**
+     * A zipped shapefile is the package Esri accepts. GDAL reads it in place.
+     */
+    public function resolveDatasetPath(string $filePath): string
+    {
+        if (strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'zip') {
+            return '/vsizip/'.$filePath;
+        }
+
+        return $filePath;
     }
 
     /**

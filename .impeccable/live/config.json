@@ -1,0 +1,16 @@
+{
+  "files": [
+    "resources/views/layouts/app.blade.php",
+    "resources/views/layouts/console.blade.php",
+    "resources/views/layouts/map-builder.blade.php",
+    "resources/views/welcome.blade.php",
+    "resources/views/forms/public.blade.php",
+    "resources/views/print/map.blade.php",
+    "resources/views/dashboards/public.blade.php",
+    "resources/views/projects/shared.blade.php",
+    "resources/views/maps/shared.blade.php"
+  ],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}

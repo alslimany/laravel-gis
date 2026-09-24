@@ -1,119 +1,92 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Data Imports</span>
-                    <a href="{{ route('imports.create') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-upload"></i> New Import
-                    </a>
-                </div>
+<div class="desk">
+    <header class="desk-intro">
+        <h1>Data imports</h1>
+        <a href="{{ route('imports.create') }}" class="desk-primary">New import</a>
+    </header>
 
-                <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
+    @if(session('success'))
+        <p class="desk-flash">{{ session('success') }}</p>
+    @endif
 
-                    @if($imports->isEmpty())
-                        <div class="text-center py-5">
-                            <p class="text-muted">No imports yet.</p>
-                            <a href="{{ route('imports.create') }}" class="btn btn-primary">
-                                Upload Your First File
-                            </a>
-                        </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>File Name</th>
-                                        <th>Type</th>
-                                        <th>Size</th>
-                                        <th>Status</th>
-                                        <th>Progress</th>
-                                        <th>Features</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($imports as $import)
-                                        <tr>
-                                            <td>
-                                                <a href="{{ route('imports.show', $import) }}">
-                                                    {{ $import->file_name }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-secondary">{{ strtoupper($import->file_type) }}</span>
-                                            </td>
-                                            <td>{{ number_format($import->file_size / 1024, 2) }} KB</td>
-                                            <td>
-                                                @if($import->status === 'completed')
-                                                    <span class="badge bg-success">Completed</span>
-                                                @elseif($import->status === 'processing')
-                                                    <span class="badge bg-primary">Processing</span>
-                                                @elseif($import->status === 'failed')
-                                                    <span class="badge bg-danger">Failed</span>
-                                                @else
-                                                    <span class="badge bg-secondary">Pending</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <div class="progress" style="width: 100px;">
-                                                    <div class="progress-bar" role="progressbar" 
-                                                         style="width: {{ $import->progress }}%"
-                                                         aria-valuenow="{{ $import->progress }}" 
-                                                         aria-valuemin="0" 
-                                                         aria-valuemax="100">
-                                                        {{ $import->progress }}%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                @if($import->feature_count)
-                                                    {{ number_format($import->feature_count) }}
-                                                @else
-                                                    -
-                                                @endif
-                                            </td>
-                                            <td>{{ $import->created_at->diffForHumans() }}</td>
-                                            <td>
-                                                <a href="{{ route('imports.show', $import) }}" 
-                                                   class="btn btn-sm btn-info">
-                                                    View
-                                                </a>
-                                                @if($import->status === 'failed' || $import->status === 'completed')
-                                                    <form action="{{ route('imports.destroy', $import) }}" 
-                                                          method="POST" 
-                                                          class="d-inline"
-                                                          onsubmit="return confirm('Are you sure you want to delete this import?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-danger">
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+    @if(session('error'))
+        <p class="desk-flash desk-flash-error">{{ session('error') }}</p>
+    @endif
 
-                        <div class="mt-3">
-                            {{ $imports->links() }}
-                        </div>
-                    @endif
-                </div>
+    <section class="desk-panel">
+        @if($imports->isEmpty())
+            <p class="desk-empty">
+                No imports yet.
+                <a href="{{ route('imports.create') }}">Import a dataset</a>
+                to start a layer.
+            </p>
+        @else
+            <div class="desk-table-wrap">
+                <table class="desk-table">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th class="desk-hide-sm">Type</th>
+                            <th class="num desk-hide-sm">Size</th>
+                            <th class="desk-status">Status</th>
+                            <th class="num desk-hide-sm">Progress</th>
+                            <th class="num desk-hide-sm">Features</th>
+                            <th class="desk-hide-sm">Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($imports as $import)
+                            @php
+                                $bytes = (int) $import->file_size;
+                                $size = $bytes >= 1048576
+                                    ? number_format($bytes / 1048576, 1).' MB'
+                                    : number_format($bytes / 1024, 0).' KB';
+                            @endphp
+                            <tr>
+                                <td>
+                                    <a href="{{ route('imports.show', $import) }}" class="desk-name">{{ $import->file_name }}</a>
+                                </td>
+                                <td class="mono desk-hide-sm">{{ strtoupper($import->file_type) }}</td>
+                                <td class="num mono desk-hide-sm">{{ $size }}</td>
+                                <td class="desk-status">
+                                    @if($import->status === 'completed')
+                                        <span class="pill pill-live">Completed</span>
+                                    @elseif($import->status === 'processing')
+                                        <span class="pill pill-run">Processing</span>
+                                    @elseif($import->status === 'failed')
+                                        <span class="pill pill-fail">Failed</span>
+                                    @else
+                                        <span class="pill">Pending</span>
+                                    @endif
+                                </td>
+                                <td class="num mono desk-hide-sm">{{ (int) $import->progress }}%</td>
+                                <td class="num mono desk-hide-sm">{{ $import->feature_count ? number_format($import->feature_count) : '—' }}</td>
+                                <td class="desk-sub desk-sub-inline desk-hide-sm">{{ $import->created_at->diffForHumans() }}</td>
+                                <td>
+                                    <div class="desk-row-actions">
+                                        <a href="{{ route('imports.show', $import) }}">View</a>
+                                        @if($import->status === 'failed' || $import->status === 'completed')
+                                            <form action="{{ route('imports.destroy', $import) }}" method="POST" onsubmit="return confirm('Delete this import?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit">Delete</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-        </div>
-    </div>
+
+            @if($imports->hasPages())
+                <div class="desk-pages">{{ $imports->links() }}</div>
+            @endif
+        @endif
+    </section>
 </div>
 @endsection

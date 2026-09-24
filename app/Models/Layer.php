@@ -73,6 +73,14 @@ class Layer extends Model
     }
 
     /**
+     * Field registry for this layer.
+     */
+    public function fields(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(LayerField::class)->orderBy('sort_order');
+    }
+
+    /**
      * Check if layer is published to GeoServer.
      */
     public function isPublished(): bool

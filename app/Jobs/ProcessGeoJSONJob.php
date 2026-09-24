@@ -11,7 +11,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class ProcessGeoJSONJob implements ShouldQueue
 {
@@ -19,7 +18,7 @@ class ProcessGeoJSONJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 600;
+    public int $timeout = 1800;
 
     public int $backoff = 10;
 
@@ -41,37 +40,11 @@ class ProcessGeoJSONJob implements ShouldQueue
             Log::info('Processing GeoJSON import', ['import_id' => $import->id]);
 
             $import->markAsProcessing();
+            $importService->importDataset($import);
 
-            // Get the full file path
-            $disk = config('dataimport.upload_disk');
-            $filePath = Storage::disk($disk)->path($import->file_path);
-
-            // Generate table name
-            $tableName = $importService->generateTableName(
-                $import->file_name,
-                $import->organization_id
-            );
-
-            // Get file information
-            $import->updateProgress(20);
-            $fileInfo = $importService->getFileInfo($filePath, 'geojson');
-
-            // Import to PostGIS
-            $import->updateProgress(40);
-            $importService->importToPostGIS($filePath, $tableName, 'geojson');
-
-            // Get actual geometry type and feature count from imported table
-            $import->updateProgress(80);
-            $geometryType = $importService->getTableGeometryType($tableName);
-            $featureCount = $importService->getTableFeatureCount($tableName);
-
-            // Update import record
-            $import->update(['metadata' => array_merge($import->metadata ?? [], $fileInfo)]);
-            $import->markAsCompleted($tableName, $geometryType, $featureCount);
-
-            Log::info('Successfully processed GeoJSON import', [
+            Log::info('Successfully processed spatial import', [
                 'import_id' => $import->id,
-                'table_name' => $tableName,
+                'table_name' => $import->fresh()->table_name,
             ]);
         } catch (Exception $e) {
             Log::error('Failed to process GeoJSON import', [

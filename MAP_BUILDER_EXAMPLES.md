@@ -44,7 +44,7 @@ This document provides practical examples of using the Map Builder feature.
 1. Click "Add Layer"
 2. Select "WMS Layer" from the type dropdown
 3. Enter Layer Name: "County Boundaries"
-4. Enter URL: "http://localhost:8080/geoserver/wms"
+4. Enter URL: "http://localhost:8081/geoserver/wms"
 5. Enter Layer Names: "my_workspace:counties"
 6. Click "Add Layer"
 ```

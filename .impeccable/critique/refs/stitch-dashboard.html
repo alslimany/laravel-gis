@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {"darkMode":"class","theme":{"extend":{"colors":{"surface-container-lowest":"#060e20","on-error-container":"#ffdad6","primary-container":"#06b6d4","surface-bright":"#31394d","on-surface":"#dae2fd","secondary-fixed-dim":"#89ceff","on-surface-variant":"#bcc9cd","surface-container":"#171f33","error-container":"#93000a","on-background":"#dae2fd","tertiary-fixed-dim":"#ffb95f","surface-dim":"#0b1326","on-secondary-fixed":"#001e2f","outline":"#869397","surface-container-high":"#222a3d","inverse-surface":"#dae2fd","on-primary-fixed":"#001f26","on-tertiary-fixed":"#2a1700","on-tertiary-fixed-variant":"#653e00","primary-fixed":"#acedff","surface-container-highest":"#2d3449","on-tertiary":"#472a00","inverse-primary":"#00687a","surface":"#0b1326","background":"#0b1326","on-secondary-fixed-variant":"#004c6e","primary":"#4cd7f6","surface-tint":"#4cd7f6","outline-variant":"#3d494c","secondary-container":"#00a2e6","on-secondary-container":"#00344e","on-primary":"#003640","on-tertiary-container":"#563400","tertiary-fixed":"#ffddb8","surface-variant":"#2d3449","on-primary-container":"#00424f","on-error":"#690005","on-primary-fixed-variant":"#004e5c","tertiary":"#ffb95f","inverse-on-surface":"#283044","tertiary-container":"#e79400","secondary-fixed":"#c9e6ff","primary-fixed-dim":"#4cd7f6","on-secondary":"#00344d","secondary":"#89ceff","surface-container-low":"#131b2e","error":"#ffb4ab"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"space-xl":"1rem","space-sm":"0.25rem","space-lg":"0.75rem","margin":"0.75rem","space-xs":"0.125rem","gutter":"0.5rem","space-md":"0.5rem"},"fontFamily":{"headline-lg":["Inter"],"tabular-data":["JetBrains Mono"],"label-mono-lg":["JetBrains Mono"],"body-lg":["Inter"],"body-sm":["Inter"],"label-mono-sm":["JetBrains Mono"],"headline-sm":["Inter"],"headline-xl":["Inter"]},"fontSize":{"headline-lg":["18px",{"lineHeight":"24px","letterSpacing":"-0.015em","fontWeight":"600"}],"tabular-data":["11px",{"lineHeight":"16px","letterSpacing":"-0.02em","fontWeight":"400"}],"label-mono-lg":["12px",{"lineHeight":"16px","letterSpacing":"-0.01em","fontWeight":"500"}],"body-lg":["13px",{"lineHeight":"18px","fontWeight":"400"}],"body-sm":["11px",{"lineHeight":"16px","fontWeight":"400"}],"label-mono-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-sm":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-xl":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"600"}]}}}};</script></head><body class="bg-surface text-on-surface font-body-lg text-body-lg min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 h-14 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between px-space-lg select-none"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-md"><img alt="GeoCore Spatial Intelligence Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1W2HziIFZS1l_8lLwlnrnTp-sU5fKKkBcu4SxuuN6iIc4YTfHm3dWYpimKeNxqdElL7fUqgroNZHkJQ4nNLltpnij5k2akLJZV4k2TQr8-i1s_9fxwAXlaoM2fi92-UGfRfd0wDRbmHvh2aIJYWQhQyur6uBW5HXyEsft4hS4mroKbpqrTItE4LvpuOyfR-mbzbmjBHIxE-w1bn8kfynwytlIxxGQ30LBJQtmkCu33lJJxy1gftEPzMJA"/><div class="flex flex-col"><div class="flex items-center gap-space-sm"><span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface">GeoCore GIS</span><span class="px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant/40 text-secondary font-label-mono-sm text-label-mono-sm uppercase tracking-wider">Enterprise</span></div><span class="font-body-sm text-body-sm text-on-surface-variant truncate max-w-[200px] xl:max-w-none">Metro Regional Planning Authority</span></div></div><div class="h-6 w-px bg-outline-variant/40 hidden md:block"></div><nav class="hidden lg:flex items-center h-14 gap-space-xs" data-active-classes="bg-surface-container-high text-primary font-medium border-b-2 border-primary"><a class="h-full px-space-md flex items-center font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" data-path="map-studio" href="#">Map Studio</a><a aria-current="page" class="h-full px-space-md flex items-center transition-colors bg-surface-container-high text-primary font-medium border-b-2 border-primary" data-path="dashboards" href="#">Dashboards</a><a class="h-full px-space-md flex items-center font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" data-path="spatial-analysis" href="#">Spatial Analysis</a><a class="h-full px-space-md flex items-center font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" data-path="layer-catalog-and-data" href="#">Layer Catalog &amp; Data</a><a class="h-full px-space-md flex items-center font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" data-path="templates" href="#">Templates</a></nav></div><div class="flex-1 max-w-md mx-space-lg hidden xl:block"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-2.5 text-outline text-[18px] pointer-events-none">travel_explore</span><input class="w-full bg-surface-container-low border border-outline-variant/50 rounded pl-9 pr-8 py-1 font-body-sm text-body-sm text-on-surface placeholder-outline focus:outline-none focus:border-primary transition-colors" placeholder="Search locations, coordinates (EPSG:4326), features, layers..." type="text"/><kbd class="absolute right-2 text-[10px] font-label-mono-sm text-outline-variant bg-surface-container-high px-1 rounded border border-outline-variant/40">/</kbd></div></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-space-xs"><button class="p-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Spatial Bookmarks" type="button"><span class="material-symbols-outlined text-[18px]">bookmarks</span></button><button class="p-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Basemap Gallery" type="button"><span class="material-symbols-outlined text-[18px]">map</span></button><button class="p-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Share &amp; Export Spatial Package" type="button"><span class="material-symbols-outlined text-[18px]">ios_share</span></button><button class="relative p-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Platform Notifications (3 alerts)" type="button"><span class="material-symbols-outlined text-[18px]">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-surface-container-lowest"></span></button><button class="p-1.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="GIS Documentation &amp; API Docs" type="button"><span class="material-symbols-outlined text-[18px]">help</span></button></div><div class="h-6 w-px bg-outline-variant/40 mx-space-xs"></div><div class="flex items-center gap-space-md pl-space-xs"><div class="flex flex-col text-right hidden sm:flex"><span class="font-body-sm text-body-sm font-semibold text-on-surface leading-tight">Dr. Elena Vance</span><span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">Sr. GIS Specialist</span></div><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZK5vI2PvT8rCuccIooJk0AepmYe81-EWDjMr_VKUNRhUrp6nVSsVrPTYbQdP7gnBeyoyBM1AwQEsy3fhxmGMhsbB44EM4GnlRmwOhl_oNIBRCsRKX3k3p3aCRCegnMwxUIJjji-SiXZ5MinrsAr3FUuBR-eZ10T7GKAR0ueBpCGnATdKFDK0iQL2leka7iq-9dGDZ3kBxvaxRiJcYyrqgoSY7DzxX9n9OcOIcZ7-2Ta32_CPW3y4"/><span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-secondary-fixed-dim ring-1 ring-surface-container-lowest"></span></div></div></div></header><aside class="fixed left-0 top-14 bottom-6 w-14 bg-surface-container-lowest border-r border-outline-variant/30 z-40 flex flex-col justify-between items-center py-space-sm select-none"><div class="flex flex-col items-center gap-space-sm w-full"><button class="w-10 h-10 rounded flex items-center justify-center bg-surface-container-high text-primary hover:bg-surface-container-highest transition-colors" title="Layers &amp; Symbology Hierarchy" type="button"><span class="material-symbols-outlined text-[20px]">layers</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Vector Feature Selection &amp; Attribute Query" type="button"><span class="material-symbols-outlined text-[20px]">select_all</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Geoprocessing Toolboxes" type="button"><span class="material-symbols-outlined text-[20px]">construction</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Spatial Filters &amp; Topology Rules" type="button"><span class="material-symbols-outlined text-[20px]">tune</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Geometry Editing &amp; Feature Creation" type="button"><span class="material-symbols-outlined text-[20px]">draw</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Temporal Slider &amp; 4D Data Playback" type="button"><span class="material-symbols-outlined text-[20px]">history</span></button></div><div class="flex flex-col items-center gap-space-sm w-full"><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Data Stores &amp; Connections" type="button"><span class="material-symbols-outlined text-[20px]">database</span></button><button class="w-10 h-10 rounded flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="Workspace Settings" type="button"><span class="material-symbols-outlined text-[20px]">settings</span></button></div></aside><div class="pl-14"><main class="relative pt-14 pb-6 min-h-screen bg-surface"><div class="flex flex-col w-full">
+<!-- Operational Sub-Header / Filters Toolbar -->
+<section class="bg-surface-container-lowest px-space-lg py-space-md shadow-md">
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md">
+<!-- Title & Context Indicator -->
+<div class="flex items-center gap-space-md">
+<div class="w-2.5 h-8 bg-primary rounded-DEFAULT"></div>
+<div>
+<div class="flex items-center gap-space-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Regional Infrastructure &amp; Emergency Resilience Dashboard</h1>
+<span class="px-2 py-0.5 rounded-DEFAULT bg-error-container text-on-error-container font-label-mono-sm text-label-mono-sm uppercase font-semibold animate-pulse">DEFCON 2</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-space-sm mt-0.5">
+<span>Spatial Operations Matrix</span>
+<span class="text-outline">•</span>
+<span class="font-tabular-data text-tabular-data text-secondary">EPSG:3857 Hydro-Surge Model v3.2</span>
+<span class="text-outline">•</span>
+<span class="text-primary flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span> Live Sensor Stream Connected</span>
+</p>
+</div>
+</div>
+<!-- Action & Global Filter Controls -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<!-- Jurisdiction Filter -->
+<div class="flex items-center bg-surface-container-low px-space-md py-1 rounded-DEFAULT shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-outline mr-1.5">share_location</span>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-[9px] uppercase text-outline">Jurisdiction</span>
+<select class="bg-transparent font-body-sm text-body-sm text-on-surface focus:outline-none cursor-pointer pr-2">
+<option value="all">All Districts (Northern Bay)</option>
+<option value="d1">District 01 - Harbor Estuary</option>
+<option value="d2">District 02 - Marina Point</option>
+<option value="d3">District 03 - Peninsula Basin</option>
+</select>
+</div>
+</div>
+<!-- Hazard Scenario -->
+<div class="flex items-center bg-surface-container-low px-space-md py-1 rounded-DEFAULT shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-tertiary mr-1.5">tsunami</span>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-[9px] uppercase text-outline">Hazard Scenario</span>
+<select class="bg-transparent font-body-sm text-body-sm text-on-surface focus:outline-none cursor-pointer pr-2">
+<option value="100yr">100-Yr Surge (+1.5m)</option>
+<option value="500yr">500-Yr Severe (+2.8m)</option>
+<option value="king">King Tide Coincident (+1.1m)</option>
+</select>
+</div>
+</div>
+<!-- Priority Tier -->
+<div class="flex items-center bg-surface-container-low px-space-md py-1 rounded-DEFAULT shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-error mr-1.5">priority_high</span>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-[9px] uppercase text-outline">Priority Tier</span>
+<select class="bg-transparent font-body-sm text-body-sm text-on-surface focus:outline-none cursor-pointer pr-2">
+<option value="crit">Critical Only</option>
+<option value="all">All Incidents</option>
+<option value="tier2">Tier 1 &amp; Tier 2</option>
+</select>
+</div>
+</div>
+<!-- Quick Operations Buttons -->
+<div class="flex items-center gap-space-xs ml-auto xl:ml-0">
+<button class="h-8 px-space-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm rounded-DEFAULT flex items-center gap-1.5 shadow-sm transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">autorenew</span>
+<span class="font-tabular-data text-tabular-data">Auto: 30s</span>
+</button>
+<button class="h-8 px-space-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm rounded-DEFAULT flex items-center gap-1.5 shadow-sm transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">picture_as_pdf</span>
+<span>GeoPDF</span>
+</button>
+<button class="h-8 px-space-md bg-primary-container text-on-primary font-body-sm text-body-sm font-semibold rounded-DEFAULT flex items-center gap-1.5 shadow-md hover:opacity-90 transition-opacity" type="button">
+<span class="material-symbols-outlined text-[16px]">share</span>
+<span>Public View</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Top KPI Analytical Overview Grid -->
+<section class="p-space-lg">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- KPI 1: Monitored Assets -->
+<div class="bg-surface-container-low p-space-md rounded-lg shadow-md flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<div>
+<div class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface-variant tracking-wider">Monitored Assets</div>
+<div class="font-headline-xl text-headline-xl text-on-surface mt-1 flex items-baseline gap-2">
+<span class="font-tabular-data">3,842</span>
+<span class="font-label-mono-sm text-label-mono-sm text-primary flex items-center font-medium">+12 today</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-DEFAULT bg-surface-container-high flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[20px]">shield_with_heart</span>
+</div>
+</div>
+<div class="mt-space-md flex items-center justify-between pt-space-xs">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">verified</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Coverage 99.8%</span>
+</div>
+<!-- Sparkline SVG -->
+<svg class="w-20 h-6 text-primary" fill="none" viewbox="0 0 80 24">
+<path d="M0 18 L12 16 L24 20 L36 11 L48 14 L60 7 L72 10 L80 4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+<path d="M0 18 L12 16 L24 20 L36 11 L48 14 L60 7 L72 10 L80 4 V24 H0 Z" fill="currentColor" fill-opacity="0.1"></path>
+</svg>
+</div>
+</div>
+<!-- KPI 2: Active Hazard Alerts -->
+<div class="bg-surface-container-low p-space-md rounded-lg shadow-md flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-tertiary/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<div>
+<div class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface-variant tracking-wider">Active Hazard Alerts</div>
+<div class="font-headline-xl text-headline-xl text-on-surface mt-1 flex items-baseline gap-2">
+<span class="font-tabular-data text-tertiary">18</span>
+<span class="px-1.5 py-0.5 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-label-mono-sm font-semibold">4 High Severity</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-DEFAULT bg-surface-container-high flex items-center justify-center text-tertiary shadow-sm">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+</div>
+</div>
+<div class="mt-space-md flex items-center justify-between text-on-surface-variant pt-space-xs">
+<span class="font-body-sm text-body-sm truncate max-w-[170px] text-tertiary-fixed-dim">3 Substations in 100m zone</span>
+<span class="font-label-mono-sm text-label-mono-sm text-outline font-medium">GIS BUFFER: ON</span>
+</div>
+</div>
+<!-- KPI 3: Field Units Dispatched -->
+<div class="bg-surface-container-low p-space-md rounded-lg shadow-md flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-secondary/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<div>
+<div class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface-variant tracking-wider">Field Units Deployed</div>
+<div class="font-headline-xl text-headline-xl text-on-surface mt-1 flex items-baseline gap-2">
+<span class="font-tabular-data">42 <span class="text-on-surface-variant text-headline-sm">/ 56</span></span>
+<span class="font-label-mono-sm text-label-mono-sm text-secondary font-medium">75% mobilized</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-DEFAULT bg-surface-container-high flex items-center justify-center text-secondary shadow-sm">
+<span class="material-symbols-outlined text-[20px]">emergency</span>
+</div>
+</div>
+<div class="mt-space-md space-y-1 pt-space-xs">
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 75%"></div>
+</div>
+<div class="flex justify-between font-label-mono-sm text-[10px] text-on-surface-variant">
+<span>Avg Resp: <strong class="text-on-surface font-tabular-data">14.2 min</strong></span>
+<span>14 Idle Reserves</span>
+</div>
+</div>
+</div>
+<!-- KPI 4: Network Grid Stability -->
+<div class="bg-surface-container-low p-space-md rounded-lg shadow-md flex flex-col justify-between relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 w-24 h-24 bg-primary-container/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<div>
+<div class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface-variant tracking-wider">Network Grid Stability</div>
+<div class="font-headline-xl text-headline-xl text-on-surface mt-1 flex items-baseline gap-2">
+<span class="font-tabular-data text-primary">99.41%</span>
+<span class="font-label-mono-sm text-label-mono-sm text-tertiary flex items-center font-medium">-0.18% zone drop</span>
+</div>
+</div>
+<div class="w-9 h-9 rounded-DEFAULT bg-surface-container-high flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+</div>
+</div>
+<div class="mt-space-md flex items-center justify-between text-on-surface-variant pt-space-xs">
+<span class="font-body-sm text-body-sm text-tertiary truncate">Coastal feeder redundancy active</span>
+<span class="font-label-mono-sm text-label-mono-sm px-1 rounded-DEFAULT bg-surface-container-highest text-secondary">SYS-OK</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Geospatial Operations Matrix (3-Column Tactical Bento) -->
+<section class="px-space-lg pb-space-lg flex-1">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
+<!-- LEFT COLUMN: Vulnerability Analytics & Incident Feed (3 cols) -->
+<div class="lg:col-span-3 space-y-space-md">
+<!-- Widget: Alerts by Asset Category -->
+<div class="bg-surface-container-low rounded-lg p-space-md shadow-md">
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">pie_chart</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Alerts by Asset Class</h2>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant font-tabular-data">Σ 18</span>
+</div>
+<div class="space-y-space-md">
+<!-- Electrical -->
+<div class="space-y-1">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Electrical Grids &amp; Power
+                </span>
+<span class="font-tabular-data text-on-surface font-semibold">7</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden flex">
+<div class="bg-tertiary h-full" style="width: 39%"></div>
+</div>
+</div>
+<!-- Water Treatment -->
+<div class="space-y-1">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span> Water &amp; Wastewater
+                </span>
+<span class="font-tabular-data text-on-surface font-semibold">5</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary h-full" style="width: 28%"></div>
+</div>
+</div>
+<!-- Telecom -->
+<div class="space-y-1">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Telecommunications
+                </span>
+<span class="font-tabular-data text-on-surface font-semibold">4</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden flex">
+<div class="bg-secondary h-full" style="width: 22%"></div>
+</div>
+</div>
+<!-- Transportation -->
+<div class="space-y-1">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-outline"></span> Bridges &amp; Freeways
+                </span>
+<span class="font-tabular-data text-on-surface font-semibold">2</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden flex">
+<div class="bg-outline h-full" style="width: 11%"></div>
+</div>
+</div>
+</div>
+<!-- Spatial Filter Tag -->
+<div class="mt-space-md p-space-sm bg-surface-container rounded-DEFAULT flex items-center justify-between text-on-surface-variant font-label-mono-sm text-label-mono-sm">
+<span>Aggregated by 500m H3 Hex</span>
+<span class="text-primary cursor-pointer hover:underline">Select Hexagons</span>
+</div>
+</div>
+<!-- Widget: Live Incident Stream -->
+<div class="bg-surface-container-low rounded-lg p-space-md shadow-md flex flex-col h-[480px]">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-error">rss_feed</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Live Incident Stream</h2>
+</div>
+<span class="px-1.5 py-0.5 rounded-DEFAULT bg-surface-container-high font-label-mono-sm text-[10px] text-secondary">FILTERED (4 CRIT)</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Real-time alerts queued from IoT sensors and dispatch operators.</p>
+<!-- Scrollable Log -->
+<div class="flex-1 overflow-y-auto space-y-space-sm pr-1">
+<!-- Incident 1 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<div class="flex items-start justify-between gap-1">
+<span class="px-1.5 py-0.2 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-[10px] font-bold">CRITICAL</span>
+<span class="font-tabular-data text-on-surface-variant text-[10px]">10:44:12 UTC</span>
+</div>
+<div class="font-headline-sm text-[12px] text-on-surface mt-1 font-semibold">Substation 44-B Surge Breach</div>
+<div class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Water level +1.62m over sea wall tolerance. Pump 2 failed.</div>
+<div class="mt-2 flex items-center justify-between pt-1 font-label-mono-sm text-[10px]">
+<span class="text-primary cursor-pointer hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">my_location</span> 37.788° N, -122.391° W
+                </span>
+<span class="text-tertiary">Unit 14 En Route</span>
+</div>
+</div>
+<!-- Incident 2 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<div class="flex items-start justify-between gap-1">
+<span class="px-1.5 py-0.2 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-[10px] font-bold">CRITICAL</span>
+<span class="font-tabular-data text-on-surface-variant text-[10px]">10:38:05 UTC</span>
+</div>
+<div class="font-headline-sm text-[12px] text-on-surface mt-1 font-semibold">Pier 29 Storm Drain Inundation</div>
+<div class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Backflow detected into arterial drainage lines. Telemetry offline.</div>
+<div class="mt-2 flex items-center justify-between pt-1 font-label-mono-sm text-[10px]">
+<span class="text-primary cursor-pointer hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">my_location</span> 37.801° N, -122.405° W
+                </span>
+<span class="text-secondary">Assigned Unit 08</span>
+</div>
+</div>
+<!-- Incident 3 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<div class="flex items-start justify-between gap-1">
+<span class="px-1.5 py-0.2 rounded-DEFAULT bg-tertiary/20 text-tertiary font-label-mono-sm text-[10px] font-bold">ELEVATED</span>
+<span class="font-tabular-data text-on-surface-variant text-[10px]">10:19:40 UTC</span>
+</div>
+<div class="font-headline-sm text-[12px] text-on-surface mt-1 font-semibold">Fiber Loop Repeater #12 Node Loss</div>
+<div class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Underground conduit flooding suspected near Embarcadero south.</div>
+<div class="mt-2 flex items-center justify-between pt-1 font-label-mono-sm text-[10px]">
+<span class="text-primary cursor-pointer hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">my_location</span> 37.792° N, -122.394° W
+                </span>
+<span class="text-outline">Investigating</span>
+</div>
+</div>
+<!-- Incident 4 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<div class="flex items-start justify-between gap-1">
+<span class="px-1.5 py-0.2 rounded-DEFAULT bg-surface-container-highest text-secondary font-label-mono-sm text-[10px] font-bold">ADVISORY</span>
+<span class="font-tabular-data text-on-surface-variant text-[10px]">09:55:12 UTC</span>
+</div>
+<div class="font-headline-sm text-[12px] text-on-surface mt-1 font-semibold">Tidal Barrier Gates 3 &amp; 4 Engaged</div>
+<div class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Automated pneumatic locks locked at 100% capacity seal.</div>
+<div class="mt-2 flex items-center justify-between pt-1 font-label-mono-sm text-[10px]">
+<span class="text-primary cursor-pointer hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">my_location</span> 37.772° N, -122.385° W
+                </span>
+<span class="text-primary">System Normal</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- CENTER COLUMN: Large Coordinated GIS Map Viewport (6 cols) -->
+<div class="lg:col-span-6 space-y-space-md">
+<!-- Interactive Cartographic Canvas Card -->
+<div class="bg-surface-container-lowest rounded-lg shadow-xl overflow-hidden flex flex-col relative" style="height: 740px;">
+<!-- Tactical Map Top Controls Bar -->
+<div class="absolute top-space-md left-space-md right-space-md z-30 flex items-center justify-between pointer-events-none">
+<!-- Layers Chips & Quick Selection -->
+<div class="flex items-center gap-space-xs pointer-events-auto bg-surface-container-low/90 backdrop-blur-md p-1 rounded-DEFAULT shadow-md">
+<button class="px-2 py-1 rounded-DEFAULT bg-primary text-on-primary font-body-sm text-body-sm font-semibold flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px]">water</span>
+<span>Surge Risk</span>
+</button>
+<button class="px-2 py-1 rounded-DEFAULT bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px] text-tertiary">bolt</span>
+<span>Substations</span>
+</button>
+<button class="px-2 py-1 rounded-DEFAULT bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-body-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">local_shipping</span>
+<span>Units (42)</span>
+</button>
+</div>
+<!-- Extent & Feature Badge -->
+<div class="pointer-events-auto flex items-center gap-space-sm bg-surface-container-low/95 backdrop-blur-md px-3 py-1.5 rounded-DEFAULT shadow-md">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface">Extent: <strong class="text-primary font-tabular-data">214 Features</strong></span>
+<span class="text-outline-variant font-label-mono-sm">|</span>
+<span class="font-label-mono-sm text-[10px] text-secondary">LIVE SYNC</span>
+</div>
+</div>
+<!-- Floating Map Toolbars (Upper Right Vertical) -->
+<div class="absolute top-16 right-space-md z-30 flex flex-col gap-1.5 pointer-events-auto">
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface flex items-center justify-center shadow-md transition-colors" title="Spatial Selection Lasso" type="button">
+<span class="material-symbols-outlined text-[18px]">gesture</span>
+</button>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface flex items-center justify-center shadow-md transition-colors" title="Measure Distance &amp; Polygon Area" type="button">
+<span class="material-symbols-outlined text-[18px]">straighten</span>
+</button>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface flex items-center justify-center shadow-md transition-colors" title="Toggle 3D Buildings &amp; Mesh" type="button">
+<span class="material-symbols-outlined text-[18px]">view_in_ar</span>
+</button>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface flex items-center justify-center shadow-md transition-colors" title="Heatmap Intensity Toggle" type="button">
+<span class="material-symbols-outlined text-[18px]">density_medium</span>
+</button>
+<div class="h-px bg-outline-variant/30 my-0.5"></div>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center shadow-md" title="Zoom In" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center shadow-md" title="Zoom Out" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<button class="w-8 h-8 rounded-DEFAULT bg-surface-container-high hover:bg-surface-container-highest text-on-surface flex items-center justify-center shadow-md" title="Reset Camera Pitch to 0°" type="button">
+<span class="material-symbols-outlined text-[18px]">navigation</span>
+</button>
+</div>
+<!-- Map Surface Representation (Location Grounding) -->
+<div class="w-full h-full relative bg-cover bg-center overflow-hidden" data-location="San Francisco Bay, California" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDZhA5XMnwsPzcbgLPNfE1G3GD8JwIWCvSKDtS0x53K2vVOiNIovMrkC5Vi_Nd1reZRyk0Im9U5jE4xctJ9yZG7QmekpzMH2i3O7Nu7bX69t7ai3I6COxhT7YMGBanGWPBJkIRe-FVTDomha38NPHyc0cn8GjzJBSy6jUaET8svZOHfeNrYPJZAaElFpcJOxV4eeBOeri3tFxj1zsnSsdPgThVaS1acQe5jLeLbL7jt5J0dwGW9b9o');">
+<!-- Dark Analytical Geospatial Overlays (Vector Choropleth, Buffers & Synthetic Risk Contours) -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+<!-- SVG Tactical Geo-Vectors: Surge Polygonal Contours & Sensor Rings -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none select-none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="surgeGradient" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#4cd7f6" stop-opacity="0.35"></stop>
+<stop offset="60%" stop-color="#00a2e6" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#93000a" stop-opacity="0.4"></stop>
+</lineargradient>
+<pattern height="40" id="gridPattern" patternunits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222a3d" stroke-width="0.75"></path>
+</pattern>
+</defs>
+<!-- Coordinate Grid Backdrop -->
+<rect fill="url(#gridPattern)" height="100%" opacity="0.6" width="100%"></rect>
+<!-- Flood Hazard Risk Polygons (Choropleth overlay) -->
+<path d="M 60 120 Q 140 180 220 160 T 380 280 T 480 240 T 560 360 L 590 600 L 20 620 Z" fill="url(#surgeGradient)"></path>
+<path d="M 120 180 Q 200 240 280 220 T 420 320 T 520 420 L 520 580 L 100 590 Z" fill="#ffb4ab" fill-opacity="0.25" stroke="#ffb4ab" stroke-dasharray="4 2" stroke-width="1.5"></path>
+<!-- Substation Buffers (100m proximity rings) -->
+<circle cx="280" cy="220" fill="#ffb95f" fill-opacity="0.15" r="48" stroke="#ffb95f" stroke-width="1"></circle>
+<circle cx="280" cy="220" fill="#ffb95f" r="6"></circle>
+<circle cx="390" cy="310" fill="#ffb4ab" fill-opacity="0.2" r="54" stroke="#ffb4ab" stroke-width="1.2"></circle>
+<circle cx="390" cy="310" fill="#ffb4ab" r="7"></circle>
+<circle cx="180" cy="380" fill="#4cd7f6" fill-opacity="0.15" r="38" stroke="#4cd7f6" stroke-width="1"></circle>
+<circle cx="180" cy="380" fill="#4cd7f6" r="5"></circle>
+<!-- Coordinated Vector Leader Lines -->
+<line stroke="#ffb4ab" stroke-dasharray="2 2" stroke-width="1" x1="390" x2="440" y1="310" y2="230"></line>
+<line stroke="#ffb95f" stroke-dasharray="2 2" stroke-width="1" x1="280" x2="220" y1="220" y2="150"></line>
+</svg>
+<!-- Contextual Map Popover (Anchored on Substation 44-B at coords 390, 310) -->
+<div class="absolute top-[160px] left-[320px] z-30 w-72 bg-surface-container-high/95 backdrop-blur-md rounded-lg p-space-md shadow-2xl pointer-events-auto">
+<div class="flex items-center justify-between pb-1 border-b border-outline-variant/30">
+<span class="font-label-mono-sm text-[10px] text-error font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-error"></span> Critical Breach Alert
+                </span>
+<span class="font-label-mono-sm text-[10px] text-outline">ID: SS-44B</span>
+</div>
+<div class="mt-2">
+<div class="font-headline-sm text-[13px] text-on-surface font-semibold">Mission Bay Secondary Terminal</div>
+<div class="grid grid-cols-2 gap-1.5 mt-2 font-tabular-data text-[10px] bg-surface-container-low p-1.5 rounded-DEFAULT">
+<div>
+<span class="text-outline block">SURGE DEPTH</span>
+<span class="text-error font-semibold">+1.84m</span>
+</div>
+<div>
+<span class="text-outline block">EST. POPULATION</span>
+<span class="text-on-surface">34,120</span>
+</div>
+<div>
+<span class="text-outline block">BACKUP POWER</span>
+<span class="text-tertiary">3h 42m</span>
+</div>
+<div>
+<span class="text-outline block">STATUS</span>
+<span class="text-error">Under Water</span>
+</div>
+</div>
+</div>
+<div class="mt-2.5 flex items-center gap-1">
+<button class="flex-1 py-1 px-2 rounded-DEFAULT bg-primary text-on-primary font-body-sm text-[11px] font-semibold text-center hover:opacity-90" type="button">Dispatch Crew</button>
+<button class="py-1 px-2 rounded-DEFAULT bg-surface-container hover:bg-surface-container-highest text-on-surface font-body-sm text-[11px]" type="button">Buffer 500m</button>
+</div>
+</div>
+<!-- In-Map Floating Legend Panel (Bottom Left) -->
+<div class="absolute bottom-space-md left-space-md z-30 bg-surface-container-low/95 backdrop-blur-md p-space-md rounded-lg shadow-xl w-64 pointer-events-auto">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface font-semibold tracking-wider">Legend &amp; Symbology</span>
+<span class="material-symbols-outlined text-[14px] text-outline">info</span>
+</div>
+<!-- Gradient Bar: Inundation Depth -->
+<div class="mt-2">
+<div class="flex justify-between font-label-mono-sm text-[10px] text-on-surface-variant">
+<span>Flood Depth: 0.1m</span>
+<span class="text-error font-semibold">3.5m+</span>
+</div>
+<div class="h-2 w-full rounded-full mt-1 bg-gradient-to-r from-primary via-secondary to-error"></div>
+</div>
+<!-- Symbol Keys -->
+<div class="mt-space-md space-y-1.5 font-body-sm text-[11px]">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-error ring-2 ring-error/30"></div>
+<span class="text-on-surface">Critical Infrastructure Breach</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-tertiary ring-2 ring-tertiary/30"></div>
+<span class="text-on-surface">At-Risk Asset (&lt;100m proximity)</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-DEFAULT bg-primary"></div>
+<span class="text-on-surface">Emergency Response Vehicle</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-1.5 bg-secondary-fixed-dim border-t border-b border-secondary"></div>
+<span class="text-on-surface">Protective Seawall Barrier</span>
+</div>
+</div>
+</div>
+<!-- In-Map Basemap Switcher (Bottom Right) -->
+<div class="absolute bottom-space-md right-space-md z-30 bg-surface-container-low/95 backdrop-blur-md px-2 py-1 rounded-DEFAULT shadow-xl pointer-events-auto flex items-center gap-1 font-body-sm text-body-sm">
+<button class="px-2 py-0.5 rounded-DEFAULT bg-surface-container-high text-primary font-semibold" type="button">Dark Gray</button>
+<button class="px-2 py-0.5 rounded-DEFAULT hover:bg-surface-container-high text-on-surface-variant" type="button">Satellite</button>
+<button class="px-2 py-0.5 rounded-DEFAULT hover:bg-surface-container-high text-on-surface-variant" type="button">Topographic</button>
+</div>
+</div>
+<!-- Bottom Micro-Shelf / Map Status Indicator Bar -->
+<div class="bg-surface-container-lowest px-space-md py-1.5 flex items-center justify-between font-label-mono-sm text-label-mono-sm text-on-surface-variant">
+<div class="flex items-center gap-space-md">
+<span class="text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary">navigation</span> 122°24'11"W 37°46'30"N
+              </span>
+<span>Scale: <strong class="text-on-surface font-tabular-data">1:18,500</strong></span>
+<span>Render Engine: <strong class="text-secondary font-tabular-data">WebGL2 60fps</strong></span>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="text-outline">Tiles Cached: 1,420</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: Analytical Gauges, Time-Series & Dispatches (3 cols) -->
+<div class="lg:col-span-3 space-y-space-md">
+<!-- Widget: Composite Spatial Vulnerability Index (Radial Gauge) -->
+<div class="bg-surface-container-low rounded-lg p-space-md shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-tertiary">speed</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Vulnerability Index</h2>
+</div>
+<span class="px-1.5 py-0.5 rounded-DEFAULT bg-tertiary/20 text-tertiary font-label-mono-sm text-[10px] font-bold">ELEVATED</span>
+</div>
+<!-- Radial Gauge Visualization SVG -->
+<div class="relative flex flex-col items-center justify-center my-space-sm">
+<svg class="w-40 h-28 overflow-visible" viewbox="0 0 160 100">
+<!-- Background Arc -->
+<path d="M 20 90 A 60 60 0 0 1 140 90" fill="none" stroke="#222a3d" stroke-linecap="round" stroke-width="12"></path>
+<!-- Active Score Arc (68/100) -->
+<path d="M 20 90 A 60 60 0 0 1 125 45" fill="none" stroke="#ffb95f" stroke-linecap="round" stroke-width="12"></path>
+<!-- Tick Marks -->
+<circle cx="20" cy="90" fill="#869397" r="2"></circle>
+<circle cx="80" cy="30" fill="#869397" r="2"></circle>
+<circle cx="140" cy="90" fill="#869397" r="2"></circle>
+</svg>
+<div class="absolute bottom-1 flex flex-col items-center">
+<span class="font-headline-xl text-[28px] font-bold text-on-surface font-tabular-data leading-none">68<span class="text-sm font-normal text-on-surface-variant">/100</span></span>
+<span class="font-label-mono-sm text-[10px] text-tertiary uppercase font-semibold mt-1">High Exposure Zone</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-xs mt-space-md pt-space-xs border-t border-outline-variant/20 font-body-sm text-body-sm">
+<div class="p-1.5 bg-surface-container rounded-DEFAULT">
+<span class="font-label-mono-sm text-[9px] uppercase text-on-surface-variant block">Surge Velocity</span>
+<span class="font-tabular-data text-on-surface font-semibold">1.42 m/s</span>
+</div>
+<div class="p-1.5 bg-surface-container rounded-DEFAULT">
+<span class="font-label-mono-sm text-[9px] uppercase text-on-surface-variant block">Soil Saturation</span>
+<span class="font-tabular-data text-tertiary font-semibold">89.1%</span>
+</div>
+</div>
+</div>
+<!-- Widget: Water Level Sensors (Tide Gauge Time-Series) -->
+<div class="bg-surface-container-low rounded-lg p-space-md shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">waves</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Tide Sensors (01-08)</h2>
+</div>
+<span class="font-label-mono-sm text-[10px] text-secondary font-tabular-data">TG-04 HIGH</span>
+</div>
+<p class="font-body-sm text-[11px] text-on-surface-variant mb-space-xs">Observed tide curve vs Critical Flood Threshold.</p>
+<!-- Time-Series Chart SVG -->
+<div class="relative bg-surface-container-lowest p-2 rounded-DEFAULT mt-space-xs">
+<svg class="w-full h-28" fill="none" viewbox="0 0 240 100">
+<!-- Grid lines -->
+<line stroke="#222a3d" stroke-dasharray="2 2" x1="0" x2="240" y1="20" y2="20"></line>
+<line stroke="#222a3d" stroke-dasharray="2 2" x1="0" x2="240" y1="50" y2="50"></line>
+<line stroke="#222a3d" stroke-dasharray="2 2" x1="0" x2="240" y1="80" y2="80"></line>
+<!-- Threshold Line (Critical 2.2m) -->
+<line stroke="#ffb4ab" stroke-dasharray="4 2" stroke-width="1.2" x1="0" x2="240" y1="32" y2="32"></line>
+<text fill="#ffb4ab" font-family="JetBrains Mono" font-size="8" x="5" y="28">ALERT THRESHOLD: +2.20m</text>
+<!-- Tide Gauge Station 04 Curve (Over Threshold) -->
+<path d="M 0 75 Q 40 70 80 52 T 160 30 T 210 24 T 240 38" fill="none" stroke="#4cd7f6" stroke-width="2"></path>
+<path d="M 0 75 Q 40 70 80 52 T 160 30 T 210 24 T 240 38 V 100 H 0 Z" fill="#4cd7f6" fill-opacity="0.08"></path>
+<!-- Secondary Sensor Station 02 -->
+<path d="M 0 85 Q 50 82 100 68 T 180 55 T 240 50" fill="none" stroke="#89ceff" stroke-dasharray="2 2" stroke-opacity="0.6" stroke-width="1.2"></path>
+<!-- Crest Marker Point -->
+<circle cx="210" cy="24" fill="#4cd7f6" r="3.5"></circle>
+<circle class="animate-ping" cx="210" cy="24" fill="none" r="7" stroke="#4cd7f6" stroke-width="1"></circle>
+</svg>
+<div class="flex justify-between font-label-mono-sm text-[9px] text-outline mt-1 px-1">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00 (PEAK)</span>
+<span>24:00</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-space-sm font-label-mono-sm text-[10px] text-on-surface-variant">
+<span>Peak Projected: <strong class="text-primary font-tabular-data">+2.41m at 18:20</strong></span>
+<span class="text-error font-medium">+0.21m OVER</span>
+</div>
+</div>
+<!-- Widget: Priority Dispatch Recommendations -->
+<div class="bg-surface-container-low rounded-lg p-space-md shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">alt_route</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Priority Dispatches</h2>
+</div>
+<span class="font-label-mono-sm text-[10px] text-outline font-tabular-data">OPTIMIZED</span>
+</div>
+<div class="space-y-space-sm">
+<!-- Action Item 1 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-[12px] text-on-surface font-semibold">Deploy Mobile Barrier #4</span>
+<span class="font-label-mono-sm text-[9px] text-error bg-error-container/30 px-1 py-0.2 rounded-DEFAULT">HIGH RISK</span>
+</div>
+<p class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Route clear via I-280 North. Est. arrival 8 min.</p>
+<div class="mt-2 flex items-center justify-between">
+<span class="font-label-mono-sm text-[10px] text-secondary">Target: Sector 09 Seawall</span>
+<button class="px-2 py-1 bg-primary text-on-primary font-body-sm text-[11px] font-semibold rounded-DEFAULT hover:opacity-90" type="button">Dispatch Unit</button>
+</div>
+</div>
+<!-- Action Item 2 -->
+<div class="p-space-sm bg-surface-container rounded-DEFAULT">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-[12px] text-on-surface font-semibold">Auxiliary Generator Relo</span>
+<span class="font-label-mono-sm text-[9px] text-tertiary bg-tertiary-container/30 px-1 py-0.2 rounded-DEFAULT">STANDBY</span>
+</div>
+<p class="font-body-sm text-[11px] text-on-surface-variant mt-0.5">Transfer backup gen from Depot 3 to Water Plant 02.</p>
+<div class="mt-2 flex items-center justify-between">
+<span class="font-label-mono-sm text-[10px] text-secondary">Target: Potable Basin B</span>
+<button class="px-2 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-sm text-[11px] rounded-DEFAULT" type="button">Assign Fleet</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Collapsible Coordinated Attribute Table Drawer -->
+<section class="mx-space-lg mb-space-lg bg-surface-container-low rounded-lg shadow-xl overflow-hidden">
+<!-- Shelf Header -->
+<div class="bg-surface-container-high px-space-md py-space-xs flex items-center justify-between select-none">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-primary">table_chart</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Spatial Attributes &amp; Telemetry Logs</span>
+</div>
+<div class="flex items-center gap-1 font-label-mono-sm text-[11px]">
+<span class="px-2 py-0.5 rounded-DEFAULT bg-surface-container-highest text-secondary">Inundation Intersections (14)</span>
+<span class="px-2 py-0.5 rounded-DEFAULT hover:bg-surface-container-highest text-on-surface-variant cursor-pointer">Telemetry Feeds (128)</span>
+<span class="px-2 py-0.5 rounded-DEFAULT hover:bg-surface-container-highest text-on-surface-variant cursor-pointer">Dispatch Log (42)</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm text-on-surface-variant">
+<button class="hover:text-on-surface text-[14px] flex items-center gap-1 font-body-sm text-body-sm" title="Filter columns" type="button">
+<span class="material-symbols-outlined text-[16px]">filter_list</span> Filter
+        </button>
+<button class="hover:text-on-surface text-[14px] flex items-center gap-1 font-body-sm text-body-sm" title="Export CSV" type="button">
+<span class="material-symbols-outlined text-[16px]">download</span> Export
+        </button>
+<button class="hover:text-on-surface" title="Minimize Drawer" type="button">
+<span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+</div>
+</div>
+<!-- Monospace Dense Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left font-tabular-data text-tabular-data text-on-surface">
+<thead>
+<tr class="bg-surface-container font-label-mono-sm text-[10px] text-on-surface-variant uppercase tracking-wider select-none">
+<th class="py-2 px-space-md w-10 text-center"><input class="rounded bg-surface-container-lowest" type="checkbox"/></th>
+<th class="py-2 px-space-md">Asset Identifier</th>
+<th class="py-2 px-space-md">Spatial Class</th>
+<th class="py-2 px-space-md">Coordinates (WGS84)</th>
+<th class="py-2 px-space-md">Surge Exposure</th>
+<th class="py-2 px-space-md">Criticality</th>
+<th class="py-2 px-space-md">Telemetry Status</th>
+<th class="py-2 px-space-md text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-high/40 font-body-sm text-[11px]">
+<!-- Row 1 Selected -->
+<tr class="bg-tertiary-container/10 border-l-2 border-tertiary hover:bg-tertiary-container/20 transition-colors">
+<td class="py-1.5 px-space-md text-center"><input checked="" class="rounded bg-surface-container-lowest text-primary" type="checkbox"/></td>
+<td class="py-1.5 px-space-md font-tabular-data font-semibold text-on-surface">SUB-44-B-MISSION</td>
+<td class="py-1.5 px-space-md text-secondary">Electrical Substation</td>
+<td class="py-1.5 px-space-md font-tabular-data text-on-surface-variant">37.7881° N, -122.3912° W</td>
+<td class="py-1.5 px-space-md font-tabular-data text-error font-semibold">+1.84m (Breached)</td>
+<td class="py-1.5 px-space-md"><span class="px-1.5 py-0.2 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-[9px] font-bold">TIER 1</span></td>
+<td class="py-1.5 px-space-md flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span> Sensor Failure (Ch 2)</td>
+<td class="py-1.5 px-space-md text-right">
+<button class="text-primary hover:underline font-label-mono-sm text-[10px]" type="button">Inspect Map</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-surface-container-low hover:bg-surface-container transition-colors">
+<td class="py-1.5 px-space-md text-center"><input class="rounded bg-surface-container-lowest text-primary" type="checkbox"/></td>
+<td class="py-1.5 px-space-md font-tabular-data font-semibold text-on-surface">PUMP-09-EMBARCADERO</td>
+<td class="py-1.5 px-space-md text-primary">Stormwater Lift Station</td>
+<td class="py-1.5 px-space-md font-tabular-data text-on-surface-variant">37.8014° N, -122.4048° W</td>
+<td class="py-1.5 px-space-md font-tabular-data text-tertiary font-semibold">+0.62m (Margin: 0.1m)</td>
+<td class="py-1.5 px-space-md"><span class="px-1.5 py-0.2 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-[9px] font-bold">TIER 1</span></td>
+<td class="py-1.5 px-space-md flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> 94% Duty Cycle</td>
+<td class="py-1.5 px-space-md text-right">
+<button class="text-primary hover:underline font-label-mono-sm text-[10px]" type="button">Inspect Map</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="bg-surface-container-low hover:bg-surface-container transition-colors">
+<td class="py-1.5 px-space-md text-center"><input class="rounded bg-surface-container-lowest text-primary" type="checkbox"/></td>
+<td class="py-1.5 px-space-md font-tabular-data font-semibold text-on-surface">FIBER-NODE-SE-12</td>
+<td class="py-1.5 px-space-md text-secondary-fixed-dim">Telecom Trunk Loop</td>
+<td class="py-1.5 px-space-md font-tabular-data text-on-surface-variant">37.7925° N, -122.3941° W</td>
+<td class="py-1.5 px-space-md font-tabular-data text-on-surface-variant">+0.15m (Dry Conduit)</td>
+<td class="py-1.5 px-space-md"><span class="px-1.5 py-0.2 rounded-DEFAULT bg-surface-container-highest text-secondary font-label-mono-sm text-[9px] font-bold">TIER 2</span></td>
+<td class="py-1.5 px-space-md flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Nominal (100Gbps)</td>
+<td class="py-1.5 px-space-md text-right">
+<button class="text-primary hover:underline font-label-mono-sm text-[10px]" type="button">Inspect Map</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="bg-surface-container-low hover:bg-surface-container transition-colors">
+<td class="py-1.5 px-space-md text-center"><input class="rounded bg-surface-container-lowest text-primary" type="checkbox"/></td>
+<td class="py-1.5 px-space-md font-tabular-data font-semibold text-on-surface">GATE-HYDRO-04</td>
+<td class="py-1.5 px-space-md text-primary">Tidal Barrier Gate</td>
+<td class="py-1.5 px-space-md font-tabular-data text-on-surface-variant">37.7719° N, -122.3855° W</td>
+<td class="py-1.5 px-space-md font-tabular-data text-primary font-semibold">+2.10m Head Pressure</td>
+<td class="py-1.5 px-space-md"><span class="px-1.5 py-0.2 rounded-DEFAULT bg-error/20 text-error font-label-mono-sm text-[9px] font-bold">TIER 1</span></td>
+<td class="py-1.5 px-space-md flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Locked / Hydraulic Seal</td>
+<td class="py-1.5 px-space-md text-right">
+<button class="text-primary hover:underline font-label-mono-sm text-[10px]" type="button">Inspect Map</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Pagination / Status -->
+<div class="bg-surface-container-lowest px-space-md py-space-xs flex items-center justify-between font-label-mono-sm text-label-mono-sm text-on-surface-variant">
+<span>Showing 1 to 4 of 214 Selected Spatial Records</span>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded-DEFAULT bg-surface-container hover:bg-surface-container-high text-on-surface disabled:opacity-40" disabled="" type="button">
+<span class="material-symbols-outlined text-[14px]">chevron_left</span>
+</button>
+<span class="px-2 py-0.5 rounded-DEFAULT bg-surface-container-high text-on-surface font-tabular-data">Page 1 of 54</span>
+<button class="p-1 rounded-DEFAULT bg-surface-container hover:bg-surface-container-high text-on-surface" type="button">
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div></main></div><footer class="fixed bottom-0 left-0 right-0 h-6 bg-surface-container-lowest border-t border-outline-variant/30 z-50 flex items-center justify-between px-space-md font-tabular-data text-tabular-data text-on-surface-variant select-none"><div class="flex items-center gap-space-md overflow-hidden text-ellipsis whitespace-nowrap"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[13px] text-primary">explore</span><span class="text-on-surface">Lat: 37.7749° N  Lon: -122.4194° W</span></div><span class="text-outline-variant">|</span><span>EPSG:3857 (WGS 84 / Pseudo-Mercator)</span><span class="text-outline-variant">|</span><span>Zoom: <span class="text-on-surface">14.5</span></span><span class="text-outline-variant">|</span><span>Scale: <span class="text-on-surface">1:24,000</span></span><span class="text-outline-variant hidden sm:inline">|</span><span class="hidden sm:inline">Elevation: <span class="text-on-surface">42m</span></span><span class="text-outline-variant hidden md:inline">|</span><span class="hidden md:inline">WebGL2 <span class="text-secondary">(60 FPS)</span></span></div><div class="flex items-center gap-space-md shrink-0"><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="text-on-surface">GeoServer Cluster: Operational</span><span class="text-outline-variant text-[10px]">(12ms)</span></div><span class="text-outline-variant">|</span><span>GeoCore v4.8.2-PRO</span></div></footer></body></html>

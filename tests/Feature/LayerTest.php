@@ -50,7 +50,7 @@ class LayerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('layers.index'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('layers.index');
+        $response->assertInertia(fn ($page) => $page->component('Layers/Index'));
     }
 
     public function test_user_without_organization_cannot_access_layers()
@@ -67,8 +67,7 @@ class LayerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('layers.create'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('layers.create');
-        $response->assertViewHas('projects');
+        $response->assertInertia(fn ($page) => $page->component('Layers/Create')->has('projects'));
     }
 
     public function test_user_can_create_layer()
@@ -103,8 +102,7 @@ class LayerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('layers.show', $layer));
 
         $response->assertStatus(200);
-        $response->assertViewIs('layers.show');
-        $response->assertViewHas('layer', $layer);
+        $response->assertInertia(fn ($page) => $page->component('Layers/Show')->where('layer.id', $layer->id));
     }
 
     public function test_user_can_access_layer_edit_form()
@@ -117,8 +115,7 @@ class LayerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('layers.edit', $layer));
 
         $response->assertStatus(200);
-        $response->assertViewIs('layers.edit');
-        $response->assertViewHas('layer', $layer);
+        $response->assertInertia(fn ($page) => $page->component('Layers/Edit')->where('layer.id', $layer->id));
     }
 
     public function test_user_can_update_layer()
@@ -257,8 +254,7 @@ class LayerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('layers.index'));
 
         $response->assertStatus(200);
-        $layers = $response->viewData('layers');
-        $this->assertCount(3, $layers);
+        $response->assertInertia(fn ($page) => $page->has('layers.data', 3));
     }
 
     public function test_user_can_access_attribute_table()
@@ -275,7 +271,7 @@ class LayerTest extends TestCase
             $response = $this->actingAs($this->user)->get(route('layers.attributes', $layer));
             // If it works, great
             $response->assertStatus(200);
-            $response->assertViewIs('layers.attributes.index');
+            $response->assertInertia(fn ($page) => $page->component('Layers/Attributes/Index'));
         } catch (\Exception $e) {
             // Expected to fail in SQLite without the actual PostGIS table
             $this->assertTrue(true);

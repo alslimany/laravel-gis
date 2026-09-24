@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ProjectController extends Controller
 {
@@ -22,7 +23,9 @@ class ProjectController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('projects.index', compact('projects'));
+        return Inertia::render('Projects/Index', [
+            'projects' => $projects,
+        ]);
     }
 
     /**
@@ -32,7 +35,7 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
 
-        return view('projects.create');
+        return Inertia::render('Projects/Form');
     }
 
     /**
@@ -81,7 +84,9 @@ class ProjectController extends Controller
             $query->with('user')->latest()->limit(10);
         }]);
 
-        return view('projects.show', compact('project'));
+        return Inertia::render('Projects/Show', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -91,7 +96,9 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
 
-        return view('projects.edit', compact('project'));
+        return Inertia::render('Projects/Form', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -143,7 +150,9 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
 
-        return view('projects.share', compact('project'));
+        return Inertia::render('Projects/Share', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -156,7 +165,9 @@ class ProjectController extends Controller
             ->with(['layers', 'user'])
             ->firstOrFail();
 
-        return view('projects.shared', compact('project'));
+        return Inertia::render('Projects/Shared', [
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -174,7 +185,11 @@ class ProjectController extends Controller
 
         $collaborators = $project->collaborators()->withPivot('role')->get();
 
-        return view('projects.invite', compact('project', 'availableUsers', 'collaborators'));
+        return Inertia::render('Projects/Invite', [
+            'project' => $project,
+            'availableUsers' => $availableUsers,
+            'collaborators' => $collaborators,
+        ]);
     }
 
     /**

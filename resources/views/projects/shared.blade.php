@@ -5,22 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $project->name }} - Shared Project</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=ibm-plex-sans:400,500,600" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+            color: #0b1220;
+            background: #eef2f6;
         }
         .project-header {
-            background: #fff;
-            border-bottom: 1px solid #dee2e6;
-            padding: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #0b1220;
+            color: #fff;
+            padding: 1rem 0;
         }
-        .project-content {
-            padding: 2rem;
-        }
+        .project-header .text-muted { color: rgba(255,255,255,0.62) !important; }
+        .project-content { padding: 1.5rem; }
+        .badge.bg-success { background: #0f766e !important; }
     </style>
 </head>
 <body>

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class OrganizationController extends Controller
 {
@@ -24,7 +25,9 @@ class OrganizationController extends Controller
 
         $this->authorize('view', $organization);
 
-        return view('organization.settings', compact('organization'));
+        return Inertia::render('Organization/Settings', [
+            'organization' => $organization,
+        ]);
     }
 
     /**
@@ -39,7 +42,22 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'primary_color' => ['nullable', 'string', 'max:20', 'regex:/^#?[0-9A-Fa-f]{3,8}$/'],
+            'logo' => 'nullable|image|mimes:jpeg,png,gif,webp,svg|max:2048',
         ]);
+
+        if (! empty($validated['primary_color']) && ! str_starts_with($validated['primary_color'], '#')) {
+            $validated['primary_color'] = '#'.$validated['primary_color'];
+        }
+
+        if ($request->hasFile('logo')) {
+            if ($organization->logo_path) {
+                Storage::disk('public')->delete($organization->logo_path);
+            }
+            $validated['logo_path'] = $request->file('logo')->store('organization-logos', 'public');
+        }
+
+        unset($validated['logo']);
 
         $organization->update($validated);
 

@@ -2,13 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GeometryColumnHelper;
 use App\Models\Layer;
+use App\Services\FeatureService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Inertia\Inertia;
 
 class AttributeTableController extends Controller
 {
+    public function __construct(protected FeatureService $features) {}
+
+    /**
+     * Attribute column names from the layer table.
+     */
+    public function columns(Layer $layer)
+    {
+        $this->authorize('view', $layer);
+
+        $columns = $layer->table_name
+            ? $this->features->attributeColumns($layer->table_name)
+            : [];
+
+        return response()->json(['columns' => $columns]);
+    }
+
+    /**
+     * Distinct values for one attribute column.
+     */
+    public function distinct(Layer $layer, string $column)
+    {
+        $this->authorize('view', $layer);
+
+        return response()->json([
+            'values' => $this->features->distinctValues($layer, $column),
+        ]);
+    }
+
     /**
      * Display attribute table for a layer.
      */
@@ -18,44 +47,37 @@ class AttributeTableController extends Controller
 
         $perPage = $request->input('per_page', 25);
         $search = $request->input('search');
+        $shape = $request->input('shape');
 
-        // Get table columns
-        $columns = $this->getTableColumns($layer->table_name);
-
-        // Build query
-        $query = DB::table($layer->table_name);
-
-        // Apply search filter if provided
-        if ($search) {
-            $query->where(function ($q) use ($search, $columns) {
-                foreach ($columns as $column) {
-                    if (!in_array($column, ['geom', 'geometry'])) {
-                        $q->orWhere($column, 'ILIKE', "%{$search}%");
-                    }
-                }
-            });
+        $result = $this->features->list($layer, (int) $perPage, $search, $shape);
+        $features = $result['features'];
+        $columns = $result['columns'];
+        $fields = $layer->fields()->orderBy('sort_order')->get()->keyBy('name');
+        $columnLabels = [];
+        foreach ($columns as $column) {
+            $columnLabels[$column] = $fields->get($column)?->alias ?: $column;
         }
 
-        // Get paginated results
-        $features = $query->paginate($perPage);
+        if (($request->expectsJson() || $request->is('api/*')) && ! $request->header('X-Inertia')) {
+            return response()->json([
+                'layer' => $layer,
+                'features' => $features,
+                'columns' => $columns,
+            ]);
+        }
 
-        // Convert geometry columns to WKT for display
-        $features->getCollection()->transform(function ($feature) use ($columns) {
-            $feature = (array) $feature;
-            foreach ($columns as $column) {
-                if (in_array($column, ['geom', 'geometry']) && isset($feature[$column])) {
-                    try {
-                        $wkt = DB::select("SELECT ST_AsText(?) as wkt", [$feature[$column]])[0]->wkt ?? null;
-                        $feature[$column] = $wkt;
-                    } catch (\Exception $e) {
-                        $feature[$column] = 'Error reading geometry';
-                    }
-                }
-            }
-            return (object) $feature;
-        });
-
-        return view('layers.attributes.index', compact('layer', 'features', 'columns'));
+        return Inertia::render('Layers/Attributes/Index', [
+            'layer' => $layer,
+            'features' => $features,
+            'columns' => $columns,
+            'columnLabels' => $columnLabels,
+            'shapes' => $result['shapes'] ?? [],
+            'filters' => [
+                'search' => $search,
+                'shape' => $shape,
+            ],
+            'canEdit' => $request->user()->can('update', $layer),
+        ]);
     }
 
     /**
@@ -70,19 +92,17 @@ class AttributeTableController extends Controller
             'value' => 'nullable|string',
         ]);
 
-        $columns = $this->getTableColumns($layer->table_name);
+        $geom = GeometryColumnHelper::resolve($layer->table_name);
+        $columns = $this->features->attributeColumns($layer->table_name, $geom);
 
-        // Ensure column exists and is not a geometry column
-        if (!in_array($validated['column'], $columns) || in_array($validated['column'], ['geom', 'geometry'])) {
+        if (! in_array($validated['column'], $columns, true)) {
             return response()->json(['error' => 'Invalid column'], 400);
         }
 
         try {
-            DB::table($layer->table_name)
-                ->where('id', $featureId)
-                ->update([
-                    $validated['column'] => $validated['value']
-                ]);
+            $this->features->update($layer, $featureId, [
+                $validated['column'] => $validated['value'],
+            ]);
 
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
@@ -98,43 +118,13 @@ class AttributeTableController extends Controller
         $this->authorize('view', $layer);
 
         try {
-            // Get all features as GeoJSON
-            $features = DB::select("
-                SELECT jsonb_build_object(
-                    'type', 'FeatureCollection',
-                    'features', jsonb_agg(feature)
-                ) as geojson
-                FROM (
-                    SELECT jsonb_build_object(
-                        'type', 'Feature',
-                        'geometry', ST_AsGeoJSON(geom)::jsonb,
-                        'properties', to_jsonb(row) - 'geom'
-                    ) as feature
-                    FROM (SELECT * FROM {$layer->table_name}) row
-                ) features
-            ");
-
-            $geojson = json_decode($features[0]->geojson ?? '{}', true);
-
-            return response()->json($geojson);
+            return response()->json($this->features->toGeoJson($layer));
         } catch (\Exception $e) {
             return response()->json([
                 'type' => 'FeatureCollection',
                 'features' => [],
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
-        }
-    }
-
-    /**
-     * Get table columns excluding geometry.
-     */
-    protected function getTableColumns(string $tableName): array
-    {
-        try {
-            return Schema::getColumnListing($tableName);
-        } catch (\Exception $e) {
-            return [];
         }
     }
 }

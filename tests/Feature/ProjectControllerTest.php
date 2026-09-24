@@ -65,8 +65,7 @@ class ProjectControllerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('projects.index'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('projects.index');
-        $response->assertViewHas('projects');
+        $response->assertInertia(fn ($page) => $page->component('Projects/Index')->has('projects'));
     }
 
     public function test_user_without_organization_cannot_view_projects()
@@ -83,7 +82,7 @@ class ProjectControllerTest extends TestCase
         $response = $this->actingAs($this->editor)->get(route('projects.create'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('projects.create');
+        $response->assertInertia(fn ($page) => $page->component('Projects/Form'));
     }
 
     public function test_viewer_cannot_create_project()
@@ -135,7 +134,7 @@ class ProjectControllerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('projects.show', $this->project));
 
         $response->assertStatus(200);
-        $response->assertViewIs('projects.show');
+        $response->assertInertia(fn ($page) => $page->component('Projects/Show'));
         $response->assertSee($this->project->name);
     }
 
@@ -221,7 +220,7 @@ class ProjectControllerTest extends TestCase
             ->get(route('projects.share', $this->project));
 
         $response->assertStatus(200);
-        $response->assertViewIs('projects.share');
+        $response->assertInertia(fn ($page) => $page->component('Projects/Share'));
     }
 
     public function test_user_can_toggle_project_visibility()
@@ -365,11 +364,11 @@ class ProjectControllerTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('projects.index'));
 
         $response->assertStatus(200);
-        $projects = $response->viewData('projects');
-        
-        // Should only see project from own organization
+        $projects = $response->viewData('page')['props']['projects']['data'];
+
+        $this->assertNotEmpty($projects);
         foreach ($projects as $project) {
-            $this->assertEquals($this->organization->id, $project->organization_id);
+            $this->assertEquals($this->organization->id, $project['organization_id']);
         }
     }
 

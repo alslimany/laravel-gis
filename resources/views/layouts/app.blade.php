@@ -1,113 +1,43 @@
+{{-- DEPRECATED: legacy Blade+console shell. Primary UI is Inertia via resources/views/app.blade.php. --}}
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    @php
+        $consoleProps = $consoleProps ?? \App\Support\ConsoleProps::base('blade');
+        $brandColor = $consoleProps['brand']['primaryColor'] ?? '#06b6d4';
+    @endphp
 
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
+    <title>{{ $consoleProps['brand']['name'] ?? 'Lumina GIS' }}</title>
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=ibm-plex-sans:400,500,600,700|ibm-plex-mono:400,500,600" rel="stylesheet" />
 
-    <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-    
+    <style>
+        :root {
+            --org-primary: {{ $brandColor }};
+            --bs-primary: {{ $brandColor }};
+            --bs-primary-rgb: {{ implode(', ', sscanf(ltrim($brandColor, '#'), '%02x%02x%02x') ?: [15, 118, 110]) }};
+        }
+    </style>
+
+    @viteReactRefresh
+    @vite(['resources/sass/app.scss', 'resources/js/console/main.jsx'])
     @stack('styles')
 </head>
-<body>
-    <div id="app">
-        <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
-            <div class="container">
-                <a class="navbar-brand" href="{{ url('/') }}">
-                    {{ config('app.name', 'Laravel') }}
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+<body class="antialiased">
+    <div
+        id="console-root"
+        data-props='@json($consoleProps)'
+    ></div>
 
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <!-- Left Side Of Navbar -->
-                    <ul class="navbar-nav me-auto">
-                        @auth
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('dashboard') }}">Dashboard</a>
-                            </li>
-                            @if(auth()->user()->organization_id)
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('projects.index') }}">Projects</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('imports.index') }}">Data Imports</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('layers.index') }}">Layers</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('maps.index') }}">Maps</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('organization.settings') }}">Organization</a>
-                                </li>
-                            @endif
-                            @if(auth()->user()->isAdmin())
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('users.index') }}">Users</a>
-                                </li>
-                            @endif
-                        @endauth
-                    </ul>
-
-                    <!-- Right Side Of Navbar -->
-                    <ul class="navbar-nav ms-auto">
-                        <!-- Authentication Links -->
-                        @guest
-                            @if (Route::has('login'))
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
-                                </li>
-                            @endif
-
-                            @if (Route::has('register'))
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
-                                </li>
-                            @endif
-                        @else
-                            <li class="nav-item dropdown">
-                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
-                                    {{ Auth::user()->name }}
-                                </a>
-
-                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{{ route('logout') }}"
-                                       onclick="event.preventDefault();
-                                                     document.getElementById('logout-form').submit();">
-                                        {{ __('Logout') }}
-                                    </a>
-
-                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                        @csrf
-                                    </form>
-                                </div>
-                            </li>
-                        @endguest
-                    </ul>
-                </div>
-            </div>
-        </nav>
-
-        <main class="py-4">
-            @yield('content')
-        </main>
+    <div id="console-blade-slot" hidden>
+        @yield('content')
     </div>
-    
+
     @stack('scripts')
 </body>
 </html>

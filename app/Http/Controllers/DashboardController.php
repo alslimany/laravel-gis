@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DataImport;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -22,42 +24,50 @@ class DashboardController extends Controller
         $user = $request->user();
         $organization = $user->organization;
 
-        $projects = $organization
-            ? $organization->projects()->latest()->paginate(10)
-            : collect();
+        $projects = [];
+        $stats = null;
 
-        // GIS-specific statistics
-        $stats = [];
         if ($organization) {
+            $projectPaginator = $organization->projects()->latest()->paginate(10);
+            $projects = [
+                'data' => $projectPaginator->getCollection()->map(fn ($project) => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'created_at_formatted' => optional($project->created_at)->format('M d, Y'),
+                ])->values()->all(),
+            ];
+
             $stats = [
+                'import_count' => DataImport::query()->where('organization_id', $organization->id)->count(),
                 'total_layers' => $organization->layers()->count(),
                 'published_layers' => $organization->layers()->where('published', true)->count(),
                 'total_maps' => $organization->maps()->count(),
                 'total_projects' => $organization->projects()->count(),
-                'recent_layers' => $organization->layers()->latest()->take(5)->get(),
-                'recent_maps' => $organization->maps()->latest()->take(5)->get(),
-                'storage_usage' => $this->calculateStorageUsage($organization),
+                'recent_layers' => $organization->layers()->latest()->take(5)->get()->map(fn ($layer) => [
+                    'id' => $layer->id,
+                    'name' => $layer->name,
+                    'geometry_type' => $layer->geometry_type,
+                    'feature_count' => $layer->feature_count,
+                    'published' => (bool) $layer->published,
+                    'created_human' => optional($layer->created_at)->diffForHumans(),
+                ])->values()->all(),
+                'recent_maps' => $organization->maps()->latest()->take(5)->get()->map(fn ($map) => [
+                    'id' => $map->id,
+                    'name' => $map->name,
+                    'layers' => $map->layers ?? [],
+                    'is_public' => (bool) $map->is_public,
+                    'created_human' => optional($map->created_at)->diffForHumans(),
+                    'viewport' => $map->viewport,
+                    'basemap' => $map->basemap ?: 'osm',
+                ])->values()->all(),
             ];
         }
 
-        return view('dashboard', compact('user', 'organization', 'projects', 'stats'));
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'projects' => $projects,
+        ]);
     }
 
-    /**
-     * Calculate approximate storage usage for organization layers
-     */
-    private function calculateStorageUsage($organization)
-    {
-        $totalFeatures = $organization->layers()->sum('feature_count');
-        // Rough estimate: average 1KB per feature
-        $estimatedBytes = $totalFeatures * 1024;
-        
-        if ($estimatedBytes < 1024 * 1024) {
-            return number_format($estimatedBytes / 1024, 2) . ' KB';
-        } elseif ($estimatedBytes < 1024 * 1024 * 1024) {
-            return number_format($estimatedBytes / (1024 * 1024), 2) . ' MB';
-        } else {
-            return number_format($estimatedBytes / (1024 * 1024 * 1024), 2) . ' GB';
-        }
-    }
 }

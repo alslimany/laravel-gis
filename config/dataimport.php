@@ -19,20 +19,22 @@ return [
 
     'upload_path' => 'imports',
 
-    'max_file_size' => env('DATA_IMPORT_MAX_FILE_SIZE', 104857600), // 100MB in bytes
+    'max_file_size' => env('DATA_IMPORT_MAX_FILE_SIZE', 1073741824), // 1 GB
 
     'allowed_extensions' => [
-        'shapefile' => ['shp', 'shx', 'dbf', 'prj', 'cpg'],
-        'geojson' => ['geojson', 'json'],
-        'kml' => ['kml', 'kmz'],
-        'csv' => ['csv'],
+        'shp', 'shx', 'dbf', 'prj', 'cpg', 'sbn', 'sbx',
+        'geojson', 'json',
+        'kml', 'kmz',
+        'csv',
+        'xlsx', 'xls',
+        'zip',
     ],
 
     'table_prefix' => env('DATA_IMPORT_TABLE_PREFIX', 'import_'),
 
     'default_srid' => env('DATA_IMPORT_DEFAULT_SRID', 4326),
 
-    'timeout' => env('DATA_IMPORT_TIMEOUT', 300), // 5 minutes
+    'timeout' => env('DATA_IMPORT_TIMEOUT', 1800),
 
     'chunk_size' => env('DATA_IMPORT_CHUNK_SIZE', 1000), // For large files
 

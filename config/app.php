@@ -13,7 +13,20 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Lumina GIS'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public registration
+    |--------------------------------------------------------------------------
+    |
+    | A self-hosted console belongs to one organization. People join by
+    | invite. Set ALLOW_REGISTRATION=true only when this deploy should
+    | accept open signups.
+    |
+    */
+
+    'allow_registration' => (bool) env('ALLOW_REGISTRATION', false),
 
     /*
     |--------------------------------------------------------------------------

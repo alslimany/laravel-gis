@@ -62,9 +62,34 @@
 document.addEventListener('DOMContentLoaded', function() {
     const mapData = @json($map);
     
-    // Create base layer
+    function basemapSource(id) {
+        if (id === 'imagery') {
+            return new ol.source.XYZ({
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                maxZoom: 19,
+                attributions: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+            });
+        }
+        if (id === 'satellite' || id === 'mapbox-satellite') {
+            return new ol.source.XYZ({
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                maxZoom: 19
+            });
+        }
+        if (id === 'dark') {
+            return new ol.source.XYZ({ url: 'https://{a-c}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', maxZoom: 19 });
+        }
+        if (id === 'light') {
+            return new ol.source.XYZ({ url: 'https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', maxZoom: 19 });
+        }
+        if (id === 'terrain') {
+            return new ol.source.XYZ({ url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png', maxZoom: 17 });
+        }
+        return new ol.source.OSM();
+    }
+
     const baseLayer = new ol.layer.Tile({
-        source: new ol.source.OSM()
+        source: basemapSource(mapData.basemap)
     });
 
     // Initialize map
@@ -77,21 +102,68 @@ document.addEventListener('DOMContentLoaded', function() {
         })
     });
 
+    function layerStyle(layerConfig) {
+        const style = layerConfig.style_config || layerConfig.style || {};
+        const fill = style.fill_color || style.fillColor || '#3388ff';
+        const stroke = style.stroke_color || style.strokeColor || '#000000';
+        const fillOpacity = Number(style.fill_opacity ?? style.fillOpacity ?? 0.5);
+        const strokeWidth = Number(style.stroke_width ?? style.strokeWidth ?? 1);
+        return new ol.style.Style({
+            fill: new ol.style.Fill({ color: fill }),
+            stroke: new ol.style.Stroke({ color: stroke, width: strokeWidth }),
+            image: new ol.style.Circle({
+                radius: 6,
+                fill: new ol.style.Fill({ color: fill }),
+                stroke: new ol.style.Stroke({ color: stroke, width: strokeWidth })
+            })
+        });
+    }
+
     // Add layers if any
     if (mapData.layers && Array.isArray(mapData.layers)) {
         mapData.layers.forEach(layerConfig => {
-            if (layerConfig.type === 'wms' && layerConfig.visible) {
-                const wmsLayer = new ol.layer.Tile({
+            if (layerConfig.visible === false) {
+                return;
+            }
+
+            const opacity = layerConfig.opacity || 1;
+
+            if ((layerConfig.type === 'mvt' || layerConfig.mvtUrl) && (layerConfig.mvtUrl || layerConfig.id)) {
+                const url = layerConfig.mvtUrl || `/api/layers/${layerConfig.id}/tiles/{z}/{x}/{y}.mvt`;
+                map.addLayer(new ol.layer.VectorTile({
+                    source: new ol.source.VectorTile({
+                        format: new ol.format.MVT(),
+                        url: url
+                    }),
+                    style: layerStyle(layerConfig),
+                    opacity: opacity
+                }));
+                return;
+            }
+
+            if (layerConfig.type === 'wms') {
+                map.addLayer(new ol.layer.Tile({
                     source: new ol.source.TileWMS({
                         url: layerConfig.url,
-                        params: {
+                        params: Object.assign({
                             'LAYERS': layerConfig.layers,
                             'TILED': true
-                        }
+                        }, layerConfig.wmsParams || {})
                     }),
-                    opacity: layerConfig.opacity || 1
-                });
-                map.addLayer(wmsLayer);
+                    opacity: opacity
+                }));
+                return;
+            }
+
+            if (layerConfig.type === 'vector' || layerConfig.type === 'geojson' || layerConfig.type === 'wfs') {
+                map.addLayer(new ol.layer.Vector({
+                    source: new ol.source.Vector({
+                        url: layerConfig.url,
+                        format: new ol.format.GeoJSON()
+                    }),
+                    style: layerStyle(layerConfig),
+                    opacity: opacity
+                }));
             }
         });
     }

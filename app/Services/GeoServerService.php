@@ -496,6 +496,123 @@ SLD;
     }
 
     /**
+     * Check if a coverage store exists.
+     */
+    public function coverageStoreExists(string $workspace, string $store): bool
+    {
+        try {
+            $response = $this->client->get(
+                "{$this->restUrl}/workspaces/{$workspace}/coveragestores/{$store}.json",
+                ['auth' => $this->auth]
+            );
+
+            return $response->getStatusCode() === 200;
+        } catch (GuzzleException $e) {
+            Log::error("Error checking coverage store: {$e->getMessage()}");
+
+            return false;
+        }
+    }
+
+    /**
+     * Publish a directory of dated GeoTIFFs as an ImageMosaic.
+     * Newest acquisition date is requested by the map with SORTING=acquired D.
+     *
+     * @throws GeoServerException
+     */
+    public function publishImageMosaic(string $workspace, string $storeName, string $directoryUrl, string $title): void
+    {
+        $this->createWorkspace($workspace);
+
+        if (! $this->coverageStoreExists($workspace, $storeName)) {
+            $response = $this->client->post(
+                "{$this->restUrl}/workspaces/{$workspace}/coveragestores",
+                [
+                    'auth' => $this->auth,
+                    'timeout' => 120,
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'json' => [
+                        'coverageStore' => [
+                            'name' => $storeName,
+                            'type' => 'ImageMosaic',
+                            'enabled' => true,
+                            'workspace' => ['name' => $workspace],
+                            'url' => $directoryUrl,
+                        ],
+                    ],
+                ]
+            );
+
+            if (! in_array($response->getStatusCode(), [200, 201], true)) {
+                throw GeoServerException::layerPublishFailed(
+                    $storeName,
+                    new \Exception("Coverage store status {$response->getStatusCode()}: {$response->getBody()}")
+                );
+            }
+        }
+
+        $coverageResponse = $this->client->get(
+            "{$this->restUrl}/workspaces/{$workspace}/coveragestores/{$storeName}/coverages/{$storeName}.json",
+            ['auth' => $this->auth]
+        );
+
+        if ($coverageResponse->getStatusCode() === 200) {
+            return;
+        }
+
+        $response = $this->client->post(
+            "{$this->restUrl}/workspaces/{$workspace}/coveragestores/{$storeName}/coverages",
+            [
+                'auth' => $this->auth,
+                'timeout' => 300,
+                'headers' => ['Content-Type' => 'application/json'],
+                'json' => [
+                    'coverage' => [
+                        'name' => $storeName,
+                        'nativeName' => $storeName,
+                        'title' => $title,
+                        'enabled' => true,
+                        'srs' => 'EPSG:3857',
+                    ],
+                ],
+            ]
+        );
+
+        if (! in_array($response->getStatusCode(), [200, 201], true)) {
+            throw GeoServerException::layerPublishFailed(
+                $storeName,
+                new \Exception("Coverage status {$response->getStatusCode()}: {$response->getBody()}")
+            );
+        }
+    }
+
+    /**
+     * Add one GeoTIFF to an existing image mosaic.
+     *
+     * @throws GeoServerException
+     */
+    public function harvestImageMosaicGranule(string $workspace, string $storeName, string $granuleUrl): void
+    {
+        $response = $this->client->post(
+            "{$this->restUrl}/workspaces/{$workspace}/coveragestores/{$storeName}/external.imagemosaic",
+            [
+                'auth' => $this->auth,
+                'timeout' => 300,
+                'headers' => ['Content-Type' => 'text/plain'],
+                'query' => ['recalculate' => 'nativebbox,latlonbbox'],
+                'body' => $granuleUrl,
+            ]
+        );
+
+        if (! in_array($response->getStatusCode(), [200, 201, 202], true)) {
+            throw GeoServerException::layerPublishFailed(
+                $storeName,
+                new \Exception("Harvest status {$response->getStatusCode()}: {$response->getBody()}")
+            );
+        }
+    }
+
+    /**
      * Execute a request with retry logic.
      *
      * @param  int|null  $retryDelay  milliseconds

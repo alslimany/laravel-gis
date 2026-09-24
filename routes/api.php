@@ -1,47 +1,27 @@
 <?php
 
-use App\Http\Controllers\AnalysisController;
-use App\Http\Controllers\AttributeTableController;
-use App\Http\Controllers\ExportController;
-use App\Http\Controllers\MapController;
+use App\Http\Controllers\Api\V1\ExportApiController;
+use App\Http\Controllers\Api\V1\FeatureApiController;
+use App\Http\Controllers\Api\V1\LayerApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| API Routes (Sanctum token clients)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
-    // Layer API endpoints
-    Route::prefix('layers/{layer}')->group(function () {
-        Route::get('/geojson', [AttributeTableController::class, 'geojson'])->name('api.layers.geojson');
-        Route::get('/attributes', [AttributeTableController::class, 'index'])->name('api.layers.attributes');
-        Route::put('/attributes/{featureId}', [AttributeTableController::class, 'update'])->name('api.layers.attributes.update');
-    });
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::get('layers', [LayerApiController::class, 'index'])->name('api.v1.layers.index');
+    Route::get('layers/{layer}', [LayerApiController::class, 'show'])->name('api.v1.layers.show');
+    Route::get('layers/{layer}/geojson', [LayerApiController::class, 'geojson'])->name('api.v1.layers.geojson');
+    Route::get('layers/{layer}/export/geojson', [ExportApiController::class, 'geojson'])->name('api.v1.layers.export.geojson');
+    Route::get('layers/{layer}/export/csv', [ExportApiController::class, 'csv'])->name('api.v1.layers.export.csv');
+    Route::get('layers/{layer}/export/excel', [ExportApiController::class, 'excel'])->name('api.v1.layers.export.excel');
 
-    // Map API endpoints
-    Route::prefix('maps')->group(function () {
-        Route::post('/', [MapController::class, 'store'])->name('api.maps.store');
-        Route::put('/{map}', [MapController::class, 'update'])->name('api.maps.update');
-    });
-
-    // Analysis API endpoints
-    Route::prefix('analysis')->group(function () {
-        Route::post('/buffer', [AnalysisController::class, 'buffer'])->name('api.analysis.buffer');
-        Route::post('/spatial-query', [AnalysisController::class, 'spatialQuery'])->name('api.analysis.spatial-query');
-        Route::post('/attribute-query', [AnalysisController::class, 'attributeQuery'])->name('api.analysis.attribute-query');
-        Route::post('/measure-distance', [AnalysisController::class, 'measureDistance'])->name('api.analysis.measure-distance');
-        Route::post('/measure-area', [AnalysisController::class, 'measureArea'])->name('api.analysis.measure-area');
-        Route::post('/layer-buffer', [AnalysisController::class, 'layerBuffer'])->name('api.analysis.layer-buffer');
-    });
-
-    // Export API endpoints
-    Route::prefix('export')->group(function () {
-        Route::get('/layer/{layer}/geojson', [ExportController::class, 'exportGeoJSON'])->name('api.export.geojson');
-        Route::get('/layer/{layer}/csv', [ExportController::class, 'exportCSV'])->name('api.export.csv');
-        Route::get('/map/{map}/config', [ExportController::class, 'exportMapConfig'])->name('api.export.map-config');
-        Route::get('/map/{map}/prepare', [ExportController::class, 'prepareMapExport'])->name('api.export.map-prepare');
-        Route::post('/query-results', [ExportController::class, 'exportQueryResults'])->name('api.export.query-results');
-    });
+    Route::get('layers/{layer}/features', [FeatureApiController::class, 'index'])->name('api.v1.features.index');
+    Route::post('layers/{layer}/features', [FeatureApiController::class, 'store'])->name('api.v1.features.store');
+    Route::get('layers/{layer}/features/{feature}', [FeatureApiController::class, 'show'])->name('api.v1.features.show');
+    Route::put('layers/{layer}/features/{feature}', [FeatureApiController::class, 'update'])->name('api.v1.features.update');
+    Route::delete('layers/{layer}/features/{feature}', [FeatureApiController::class, 'destroy'])->name('api.v1.features.destroy');
 });

@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class RegisterController extends Controller
 {
@@ -38,6 +40,16 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+        $this->middleware(function ($request, $next) {
+            abort_unless(config('app.allow_registration'), 404);
+
+            return $next($request);
+        });
+    }
+
+    public function showRegistrationForm(): Response
+    {
+        return Inertia::render('Auth/Register');
     }
 
     /**

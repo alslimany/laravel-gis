@@ -82,9 +82,7 @@ class OrganizationDataIsolationTest extends TestCase
 
         $response->assertStatus(200);
         // Dashboard should only show projects from org1
-        $response->assertViewHas('projects', function ($projects) {
-            return $projects->count() === 3;
-        });
+        $response->assertInertia(fn ($page) => $page->component('Dashboard')->has('projects.data', 3));
     }
 
     public function test_admin_can_only_manage_users_in_same_organization(): void
@@ -102,9 +100,7 @@ class OrganizationDataIsolationTest extends TestCase
 
         $response->assertStatus(200);
         // Should only see users from org1 (3 users + admin = 4)
-        $response->assertViewHas('users', function ($users) {
-            return $users->total() === 4;
-        });
+        $response->assertInertia(fn ($page) => $page->component('Users/Index')->where('users.total', 4));
     }
 
     public function test_user_without_organization_cannot_create_projects(): void
@@ -126,9 +122,9 @@ class OrganizationDataIsolationTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Test Org');
-        $response->assertViewHas('organization', function ($org) use ($organization) {
-            return $org->id === $organization->id;
-        });
+        $response->assertInertia(fn ($page) => $page
+            ->component('Organization/Settings')
+            ->where('organization.id', $organization->id));
     }
 
     public function test_user_can_belong_to_only_one_organization(): void
@@ -149,5 +145,23 @@ class OrganizationDataIsolationTest extends TestCase
         // Verify user now belongs to org2 only
         $this->assertEquals($org2->id, $user->organization_id);
         $this->assertEquals($org2->id, $user->organization->id);
+    }
+
+    public function test_console_nav_keeps_organize_separate_from_the_workspace(): void
+    {
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create(['organization_id' => $organization->id]);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $response->assertOk();
+        $nav = collect($response->viewData('page')['props']['nav']);
+
+        $this->assertSame(
+            ['Dashboard', 'Projects', 'Data imports', 'Layers', 'Maps'],
+            $nav->where('group', 'workspace')->pluck('label')->all()
+        );
+        $this->assertTrue($nav->where('group', 'organize')->pluck('label')->contains('Organization'));
+        $this->assertFalse($nav->where('group', 'workspace')->pluck('label')->contains('Catalog'));
     }
 }

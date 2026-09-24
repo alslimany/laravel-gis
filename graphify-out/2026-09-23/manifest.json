@@ -1,0 +1,2258 @@
+{
+  "app/Console/Commands/PublishOrganizationLayers.php": {
+    "mtime": 1759956416.8926775,
+    "seen": 1790117001.193825,
+    "ast_hash": "37e95bc21e6749fcf802f7e3fb8893a5",
+    "semantic_hash": ""
+  },
+  "app/Console/Commands/TestGeoServerConnection.php": {
+    "mtime": 1759956416.892865,
+    "seen": 1790117001.193829,
+    "ast_hash": "453cbbbbfa961377fbfdc1bbe971dba0",
+    "semantic_hash": ""
+  },
+  "app/Exceptions/GeoServerException.php": {
+    "mtime": 1759956416.892984,
+    "seen": 1790117001.193831,
+    "ast_hash": "1c0c348ef797a822131792f0883abf17",
+    "semantic_hash": ""
+  },
+  "app/Helpers/QueryBuilder.php": {
+    "mtime": 1760004341.5663762,
+    "seen": 1790117001.193832,
+    "ast_hash": "f78b54b24269b33c168ffec29742699f",
+    "semantic_hash": ""
+  },
+  "app/Helpers/SpatialHelper.php": {
+    "mtime": 1760004341.5666373,
+    "seen": 1790117001.1938329,
+    "ast_hash": "fd61f8b9cd131b5373c9787253b78528",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/AnalysisController.php": {
+    "mtime": 1790117761.5480373,
+    "seen": 1790117812.437553,
+    "ast_hash": "fe89aa784d62351879c5ee6ae708d56f",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/AttributeTableController.php": {
+    "mtime": 1790197000.9523568,
+    "seen": 1790197365.788356,
+    "ast_hash": "4272542ef057c19002a2d80a13464ec2",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/ConfirmPasswordController.php": {
+    "mtime": 1790196958.575123,
+    "seen": 1790197365.788357,
+    "ast_hash": "6cd72a1450ab81561d03946d73e20b66",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/ForgotPasswordController.php": {
+    "mtime": 1790196955.4088755,
+    "seen": 1790197365.788358,
+    "ast_hash": "b345a4e8ed22b1711b989a58f7859594",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/LoginController.php": {
+    "mtime": 1790196952.9131386,
+    "seen": 1790197365.788358,
+    "ast_hash": "e6fed32f99a11ef2812b248e1c118d13",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/RegisterController.php": {
+    "mtime": 1790196954.3507931,
+    "seen": 1790197365.788359,
+    "ast_hash": "c8e806378fc5536777ae46d41bfbe91b",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/ResetPasswordController.php": {
+    "mtime": 1790196956.5333507,
+    "seen": 1790197365.788359,
+    "ast_hash": "b57e230696a88e892a29fd2055638a28",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Auth/VerificationController.php": {
+    "mtime": 1790196962.8916445,
+    "seen": 1790197365.7883599,
+    "ast_hash": "b056a6113662c898afef855904148401",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Controller.php": {
+    "mtime": 1759956416.8937597,
+    "seen": 1790117001.1938381,
+    "ast_hash": "43edc8ea08c870ebe09d4e98672e7ed6",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/DashboardController.php": {
+    "mtime": 1790196967.089533,
+    "seen": 1790197365.788363,
+    "ast_hash": "556d384ef428925f242648de784c1913",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/DataImportController.php": {
+    "mtime": 1790196972.2988043,
+    "seen": 1790197365.788364,
+    "ast_hash": "0a892c7a354481c28f6d9b4e54aec212",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/ExportController.php": {
+    "mtime": 1790117787.5659964,
+    "seen": 1790117812.4375648,
+    "ast_hash": "1e55e17b9107fa8100dadf11cd92cd23",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/HealthCheckController.php": {
+    "mtime": 1760055304.013002,
+    "seen": 1790117001.19384,
+    "ast_hash": "49898ecfab5d11d1e70aa3a514cc4fe0",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/HomeController.php": {
+    "mtime": 1790121734.4325268,
+    "seen": 1790121832.477721,
+    "ast_hash": "2518e4b0f7d898832796c8a77af77484",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/LayerController.php": {
+    "mtime": 1790197142.000367,
+    "seen": 1790197365.7883708,
+    "ast_hash": "57c285bb87c97afcdb31162e91fb68a0",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/MapController.php": {
+    "mtime": 1790196983.4166934,
+    "seen": 1790197365.788372,
+    "ast_hash": "6272f050bc1d8d914a3f0d9d2fe4c73a",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/OrganizationController.php": {
+    "mtime": 1790197011.8012052,
+    "seen": 1790197365.788373,
+    "ast_hash": "75990d35f40ff3e52d3b3d142da6bf4f",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/ProjectController.php": {
+    "mtime": 1790196999.666,
+    "seen": 1790197365.788374,
+    "ast_hash": "9f9c6b52df634fd4f6ad1b33b2fa7b90",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/UserController.php": {
+    "mtime": 1790197029.3571017,
+    "seen": 1790197365.7883751,
+    "ast_hash": "0b96807b67bdaf7a569e8588697cc421",
+    "semantic_hash": ""
+  },
+  "app/Http/Middleware/CheckRole.php": {
+    "mtime": 1759958650.3977938,
+    "seen": 1790117001.193843,
+    "ast_hash": "5a18abf7760818f736c062d95fac72e3",
+    "semantic_hash": ""
+  },
+  "app/Http/Middleware/EnsureUserHasOrganization.php": {
+    "mtime": 1759958650.3979259,
+    "seen": 1790117001.193844,
+    "ast_hash": "b2fa80ab3b95104e7c11df76bf424e20",
+    "semantic_hash": ""
+  },
+  "app/Http/Requests/DataImportRequest.php": {
+    "mtime": 1790186448.07307,
+    "seen": 1790186597.697484,
+    "ast_hash": "50001dc71115d16e4c6892b92226c013",
+    "semantic_hash": ""
+  },
+  "app/Jobs/DeleteLayerFromGeoServer.php": {
+    "mtime": 1759956416.8942811,
+    "seen": 1790117001.193845,
+    "ast_hash": "7e4c036a682d81eded773145daf13709",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessGeoJSONJob.php": {
+    "mtime": 1790186551.791247,
+    "seen": 1790186597.6974862,
+    "ast_hash": "92fa627324b01a676a96e3448499c08f",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessKMLJob.php": {
+    "mtime": 1790186546.2794857,
+    "seen": 1790186597.6974862,
+    "ast_hash": "4bdb5dba47c9cf633b2fd5909b58086d",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessShapefileJob.php": {
+    "mtime": 1790186546.4357905,
+    "seen": 1790186597.697487,
+    "ast_hash": "232ec15ed35954b4495dd06a7402862a",
+    "semantic_hash": ""
+  },
+  "app/Jobs/PublishLayerToGeoServer.php": {
+    "mtime": 1759956416.894342,
+    "seen": 1790117001.193847,
+    "ast_hash": "8233f8303a51e8b5286cb6be4390ceda",
+    "semantic_hash": ""
+  },
+  "app/Jobs/UpdateLayerStyle.php": {
+    "mtime": 1759956416.8944001,
+    "seen": 1790117001.1938481,
+    "ast_hash": "2d7654449da76659b0763d70fc8b0691",
+    "semantic_hash": ""
+  },
+  "app/Models/DataImport.php": {
+    "mtime": 1759958650.3985894,
+    "seen": 1790117001.1938481,
+    "ast_hash": "910b343789910bf3eebb47e71fd957f7",
+    "semantic_hash": ""
+  },
+  "app/Models/Layer.php": {
+    "mtime": 1790117554.229828,
+    "seen": 1790117812.437587,
+    "ast_hash": "042b1fae98fcf6779572006b2f7dce9b",
+    "semantic_hash": ""
+  },
+  "app/Models/Map.php": {
+    "mtime": 1759965536.8247783,
+    "seen": 1790117001.193849,
+    "ast_hash": "e4e6e0109e96c445883eefd193053330",
+    "semantic_hash": ""
+  },
+  "app/Models/Organization.php": {
+    "mtime": 1790117715.511076,
+    "seen": 1790117812.437589,
+    "ast_hash": "983caf2719a748de10dac1b769bd8511",
+    "semantic_hash": ""
+  },
+  "app/Models/Project.php": {
+    "mtime": 1760053240.2947311,
+    "seen": 1790117001.19385,
+    "ast_hash": "7cedfb31510a50941fd8dc96a73d105b",
+    "semantic_hash": ""
+  },
+  "app/Models/ProjectActivity.php": {
+    "mtime": 1760053240.2948291,
+    "seen": 1790117001.193851,
+    "ast_hash": "a82316b2129cdf9227bceb0aee741e52",
+    "semantic_hash": ""
+  },
+  "app/Models/ProjectComment.php": {
+    "mtime": 1760053240.295001,
+    "seen": 1790117001.193851,
+    "ast_hash": "bbb3320a6db47e40facd5c214d407caa",
+    "semantic_hash": ""
+  },
+  "app/Models/Role.php": {
+    "mtime": 1759956416.8946261,
+    "seen": 1790117001.193852,
+    "ast_hash": "c38c916c197a556e6d3f6015f3e2e75b",
+    "semantic_hash": ""
+  },
+  "app/Models/User.php": {
+    "mtime": 1790117708.5960839,
+    "seen": 1790117812.437592,
+    "ast_hash": "4b5bcb46ae226839c670e584ac32748a",
+    "semantic_hash": ""
+  },
+  "app/Policies/DataImportPolicy.php": {
+    "mtime": 1759958650.3989203,
+    "seen": 1790117001.193853,
+    "ast_hash": "e6f9328e77c79bb70291d8948560cc3b",
+    "semantic_hash": ""
+  },
+  "app/Policies/LayerPolicy.php": {
+    "mtime": 1790177203.1997054,
+    "seen": 1790177490.6251829,
+    "ast_hash": "45304fe95b43c795c5e16cd2722e2d81",
+    "semantic_hash": ""
+  },
+  "app/Policies/OrganizationPolicy.php": {
+    "mtime": 1759958650.3990571,
+    "seen": 1790117001.1938539,
+    "ast_hash": "de85fd30704b7ccd44327b154a4d28dc",
+    "semantic_hash": ""
+  },
+  "app/Policies/ProjectPolicy.php": {
+    "mtime": 1759958650.3991988,
+    "seen": 1790117001.1938539,
+    "ast_hash": "fac7aa7fe9f3e4e5a409ff6fe15cec89",
+    "semantic_hash": ""
+  },
+  "app/Policies/UserPolicy.php": {
+    "mtime": 1759958650.3993192,
+    "seen": 1790117001.193855,
+    "ast_hash": "4e1e2ddc213109ef35d08e49f90fff0b",
+    "semantic_hash": ""
+  },
+  "app/Providers/AppServiceProvider.php": {
+    "mtime": 1759962210.4320223,
+    "seen": 1790117001.193856,
+    "ast_hash": "ac8211969a81d8ebd22febebee164777",
+    "semantic_hash": ""
+  },
+  "app/Services/DataImportService.php": {
+    "mtime": 1790186498.8325768,
+    "seen": 1790186597.697506,
+    "ast_hash": "cadf8d9a44744a374b1d45e7718116db",
+    "semantic_hash": ""
+  },
+  "app/Services/GeoServerService.php": {
+    "mtime": 1790191509.195076,
+    "seen": 1790191675.345591,
+    "ast_hash": "bc829e6053d0e9f76e71ad78bbb2c018",
+    "semantic_hash": ""
+  },
+  "app/Traits/HasGeoServerLayers.php": {
+    "mtime": 1759956416.8953087,
+    "seen": 1790117001.193857,
+    "ast_hash": "7153c2f93f7b913e9f29752ba12bff24",
+    "semantic_hash": ""
+  },
+  "app/Traits/SpatialTrait.php": {
+    "mtime": 1759958650.399735,
+    "seen": 1790117001.1938581,
+    "ast_hash": "2872f1210bf5dd12735fc6130e1185fa",
+    "semantic_hash": ""
+  },
+  "artisan": {
+    "mtime": 1759934843.1191096,
+    "seen": 1790117001.1938581,
+    "ast_hash": "e66bb13691f6184c762c196427d8e685",
+    "semantic_hash": ""
+  },
+  "bootstrap/app.php": {
+    "mtime": 1790196405.2125294,
+    "seen": 1790197365.7884102,
+    "ast_hash": "32e967847f02f41252ff7ba20f0a607e",
+    "semantic_hash": ""
+  },
+  "bootstrap/providers.php": {
+    "mtime": 1759934843.1194446,
+    "seen": 1790117001.193859,
+    "ast_hash": "d18593472c5e35d8ab5add4240fc95f6",
+    "semantic_hash": ""
+  },
+  "composer.json": {
+    "mtime": 1790196279.496354,
+    "seen": 1790197365.788411,
+    "ast_hash": "c85f48e369d5bdac2ce425fe1e510340",
+    "semantic_hash": ""
+  },
+  "config/ai.php": {
+    "mtime": 1789086500.5631497,
+    "seen": 1790117001.19386,
+    "ast_hash": "2306d55b82dcf301b91890edeacf897f",
+    "semantic_hash": ""
+  },
+  "config/app.php": {
+    "mtime": 1790188394.9811509,
+    "seen": 1790188655.839081,
+    "ast_hash": "1e8f5d383074e690b1f6da001bc4603e",
+    "semantic_hash": ""
+  },
+  "config/auth.php": {
+    "mtime": 1759934843.1203544,
+    "seen": 1790117001.193861,
+    "ast_hash": "74dec5ff7ad634dc226fd424f2414585",
+    "semantic_hash": ""
+  },
+  "config/cache.php": {
+    "mtime": 1789086347.5476894,
+    "seen": 1790117001.193861,
+    "ast_hash": "ff82905beaeb6c9a89d5f299cb91c192",
+    "semantic_hash": ""
+  },
+  "config/database.php": {
+    "mtime": 1759934843.1205952,
+    "seen": 1790117001.193862,
+    "ast_hash": "10afa41d924294ec1f84ebae65a7b411",
+    "semantic_hash": ""
+  },
+  "config/dataimport.php": {
+    "mtime": 1790186521.4801452,
+    "seen": 1790186597.697518,
+    "ast_hash": "5a93fc0ed45046f10d8251cf0c1efbfd",
+    "semantic_hash": ""
+  },
+  "config/filesystems.php": {
+    "mtime": 1759958650.3999026,
+    "seen": 1790117001.193863,
+    "ast_hash": "57f90dc7c456665c2df08deb6244cf2d",
+    "semantic_hash": ""
+  },
+  "config/geoserver.php": {
+    "mtime": 1790191498.7160032,
+    "seen": 1790191675.345603,
+    "ast_hash": "33938c4b5eb1cebcb461b9814fead8f2",
+    "semantic_hash": ""
+  },
+  "config/logging.php": {
+    "mtime": 1760055304.0132577,
+    "seen": 1790117001.1938639,
+    "ast_hash": "edc7bfdb6e2948263e28bcd4157835ca",
+    "semantic_hash": ""
+  },
+  "config/mail.php": {
+    "mtime": 1759934843.1209233,
+    "seen": 1790117001.1938639,
+    "ast_hash": "56b14578a660ef83c41fa599620bef6b",
+    "semantic_hash": ""
+  },
+  "config/queue.php": {
+    "mtime": 1759934843.1210086,
+    "seen": 1790117001.193865,
+    "ast_hash": "fa588a4871790fca01d6a90af9208d15",
+    "semantic_hash": ""
+  },
+  "config/services.php": {
+    "mtime": 1759934843.1210885,
+    "seen": 1790117001.193865,
+    "ast_hash": "57753d0f922030587fd9debe2db50a46",
+    "semantic_hash": ""
+  },
+  "config/session.php": {
+    "mtime": 1789086352.5999634,
+    "seen": 1790117001.193866,
+    "ast_hash": "9c188bb813b573d0d8c922eeac3f3383",
+    "semantic_hash": ""
+  },
+  "database/factories/DataImportFactory.php": {
+    "mtime": 1759958650.39998,
+    "seen": 1790117001.193866,
+    "ast_hash": "114337bdff32688edad5df6696de2d66",
+    "semantic_hash": ""
+  },
+  "database/factories/LayerFactory.php": {
+    "mtime": 1759960401.3787692,
+    "seen": 1790117001.193867,
+    "ast_hash": "2349597259707a7fbb6729618d062d76",
+    "semantic_hash": ""
+  },
+  "database/factories/OrganizationFactory.php": {
+    "mtime": 1759956416.8963313,
+    "seen": 1790117001.193867,
+    "ast_hash": "06f72fbdf3b08e0e52842fea03b00ed4",
+    "semantic_hash": ""
+  },
+  "database/factories/ProjectFactory.php": {
+    "mtime": 1760053240.2952158,
+    "seen": 1790117001.193868,
+    "ast_hash": "047843846ee989674cedd6115f14f03a",
+    "semantic_hash": ""
+  },
+  "database/factories/UserFactory.php": {
+    "mtime": 1759958650.4000947,
+    "seen": 1790117001.193868,
+    "ast_hash": "8e8c6d53dc4f80f7f270a3c41d29ffe8",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000000_enable_postgis_extension.php": {
+    "mtime": 1759956416.896601,
+    "seen": 1790117001.193869,
+    "ast_hash": "a71facb645044d4bae5c7eb5d759f6bb",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000001_create_users_table.php": {
+    "mtime": 1759956416.896684,
+    "seen": 1790117001.19387,
+    "ast_hash": "3307476cd7f3fc249b1d996fb19cce6c",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000002_create_organizations_table.php": {
+    "mtime": 1759956416.8967538,
+    "seen": 1790117001.19387,
+    "ast_hash": "87f1b3bc7c441a118805fa9391819a0e",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000003_create_projects_table.php": {
+    "mtime": 1759956416.8968253,
+    "seen": 1790117001.193871,
+    "ast_hash": "835a64e38035400a6ee47ff046a46be7",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000004_create_cache_table.php": {
+    "mtime": 1759956416.8968892,
+    "seen": 1790117001.193871,
+    "ast_hash": "6803c10a1aa695d40633ec8bea5576d5",
+    "semantic_hash": ""
+  },
+  "database/migrations/0001_01_01_000005_create_jobs_table.php": {
+    "mtime": 1759956416.8969495,
+    "seen": 1790117001.193872,
+    "ast_hash": "ead9cce2650b36345454f85e8c0214a0",
+    "semantic_hash": ""
+  },
+  "database/migrations/2014_10_12_100000_create_password_resets_table.php": {
+    "mtime": 1759956416.8970094,
+    "seen": 1790117001.193872,
+    "ast_hash": "8140e093301bd098178bf3ce40c516e6",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_192722_create_roles_table.php": {
+    "mtime": 1759956416.8970683,
+    "seen": 1790117001.193873,
+    "ast_hash": "e4077383137641c7d4a2a070af31e2b6",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_192733_create_role_user_table.php": {
+    "mtime": 1759958650.4002104,
+    "seen": 1790117001.193873,
+    "ast_hash": "87f1b7c3b9d90302297607568c424f25",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_192741_add_organization_id_to_users_table.php": {
+    "mtime": 1759956416.8971922,
+    "seen": 1790117001.193874,
+    "ast_hash": "c64f115d13605b8df9aebf493c4d2a6f",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_210104_create_data_imports_table.php": {
+    "mtime": 1759958650.4002914,
+    "seen": 1790117001.193874,
+    "ast_hash": "1b36019fbea45f7d10e91d7c68d4d0d7",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_213331_create_layers_table.php": {
+    "mtime": 1759960401.3790174,
+    "seen": 1790117001.1938748,
+    "ast_hash": "11d064d9a4e1aa073fa7bff0724237ff",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_08_230000_create_maps_table.php": {
+    "mtime": 1759965536.8249083,
+    "seen": 1790117001.193876,
+    "ast_hash": "c85997917bae4ca12a32ac643c85c21a",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_09_141609_add_sharing_fields_to_projects_table.php": {
+    "mtime": 1760053240.2953434,
+    "seen": 1790117001.193876,
+    "ast_hash": "431965b76b27717c61589be16ef77600",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_09_141649_create_project_activities_table.php": {
+    "mtime": 1760053240.2956216,
+    "seen": 1790117001.193877,
+    "ast_hash": "ef7b3326da32e0354f44b28ffc8c1c5d",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_09_141649_create_project_user_table.php": {
+    "mtime": 1760053240.2957473,
+    "seen": 1790117001.193877,
+    "ast_hash": "4579907844889b585b65044a69c55652",
+    "semantic_hash": ""
+  },
+  "database/migrations/2025_10_09_141650_create_project_comments_table.php": {
+    "mtime": 1760053240.295862,
+    "seen": 1790117001.193878,
+    "ast_hash": "38fc98b1734651dd538c58aca0cecdbf",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_11_002821_create_agent_conversations_table.php": {
+    "mtime": 1789086500.5708485,
+    "seen": 1790117001.193878,
+    "ast_hash": "5a1117dd10b40e97b48473f3dae142c5",
+    "semantic_hash": ""
+  },
+  "database/seeders/DatabaseSeeder.php": {
+    "mtime": 1759958650.40041,
+    "seen": 1790117001.1938791,
+    "ast_hash": "97026a4acb8a1050a2f2a3bb4c77e83c",
+    "semantic_hash": ""
+  },
+  "database/seeders/RoleSeeder.php": {
+    "mtime": 1759958650.4005363,
+    "seen": 1790117001.1938791,
+    "ast_hash": "77f58abf138c90237991d44eb16b5277",
+    "semantic_hash": ""
+  },
+  "docker/postgres/backup-scripts/backup.sh": {
+    "mtime": 1760055304.0139759,
+    "seen": 1790117001.19388,
+    "ast_hash": "988a57e62a01b8a346f92d130c27a2ca",
+    "semantic_hash": ""
+  },
+  "docker/postgres/backup-scripts/restore.sh": {
+    "mtime": 1760055304.0140898,
+    "seen": 1790117001.19388,
+    "ast_hash": "6ccc5cd46c81ab91eecaba2d2c48e18d",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1790196292.7643192,
+    "seen": 1790197365.7884421,
+    "ast_hash": "84c17e5c6af0caf005e43c3e24a2c06a",
+    "semantic_hash": ""
+  },
+  "public/index.php": {
+    "mtime": 1759934843.1225762,
+    "seen": 1790117001.1938822,
+    "ast_hash": "d8eda274115af5fd2aaa8230af329ef7",
+    "semantic_hash": ""
+  },
+  "resources/js/app.js": {
+    "mtime": 1759934843.122978,
+    "seen": 1790117001.1938822,
+    "ast_hash": "1ccf2b9101110f40ecaab1608a6f91cf",
+    "semantic_hash": ""
+  },
+  "resources/js/bootstrap.js": {
+    "mtime": 1760005463.375332,
+    "seen": 1790117001.193883,
+    "ast_hash": "be70dadcc24636190a73a3cd8e8e8399",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/MapWorkspace.jsx": {
+    "mtime": 1790176994.2188416,
+    "seen": 1790177490.625223,
+    "ast_hash": "473949d41ed87d244688dde32b7a4cd4",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/main.jsx": {
+    "mtime": 1790116992.2224019,
+    "seen": 1790117001.193884,
+    "ast_hash": "5160b70d0b5b702b7236a7d537f8429a",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/map/MapView.jsx": {
+    "mtime": 1790191594.4602501,
+    "seen": 1790191675.345643,
+    "ast_hash": "dedaa1d4104910b6df79d02a73c31935",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/panels/AnalysisPanel.jsx": {
+    "mtime": 1790177088.294898,
+    "seen": 1790177490.625226,
+    "ast_hash": "ffea7b159f81e81899f15d851102eaf9",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/panels/LayerPanel.jsx": {
+    "mtime": 1790191596.522011,
+    "seen": 1790191675.345644,
+    "ast_hash": "b4c849b755a16c749ece0c454bc63962",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/panels/StyleEditor.jsx": {
+    "mtime": 1790177312.2787323,
+    "seen": 1790177490.625227,
+    "ast_hash": "61d76969283340ff9173c6d699fb8782",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/panels/ToolPanel.jsx": {
+    "mtime": 1790120340.4208755,
+    "seen": 1790120729.734758,
+    "ast_hash": "06fbcdf189e330b42b16798dca5e74fd",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/store/mapStore.js": {
+    "mtime": 1790191592.1401591,
+    "seen": 1790191675.3456461,
+    "ast_hash": "f624913c3522f0ca087620dd4f428fe6",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/login.blade.php": {
+    "mtime": 1790189198.8468723,
+    "seen": 1790189775.556135,
+    "ast_hash": "249ed84eb3914f69ecdd224b01e3c1bf",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/passwords/confirm.blade.php": {
+    "mtime": 1759956416.8983476,
+    "seen": 1790117001.193888,
+    "ast_hash": "033dc6f6d014f174aee631ebd206af82",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/passwords/email.blade.php": {
+    "mtime": 1759956416.8984065,
+    "seen": 1790117001.193888,
+    "ast_hash": "806c4f3696777e78a10767a9f923f374",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/passwords/reset.blade.php": {
+    "mtime": 1759956416.8986013,
+    "seen": 1790117001.1938891,
+    "ast_hash": "5dc51f8ef305d30fc44853c89450f2fc",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/register.blade.php": {
+    "mtime": 1759956416.8988934,
+    "seen": 1790117001.1938891,
+    "ast_hash": "4b887d1c3cc2806ded515907a1f7ea35",
+    "semantic_hash": ""
+  },
+  "resources/views/auth/verify.blade.php": {
+    "mtime": 1759956416.8989809,
+    "seen": 1790117001.19389,
+    "ast_hash": "03367aeabd3cf0561832c8e7f9d71afa",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboard.blade.php": {
+    "mtime": 1790119823.2882943,
+    "seen": 1790119869.6441789,
+    "ast_hash": "3dd1645833fe462e00006c5fd5c2c4d0",
+    "semantic_hash": ""
+  },
+  "resources/views/home.blade.php": {
+    "mtime": 1759956416.8992517,
+    "seen": 1790117001.193891,
+    "ast_hash": "f09a74bdfe9318676fab33c60a064b1c",
+    "semantic_hash": ""
+  },
+  "resources/views/imports/create.blade.php": {
+    "mtime": 1790191583.106716,
+    "seen": 1790191675.345665,
+    "ast_hash": "44d8c69d2869329d6e0ec751f997ca18",
+    "semantic_hash": ""
+  },
+  "resources/views/imports/index.blade.php": {
+    "mtime": 1790190185.1704755,
+    "seen": 1790190375.813576,
+    "ast_hash": "42dba6276ff06f9768018141c09ff12e",
+    "semantic_hash": ""
+  },
+  "resources/views/imports/show.blade.php": {
+    "mtime": 1790177387.5594227,
+    "seen": 1790177490.625242,
+    "ast_hash": "f2b5d003d2fb450cfd7a50f8e9017250",
+    "semantic_hash": ""
+  },
+  "resources/views/layers/attributes/index.blade.php": {
+    "mtime": 1790177287.0729775,
+    "seen": 1790177490.625243,
+    "ast_hash": "9dd609b5564406c75318c77aea18909a",
+    "semantic_hash": ""
+  },
+  "resources/views/layers/create.blade.php": {
+    "mtime": 1759963751.3367832,
+    "seen": 1790117001.193894,
+    "ast_hash": "dba13e9f6d99252360c0df61480b2c95",
+    "semantic_hash": ""
+  },
+  "resources/views/layers/edit.blade.php": {
+    "mtime": 1760057365.6221802,
+    "seen": 1790117001.193894,
+    "ast_hash": "5f75d3493a90b0c688089eb12a5bccad",
+    "semantic_hash": ""
+  },
+  "resources/views/layers/index.blade.php": {
+    "mtime": 1790190182.5447793,
+    "seen": 1790190375.813579,
+    "ast_hash": "88a132e9d12cf657f7726e1d94f4d66a",
+    "semantic_hash": ""
+  },
+  "resources/views/layers/show.blade.php": {
+    "mtime": 1790191670.8779173,
+    "seen": 1790191675.345669,
+    "ast_hash": "3a841a942b22641ebe23bb296d9efe74",
+    "semantic_hash": ""
+  },
+  "resources/views/layouts/app.blade.php": {
+    "mtime": 1790188431.300762,
+    "seen": 1790188655.839162,
+    "ast_hash": "d96d9c06cc05a7cc1b7fbc9395a622b9",
+    "semantic_hash": ""
+  },
+  "resources/views/maps/builder.blade.php": {
+    "mtime": 1790191606.9354353,
+    "seen": 1790191675.345671,
+    "ast_hash": "591d6a44df72edb32ba01041f0768de6",
+    "semantic_hash": ""
+  },
+  "resources/views/maps/index.blade.php": {
+    "mtime": 1790190536.0610378,
+    "seen": 1790190635.5172951,
+    "ast_hash": "20eb07da67bc962c7dacd02faa2d4d95",
+    "semantic_hash": ""
+  },
+  "resources/views/maps/share.blade.php": {
+    "mtime": 1759965536.8273883,
+    "seen": 1790117001.193897,
+    "ast_hash": "03e46aa9711840dc736b350c83644381",
+    "semantic_hash": ""
+  },
+  "resources/views/maps/shared.blade.php": {
+    "mtime": 1790191611.8394082,
+    "seen": 1790191675.3456728,
+    "ast_hash": "e54cb598df6242d627e1757957095c34",
+    "semantic_hash": ""
+  },
+  "resources/views/maps/show.blade.php": {
+    "mtime": 1790191610.5937114,
+    "seen": 1790191675.345674,
+    "ast_hash": "88add25ef7e612b2228dfe106fd2a645",
+    "semantic_hash": ""
+  },
+  "resources/views/organization/settings.blade.php": {
+    "mtime": 1790117842.6375914,
+    "seen": 1790117849.886931,
+    "ast_hash": "875bf3836685054e6b021914c41d9bb7",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/create.blade.php": {
+    "mtime": 1760053240.2962635,
+    "seen": 1790117001.193899,
+    "ast_hash": "4b3ec51e74f79c1354cb9cac4e58c5f2",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/edit.blade.php": {
+    "mtime": 1760053240.2963653,
+    "seen": 1790117001.193899,
+    "ast_hash": "463939b953b22abc5f9d42df70eb960f",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/index.blade.php": {
+    "mtime": 1790190536.1734068,
+    "seen": 1790190635.5173,
+    "ast_hash": "947ad8a91b03620a7045f2998768e347",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/invite.blade.php": {
+    "mtime": 1760053240.2966669,
+    "seen": 1790117001.1939,
+    "ast_hash": "2f84215ff1e1e3febbaab63d7bba1dc5",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/share.blade.php": {
+    "mtime": 1760053240.2968273,
+    "seen": 1790117001.193901,
+    "ast_hash": "c3a78f7d8a1f3a240870fa20873a3242",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/shared.blade.php": {
+    "mtime": 1790121811.5429754,
+    "seen": 1790121832.4778602,
+    "ast_hash": "91343e73b03cb1dbd3fa1e8ac9d87b9c",
+    "semantic_hash": ""
+  },
+  "resources/views/projects/show.blade.php": {
+    "mtime": 1760053240.2971058,
+    "seen": 1790117001.193902,
+    "ast_hash": "779368d63a6991b7b2da8de1da48bcfc",
+    "semantic_hash": ""
+  },
+  "resources/views/users/edit.blade.php": {
+    "mtime": 1759956416.899726,
+    "seen": 1790117001.193902,
+    "ast_hash": "573e421e8a75ae46e5fa47a02eca6bd3",
+    "semantic_hash": ""
+  },
+  "resources/views/users/index.blade.php": {
+    "mtime": 1759956416.8997817,
+    "seen": 1790117001.1939032,
+    "ast_hash": "7f858ff3e4680e52eaadda397ce1d16c",
+    "semantic_hash": ""
+  },
+  "resources/views/welcome.blade.php": {
+    "mtime": 1790119518.1593096,
+    "seen": 1790119869.6442099,
+    "ast_hash": "0717328f40f2b7759939279ecbe3e7c9",
+    "semantic_hash": ""
+  },
+  "routes/api.php": {
+    "mtime": 1790177345.585001,
+    "seen": 1790177490.6252558,
+    "ast_hash": "7e091f0b29ecedfcdaf32a5ecbbfc4a5",
+    "semantic_hash": ""
+  },
+  "routes/console.php": {
+    "mtime": 1759934843.1234663,
+    "seen": 1790117001.1939042,
+    "ast_hash": "3c6ce2e6d16444282b24a9aa63885563",
+    "semantic_hash": ""
+  },
+  "routes/web.php": {
+    "mtime": 1790191555.3501143,
+    "seen": 1790191675.345689,
+    "ast_hash": "dc48f1bad2f8298e3ef167b768bcda2c",
+    "semantic_hash": ""
+  },
+  "tests/Feature/AnalysisTest.php": {
+    "mtime": 1760004341.568116,
+    "seen": 1790117001.1939049,
+    "ast_hash": "69f6e600f8a6da29dbfd6e7531828bfd",
+    "semantic_hash": ""
+  },
+  "tests/Feature/AuthenticationTest.php": {
+    "mtime": 1790188476.0105672,
+    "seen": 1790188655.839179,
+    "ast_hash": "fb4811cf8a6df1453306737b34c43af3",
+    "semantic_hash": ""
+  },
+  "tests/Feature/AuthorizationTest.php": {
+    "mtime": 1759958650.4018252,
+    "seen": 1790117001.1939058,
+    "ast_hash": "45c5f80a64e2de420bcb31df7d4600fa",
+    "semantic_hash": ""
+  },
+  "tests/Feature/DataImportTest.php": {
+    "mtime": 1790197063.5112548,
+    "seen": 1790197365.788535,
+    "ast_hash": "706c35c53f5b5425ea23decf1fa416bf",
+    "semantic_hash": ""
+  },
+  "tests/Feature/ExampleTest.php": {
+    "mtime": 1790188473.2926533,
+    "seen": 1790188655.839181,
+    "ast_hash": "6fba9f11314c1ef1858ae5e6afbcdf00",
+    "semantic_hash": ""
+  },
+  "tests/Feature/ExportTest.php": {
+    "mtime": 1760004341.56833,
+    "seen": 1790117001.193908,
+    "ast_hash": "7567a7b79fda7730e5423676c7f8ea15",
+    "semantic_hash": ""
+  },
+  "tests/Feature/GeoServerJobsTest.php": {
+    "mtime": 1759956416.9002347,
+    "seen": 1790117001.193908,
+    "ast_hash": "28e593ac179639d260a913936f64d1a0",
+    "semantic_hash": ""
+  },
+  "tests/Feature/LayerTest.php": {
+    "mtime": 1790197066.475115,
+    "seen": 1790197365.7885382,
+    "ast_hash": "c67f9d98b5ca7cf0a8bea3d17a52937b",
+    "semantic_hash": ""
+  },
+  "tests/Feature/OrganizationDataIsolationTest.php": {
+    "mtime": 1790197070.669177,
+    "seen": 1790197365.788539,
+    "ast_hash": "83eaea3a556f0f67818f25687a4ce0e5",
+    "semantic_hash": ""
+  },
+  "tests/Feature/ProjectControllerTest.php": {
+    "mtime": 1790197142.001182,
+    "seen": 1790197365.78854,
+    "ast_hash": "5368a70472e90379e745421d32bf3b87",
+    "semantic_hash": ""
+  },
+  "tests/Feature/SpatialDatabaseTest.php": {
+    "mtime": 1759958650.4023473,
+    "seen": 1790117001.1939101,
+    "ast_hash": "0e5b1b1c18e5f1bf0c7bdd43e6df8a03",
+    "semantic_hash": ""
+  },
+  "tests/TestCase.php": {
+    "mtime": 1759934843.1249943,
+    "seen": 1790117001.193911,
+    "ast_hash": "7e567dc27e68d5b57bae16af07f68907",
+    "semantic_hash": ""
+  },
+  "tests/TestHelpers/MockGeoServerResponse.php": {
+    "mtime": 1760055304.0154634,
+    "seen": 1790117001.193911,
+    "ast_hash": "cdd185298b3e318ea48b30a756b95e07",
+    "semantic_hash": ""
+  },
+  "tests/TestHelpers/SpatialDataHelper.php": {
+    "mtime": 1760055304.0156999,
+    "seen": 1790117001.193912,
+    "ast_hash": "f50e520629d1395a17e18a9bd5bb3247",
+    "semantic_hash": ""
+  },
+  "tests/Unit/ExampleTest.php": {
+    "mtime": 1759934843.1251013,
+    "seen": 1790117001.193912,
+    "ast_hash": "3f679e9508c834f0ad95943455fcd836",
+    "semantic_hash": ""
+  },
+  "tests/Unit/GeoServerServiceTest.php": {
+    "mtime": 1759958650.4024487,
+    "seen": 1790117001.193913,
+    "ast_hash": "50b358ce9a3dd79b80c70db2dec4fd82",
+    "semantic_hash": ""
+  },
+  "tests/Unit/SpatialHelperTest.php": {
+    "mtime": 1760004341.5685415,
+    "seen": 1790117001.193913,
+    "ast_hash": "e1b903eeab7d75ec2db761a41cfda811",
+    "semantic_hash": ""
+  },
+  "vite.config.js": {
+    "mtime": 1790196419.499571,
+    "seen": 1790197365.788546,
+    "ast_hash": "9cfa5f9fdd86cf73cf12f23ff23343ff",
+    "semantic_hash": ""
+  },
+  ".github/workflows/issues.yml": {
+    "mtime": 1759934843.1177669,
+    "seen": 1790117001.1939142,
+    "ast_hash": "c2a687636b6466a3a69b9d33f0e67c7b",
+    "semantic_hash": ""
+  },
+  ".github/workflows/pull-requests.yml": {
+    "mtime": 1759934843.1178653,
+    "seen": 1790117001.193915,
+    "ast_hash": "8f2eb126f593cffe6d327e12a69ab384",
+    "semantic_hash": ""
+  },
+  ".github/workflows/tests.yml": {
+    "mtime": 1759934843.1179552,
+    "seen": 1790117001.193915,
+    "ast_hash": "62bba33606179f409f132dab1cff197f",
+    "semantic_hash": ""
+  },
+  ".github/workflows/update-changelog.yml": {
+    "mtime": 1759934843.1180415,
+    "seen": 1790117001.1939158,
+    "ast_hash": "21030389cde3bf6d4f73e8a7e1f75d8f",
+    "semantic_hash": ""
+  },
+  ".styleci.yml": {
+    "mtime": 1759934843.1182208,
+    "seen": 1790117001.1939158,
+    "ast_hash": "5177f4fa500b459b5ca4ba40ab889f20",
+    "semantic_hash": ""
+  },
+  "API_DOCUMENTATION.md": {
+    "mtime": 1760055304.0109112,
+    "seen": 1790117001.193917,
+    "ast_hash": "93f358d7ee988401e53c567846db6d9f",
+    "semantic_hash": ""
+  },
+  "AUTH_GUIDE.md": {
+    "mtime": 1759956416.891438,
+    "seen": 1790117001.193917,
+    "ast_hash": "a6f4b904759171f5713b0c56ef9aacba",
+    "semantic_hash": ""
+  },
+  "CHANGELOG.md": {
+    "mtime": 1759934843.1184154,
+    "seen": 1790117001.193918,
+    "ast_hash": "25a4a372518934c2ec0997ecb2288c13",
+    "semantic_hash": ""
+  },
+  "CHANGES_AT_A_GLANCE.md": {
+    "mtime": 1760127196.4202302,
+    "seen": 1790117001.193918,
+    "ast_hash": "d7fc357a7170aa3a369ad8a55ac9c344",
+    "semantic_hash": ""
+  },
+  "DATA_IMPORT.md": {
+    "mtime": 1759958650.3949165,
+    "seen": 1790117001.19392,
+    "ast_hash": "bb9fb5b80d800cb5ea91e11428c60a62",
+    "semantic_hash": ""
+  },
+  "DATA_IMPORT_SUMMARY.md": {
+    "mtime": 1759958650.3950903,
+    "seen": 1790117001.19392,
+    "ast_hash": "1a6af099ba3c15628f5ba6e25aef1386",
+    "semantic_hash": ""
+  },
+  "DEPLOYMENT_GUIDE.md": {
+    "mtime": 1760055304.0110373,
+    "seen": 1790117001.193921,
+    "ast_hash": "328cb6dd6716171db516600bfa5d6d4e",
+    "semantic_hash": ""
+  },
+  "ENHANCEMENTS_SUMMARY.md": {
+    "mtime": 1760127196.4204,
+    "seen": 1790117001.193921,
+    "ast_hash": "e8624968d5c732bc0da45d4644872356",
+    "semantic_hash": ""
+  },
+  "FINAL_SUMMARY.md": {
+    "mtime": 1759958650.3952346,
+    "seen": 1790117001.193922,
+    "ast_hash": "4f62fbe38d4e093fdfb2c6150fec2ff4",
+    "semantic_hash": ""
+  },
+  "GEOSERVER_INTEGRATION.md": {
+    "mtime": 1759956416.8916113,
+    "seen": 1790117001.193922,
+    "ast_hash": "c34419df018cc120f735e689003fc1f9",
+    "semantic_hash": ""
+  },
+  "GIS_TOOLS_DOCUMENTATION.md": {
+    "mtime": 1760004341.565179,
+    "seen": 1790117001.193923,
+    "ast_hash": "7df05bb10c45e5425641fbaedb05f616",
+    "semantic_hash": ""
+  },
+  "GIS_TOOLS_FEATURES.md": {
+    "mtime": 1760004341.5653532,
+    "seen": 1790117001.193923,
+    "ast_hash": "edf2871f6eaf85e90894724fe437e878",
+    "semantic_hash": ""
+  },
+  "GIS_TOOLS_IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1760004341.5654662,
+    "seen": 1790117001.1939242,
+    "ast_hash": "a38338e187b15bcd993cef71c5a7c5ed",
+    "semantic_hash": ""
+  },
+  "GIS_TOOLS_QUICK_REFERENCE.md": {
+    "mtime": 1760004341.5656266,
+    "seen": 1790117001.1939242,
+    "ast_hash": "16a37461cd9cc497d803095f5aeac164",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_CHECKLIST.md": {
+    "mtime": 1759958650.395373,
+    "seen": 1790117001.1939251,
+    "ast_hash": "cb50060a95ffca81913a4b336a4416de",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_COMPLETE.md": {
+    "mtime": 1760004341.5657904,
+    "seen": 1790117001.1939251,
+    "ast_hash": "d624a705f03f2ef68f84fb7b9ea068a5",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_COMPLETE.txt": {
+    "mtime": 1760057365.6204412,
+    "seen": 1790117001.1939259,
+    "ast_hash": "ff131eb1a38ef9c84a7ec4d5f43442bf",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_COMPLETE_SUMMARY.md": {
+    "mtime": 1760127196.4205954,
+    "seen": 1790117001.1939259,
+    "ast_hash": "4b56ee236658fad16ba8e6610302e992",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_FINAL.md": {
+    "mtime": 1760055304.011335,
+    "seen": 1790117001.1939268,
+    "ast_hash": "7a48068ba33230888bb5d32447afba3c",
+    "semantic_hash": ""
+  },
+  "IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1759956416.891965,
+    "seen": 1790117001.1939268,
+    "ast_hash": "1b09f371e3a9f2b2abb564d82fea1527",
+    "semantic_hash": ""
+  },
+  "INSTALLATION_NOTES.md": {
+    "mtime": 1759958650.395484,
+    "seen": 1790117001.193928,
+    "ast_hash": "270dd247c4754bbdc4d10e940ea13046",
+    "semantic_hash": ""
+  },
+  "LAYER_IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1759960401.3746738,
+    "seen": 1790117001.193928,
+    "ast_hash": "b6697b2e4f780e987eaa2048c85a2011",
+    "semantic_hash": ""
+  },
+  "LAYER_MANAGEMENT.md": {
+    "mtime": 1759960401.3750825,
+    "seen": 1790117001.193929,
+    "ast_hash": "2ddf1f4e23260ce3ed69e4350149f8eb",
+    "semantic_hash": ""
+  },
+  "LAYER_SYSTEM_README.md": {
+    "mtime": 1759960401.3755167,
+    "seen": 1790117001.193929,
+    "ast_hash": "78cf75fabff2604530f7780b5f5c4aad",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_ARCHITECTURE.md": {
+    "mtime": 1759965536.8230371,
+    "seen": 1790117001.19393,
+    "ast_hash": "277b127d9ca0d8b6f8da089477b6818c",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_CHECKLIST.md": {
+    "mtime": 1759965536.8232408,
+    "seen": 1790117001.19393,
+    "ast_hash": "ba1fe8c9b34790093deccbf5bf221391",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_DOCUMENTATION.md": {
+    "mtime": 1759965536.823366,
+    "seen": 1790117001.193931,
+    "ast_hash": "25795b535fa720246740c402e6c2c2ed",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_EXAMPLES.md": {
+    "mtime": 1760019082.0557084,
+    "seen": 1790117001.193931,
+    "ast_hash": "f1c7493e2066fcbb22670858efc354b0",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_FINAL_SUMMARY.md": {
+    "mtime": 1759965536.8237824,
+    "seen": 1790117001.193932,
+    "ast_hash": "6f9a7def70f4413e43fd5dbe4676c029",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_FIXES.md": {
+    "mtime": 1760005463.3750029,
+    "seen": 1790117001.193932,
+    "ast_hash": "a10b80b226c47cc67dcc0f159ce199b3",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1759965536.8239675,
+    "seen": 1790117001.193933,
+    "ast_hash": "9e60de06e9bc30de7e9f6b148310546e",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_QUICK_REFERENCE.md": {
+    "mtime": 1759965536.8241348,
+    "seen": 1790117001.193933,
+    "ast_hash": "4a54a2e84becc74a7473df22dedbc45e",
+    "semantic_hash": ""
+  },
+  "MAP_BUILDER_README.md": {
+    "mtime": 1759965536.8243248,
+    "seen": 1790117001.193934,
+    "ast_hash": "b0040b62d349bf088eb61c27bb8d4354",
+    "semantic_hash": ""
+  },
+  "MONITORING_AND_LOGGING.md": {
+    "mtime": 1760055304.0114877,
+    "seen": 1790117001.1939352,
+    "ast_hash": "06513fdc083985a8ae1506667dde8fc4",
+    "semantic_hash": ""
+  },
+  "PROJECT_MANAGEMENT.md": {
+    "mtime": 1760053240.2940388,
+    "seen": 1790117001.1939352,
+    "ast_hash": "db966342d360777b65f8b54376c06320",
+    "semantic_hash": ""
+  },
+  "PROJECT_MANAGEMENT_IMPLEMENTATION.md": {
+    "mtime": 1760053240.2942088,
+    "seen": 1790117001.1939359,
+    "ast_hash": "a723195325a77bb74411dc6d9abfc781",
+    "semantic_hash": ""
+  },
+  "PROJECT_MANAGEMENT_QUICK_REFERENCE.md": {
+    "mtime": 1760053240.2943845,
+    "seen": 1790117001.1939359,
+    "ast_hash": "d522be9a7d4d970149877f0315349611",
+    "semantic_hash": ""
+  },
+  "QUICK_START_GUIDE.md": {
+    "mtime": 1760127196.4207697,
+    "seen": 1790117001.1939368,
+    "ast_hash": "bdd8307916b86d745e6ddd1cf637beef",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1760055304.0118265,
+    "seen": 1790117001.1939368,
+    "ast_hash": "738d6233c7236fbaf55148f7ae911f3b",
+    "semantic_hash": ""
+  },
+  "SPATIAL_FEATURES.md": {
+    "mtime": 1759956416.8925004,
+    "seen": 1790117001.1939368,
+    "ast_hash": "eac486a9da508c9bcac1c1d74312d914",
+    "semantic_hash": ""
+  },
+  "TESTING_AND_DEPLOYMENT_README.md": {
+    "mtime": 1760055304.0120323,
+    "seen": 1790117001.193938,
+    "ast_hash": "81d847be79187c2823659cecf1dad6ef",
+    "semantic_hash": ""
+  },
+  "TESTING_AND_DEPLOYMENT_SUMMARY.md": {
+    "mtime": 1760055304.01234,
+    "seen": 1790117001.193938,
+    "ast_hash": "9aa010bd6e0152e87055f8f3ea6eb6f5",
+    "semantic_hash": ""
+  },
+  "TESTING_CHECKLIST.md": {
+    "mtime": 1760057365.6207118,
+    "seen": 1790117001.193939,
+    "ast_hash": "59c4bc41ef4b58767d713069169d1788",
+    "semantic_hash": ""
+  },
+  "TESTING_GUIDE.md": {
+    "mtime": 1760055304.012564,
+    "seen": 1790117001.193939,
+    "ast_hash": "7aa9bbfc42958a62e8e13eb5bad8f8ce",
+    "semantic_hash": ""
+  },
+  "UI_DOCUMENTATION.md": {
+    "mtime": 1759958650.396492,
+    "seen": 1790117001.19394,
+    "ast_hash": "5c03c96efaebbaac8c85a7ea11305223",
+    "semantic_hash": ""
+  },
+  "USER_GUIDE.md": {
+    "mtime": 1760055304.0127428,
+    "seen": 1790117001.19394,
+    "ast_hash": "737f956f21fb18ea3b21ac8d60249e00",
+    "semantic_hash": ""
+  },
+  "WEBGIS_FIXES_SUMMARY.md": {
+    "mtime": 1760057365.6208553,
+    "seen": 1790117001.1939409,
+    "ast_hash": "2586f8ca8a4dc8170b50b43e1e1ca11b",
+    "semantic_hash": ""
+  },
+  "docker-compose.production.yml": {
+    "mtime": 1760055304.0135703,
+    "seen": 1790117001.1939409,
+    "ast_hash": "ac532b2c18baceaf28d37f7a2a721607",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1790191499.5353358,
+    "seen": 1790191675.345738,
+    "ast_hash": "a0c70f2c84f76f261c1bd215dafcf363",
+    "semantic_hash": ""
+  },
+  "docker/ssl/README.md": {
+    "mtime": 1760055304.014739,
+    "seen": 1790117001.193942,
+    "ast_hash": "ab597dbe8d6ff4ca11aa611255030477",
+    "semantic_hash": ""
+  },
+  "public/robots.txt": {
+    "mtime": 1759934843.1226585,
+    "seen": 1790117001.193943,
+    "ast_hash": "b6216d61c03e6ce0c9aea6ca7808f7ca",
+    "semantic_hash": ""
+  },
+  "app/Ai/Agents/GisAssistant.php": {
+    "mtime": 1790117719.0745099,
+    "seen": 1790117812.437537,
+    "ast_hash": "c606da6e48f7af9dae83d77d1b410a7e",
+    "semantic_hash": ""
+  },
+  "app/Ai/Tools/BufferAnalysisTool.php": {
+    "mtime": 1790117728.0838602,
+    "seen": 1790117812.437541,
+    "ast_hash": "a5694f6c5f7054ef33cd63b5c3e7de94",
+    "semantic_hash": ""
+  },
+  "app/Ai/Tools/ListFeaturesTool.php": {
+    "mtime": 1790117727.6382217,
+    "seen": 1790117812.437543,
+    "ast_hash": "2ce8ac02ca1dd3ecc825523c0f96db9d",
+    "semantic_hash": ""
+  },
+  "app/Ai/Tools/SearchLayersTool.php": {
+    "mtime": 1790117722.9852395,
+    "seen": 1790117812.4375439,
+    "ast_hash": "2218c057911d4f572def34d86e78863e",
+    "semantic_hash": ""
+  },
+  "app/Helpers/GeometryColumnHelper.php": {
+    "mtime": 1790117448.9745364,
+    "seen": 1790117812.437551,
+    "ast_hash": "67fd07356617619369c0d3ff58340c9d",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Api/V1/FeatureApiController.php": {
+    "mtime": 1790177345.6226242,
+    "seen": 1790177490.625152,
+    "ast_hash": "9716cf3b84b443cdd49e8bbacf33cd07",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Api/V1/LayerApiController.php": {
+    "mtime": 1790117767.4456563,
+    "seen": 1790117812.4375548,
+    "ast_hash": "988606c76b078b57ddfea32efea80a15",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/ApiTokenController.php": {
+    "mtime": 1790197029.9586146,
+    "seen": 1790197365.788356,
+    "ast_hash": "6868174bc0a22d20c3803f044903062d",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/CatalogController.php": {
+    "mtime": 1790197011.006025,
+    "seen": 1790197365.7883599,
+    "ast_hash": "f98005f8c5d0c69699edc5ea98e6c605",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/ContentAccessController.php": {
+    "mtime": 1790117752.2742162,
+    "seen": 1790117812.437561,
+    "ast_hash": "503a0ec0a33ffb5e9e6d48160453e486",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/DashboardBoardController.php": {
+    "mtime": 1790197024.986379,
+    "seen": 1790197365.788363,
+    "ast_hash": "c5b89c45920ceb39e8f568452306a864",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/FeatureAttachmentController.php": {
+    "mtime": 1790176906.9557245,
+    "seen": 1790177490.625161,
+    "ast_hash": "190126fef8bff6f87e4ad3c2ebd72594",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/FeatureController.php": {
+    "mtime": 1790117517.6773348,
+    "seen": 1790117812.437566,
+    "ast_hash": "05bf8637b92f4623e1da2ff3f64aaf73",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/FormController.php": {
+    "mtime": 1790197023.02782,
+    "seen": 1790197365.788367,
+    "ast_hash": "2dba7287ba90f376f1385ef156df9e87",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/GeocodeController.php": {
+    "mtime": 1790117683.2268662,
+    "seen": 1790117812.437568,
+    "ast_hash": "7039635a2b6429919893d66d11033da4",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/GisAssistantController.php": {
+    "mtime": 1790117864.7349145,
+    "seen": 1790117871.359009,
+    "ast_hash": "3fffb3587dbcd0ee7c89b7a8e92749cc",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/GroupController.php": {
+    "mtime": 1790197014.6273036,
+    "seen": 1790197365.788369,
+    "ast_hash": "69abe549b1fdfc8bddc75b11d1b8c696",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/LayerFieldController.php": {
+    "mtime": 1790117529.2792192,
+    "seen": 1790117812.437571,
+    "ast_hash": "fdb40b88e8af5d191a18d9f6781fb640",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/MvtController.php": {
+    "mtime": 1790176869.6207411,
+    "seen": 1790177490.6251662,
+    "ast_hash": "68b2e594b431f95614a4cc8f0233db6c",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/PrintController.php": {
+    "mtime": 1790197030.6058722,
+    "seen": 1790197365.788374,
+    "ast_hash": "24eebb8e2feb610d227113e1d96eac78",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/WebhookController.php": {
+    "mtime": 1790197016.1670384,
+    "seen": 1790197365.7883751,
+    "ast_hash": "21c81099a8f7b2e3782ee065719c6e62",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessExcelJob.php": {
+    "mtime": 1790117749.8104486,
+    "seen": 1790117812.43758,
+    "ast_hash": "a31ed729c47609d0e33e33880ca27ad4",
+    "semantic_hash": ""
+  },
+  "app/Models/ContentAccess.php": {
+    "mtime": 1790117477.4339366,
+    "seen": 1790117812.437584,
+    "ast_hash": "767487c70731704d2e330346649c2a5b",
+    "semantic_hash": ""
+  },
+  "app/Models/DashboardBoard.php": {
+    "mtime": 1790117485.8013763,
+    "seen": 1790117812.437584,
+    "ast_hash": "002925925ee0ac5ef50045a0ae52b5aa",
+    "semantic_hash": ""
+  },
+  "app/Models/FeatureAttachment.php": {
+    "mtime": 1790117482.0538743,
+    "seen": 1790117812.4375858,
+    "ast_hash": "74e4facf739dea5fa78e92b8b89d4c4c",
+    "semantic_hash": ""
+  },
+  "app/Models/Form.php": {
+    "mtime": 1790117478.8231347,
+    "seen": 1790117812.4375858,
+    "ast_hash": "417096465b8ef6ec43c4de19d7685e06",
+    "semantic_hash": ""
+  },
+  "app/Models/Group.php": {
+    "mtime": 1790117474.7073839,
+    "seen": 1790117812.437587,
+    "ast_hash": "eca392bb00bff8ede935da18de66a811",
+    "semantic_hash": ""
+  },
+  "app/Models/LayerField.php": {
+    "mtime": 1790117471.784353,
+    "seen": 1790117812.437588,
+    "ast_hash": "c8c95690c2374f56d20438333bf4c2d8",
+    "semantic_hash": ""
+  },
+  "app/Models/Webhook.php": {
+    "mtime": 1790117485.8013759,
+    "seen": 1790117812.437593,
+    "ast_hash": "c90c2f9a28c1be9a1c45c02361393838",
+    "semantic_hash": ""
+  },
+  "app/Policies/FormPolicy.php": {
+    "mtime": 1790117702.6133857,
+    "seen": 1790117812.4375942,
+    "ast_hash": "960c4cd3b7925c33757970422b17f8d2",
+    "semantic_hash": ""
+  },
+  "app/Policies/GroupPolicy.php": {
+    "mtime": 1790117721.1057582,
+    "seen": 1790117812.437595,
+    "ast_hash": "cd53b625eac763f6fe135d190bb4aff4",
+    "semantic_hash": ""
+  },
+  "app/Policies/WebhookPolicy.php": {
+    "mtime": 1790117721.1988943,
+    "seen": 1790117812.437598,
+    "ast_hash": "1f764556c4809421339955d69408819a",
+    "semantic_hash": ""
+  },
+  "app/Services/ContentAccessService.php": {
+    "mtime": 1790177233.6970673,
+    "seen": 1790177490.625186,
+    "ast_hash": "5cd819910ec0a36992ffecdbbc36ab5b",
+    "semantic_hash": ""
+  },
+  "app/Services/ExcelImportService.php": {
+    "mtime": 1790117748.4841158,
+    "seen": 1790117812.4376,
+    "ast_hash": "ad1d85de919b4ce5dfc5821421a1117b",
+    "semantic_hash": ""
+  },
+  "app/Services/FeatureService.php": {
+    "mtime": 1790185998.5404572,
+    "seen": 1790186050.3865721,
+    "ast_hash": "2551709872ab8d3214aef92f47b10916",
+    "semantic_hash": ""
+  },
+  "app/Services/WebhookDispatcher.php": {
+    "mtime": 1790117529.5740361,
+    "seen": 1790117812.437602,
+    "ast_hash": "d1c76b72bcbf78e53e997662ad814f73",
+    "semantic_hash": ""
+  },
+  "config/geocode.php": {
+    "mtime": 1790117657.5733447,
+    "seen": 1790117812.437611,
+    "ast_hash": "4afcf8d552f52a8fa6bfa6f51aace29d",
+    "semantic_hash": ""
+  },
+  "config/print.php": {
+    "mtime": 1790117657.803253,
+    "seen": 1790117812.437613,
+    "ast_hash": "226bc464fb3e329322f8456d93f554b8",
+    "semantic_hash": ""
+  },
+  "config/sanctum.php": {
+    "mtime": 1790118098.6230762,
+    "seen": 1790118155.010476,
+    "ast_hash": "e3887ebee464a1b2c014cb16696a2b50",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_22_225502_create_personal_access_tokens_table.php": {
+    "mtime": 1790117701.5765185,
+    "seen": 1790117812.437631,
+    "ast_hash": "eb77af89d184f92ec893eff344c34999",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_23_010000_create_layer_fields_table.php": {
+    "mtime": 1790117456.0612833,
+    "seen": 1790117812.437631,
+    "ast_hash": "42ad98dd41a011c39a793553b2062b17",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_23_010100_create_groups_and_content_access_tables.php": {
+    "mtime": 1790117463.5200956,
+    "seen": 1790117812.437632,
+    "ast_hash": "0e71eaf80c3b1a83a4f98430d03947d5",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_09_23_010200_create_forms_attachments_dashboards_webhooks_tables.php": {
+    "mtime": 1790117463.8614118,
+    "seen": 1790117812.437633,
+    "ast_hash": "6d5a61148aeb98331510987819510796",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/components/GeocodeSearch.jsx": {
+    "mtime": 1790120538.8512948,
+    "seen": 1790120729.7347531,
+    "ast_hash": "1077421a5e8f127590f3f7709d1125de",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/panels/Legend.jsx": {
+    "mtime": 1790120541.1504574,
+    "seen": 1790120729.7347572,
+    "ast_hash": "4aa9a34bc7df1a35e615c5a25b2824d2",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/utils/csrf.js": {
+    "mtime": 1790117654.0079389,
+    "seen": 1790117812.437645,
+    "ast_hash": "01d5d0035f1a736c663c5b7e71caae1d",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/utils/styleRenderers.js": {
+    "mtime": 1790117654.590536,
+    "seen": 1790117812.437645,
+    "ast_hash": "2a91ada79d33f9c7b1f1464394d4c477",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/_charts.blade.php": {
+    "mtime": 1790117803.750581,
+    "seen": 1790117812.43765,
+    "ast_hash": "573d1de79ac7fb25b844a3d8df70ce94",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/_form.blade.php": {
+    "mtime": 1790117794.523792,
+    "seen": 1790117812.437651,
+    "ast_hash": "592fd28537a5cbe40de43ba56722a4ee",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/create.blade.php": {
+    "mtime": 1790117785.9737673,
+    "seen": 1790117812.437651,
+    "ast_hash": "0df11c521ade5304032891b13e9abca3",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/edit.blade.php": {
+    "mtime": 1790117791.6470916,
+    "seen": 1790117812.4376519,
+    "ast_hash": "b061caf931b44669fc5c0db8dfec4a81",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/index.blade.php": {
+    "mtime": 1790117783.5556693,
+    "seen": 1790117812.437653,
+    "ast_hash": "fb627ce6b0187c51bea551cd1c80c702",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/public.blade.php": {
+    "mtime": 1790121766.0866907,
+    "seen": 1790121832.477834,
+    "ast_hash": "7653d62f757212abc198511d765d48cf",
+    "semantic_hash": ""
+  },
+  "resources/views/dashboards/show.blade.php": {
+    "mtime": 1790177474.448394,
+    "seen": 1790177490.625236,
+    "ast_hash": "a1ab2ff8ad81a0f51991a90fe9453f0a",
+    "semantic_hash": ""
+  },
+  "resources/views/forms/create.blade.php": {
+    "mtime": 1790117803.1687684,
+    "seen": 1790117812.437654,
+    "ast_hash": "8aaa6ea46a298ee9536b3aa93b142196",
+    "semantic_hash": ""
+  },
+  "resources/views/forms/index.blade.php": {
+    "mtime": 1790117802.9126885,
+    "seen": 1790117812.437655,
+    "ast_hash": "5ba7b3feeb59d07a978266b54e888449",
+    "semantic_hash": ""
+  },
+  "resources/views/groups/create.blade.php": {
+    "mtime": 1790117785.7758172,
+    "seen": 1790117812.437655,
+    "ast_hash": "e86c55f9647fc443115600c5222f57b4",
+    "semantic_hash": ""
+  },
+  "resources/views/groups/edit.blade.php": {
+    "mtime": 1790117796.889997,
+    "seen": 1790117812.4376562,
+    "ast_hash": "ae40196b0986ee8392704cea2b6f759a",
+    "semantic_hash": ""
+  },
+  "resources/views/groups/index.blade.php": {
+    "mtime": 1790117845.4950337,
+    "seen": 1790117849.886921,
+    "ast_hash": "8a471edeb6772ebf41d0cb5aac896b65",
+    "semantic_hash": ""
+  },
+  "resources/views/groups/show.blade.php": {
+    "mtime": 1790117802.8739195,
+    "seen": 1790117812.437657,
+    "ast_hash": "5af7ffca55e0f11476c215464e72ffee",
+    "semantic_hash": ""
+  },
+  "resources/views/print/map.blade.php": {
+    "mtime": 1790177126.9990714,
+    "seen": 1790177490.625249,
+    "ast_hash": "b06581ae47a4434c224fb978f45ab92b",
+    "semantic_hash": ""
+  },
+  "resources/views/catalog/index.blade.php": {
+    "mtime": 1790117823.2131574,
+    "seen": 1790117849.886909,
+    "ast_hash": "bd8d25c66ed4da6b0af888243d706931",
+    "semantic_hash": ""
+  },
+  "resources/views/forms/edit.blade.php": {
+    "mtime": 1790117828.0759883,
+    "seen": 1790117849.886917,
+    "ast_hash": "fd0638830c8c5b2bfd54a0a3ad18a741",
+    "semantic_hash": ""
+  },
+  "resources/views/forms/public.blade.php": {
+    "mtime": 1790121761.1620402,
+    "seen": 1790121832.477837,
+    "ast_hash": "85bb8101e06a347c4206c4f660a43633",
+    "semantic_hash": ""
+  },
+  "resources/views/forms/show.blade.php": {
+    "mtime": 1790117840.8910203,
+    "seen": 1790117849.886919,
+    "ast_hash": "7f21df9aceed0d896da86311fbba2e6e",
+    "semantic_hash": ""
+  },
+  "resources/views/settings/api-tokens.blade.php": {
+    "mtime": 1790117828.9498513,
+    "seen": 1790117849.8869371,
+    "ast_hash": "cc3ce9d9e0d5bf88116cf4eafd440f8a",
+    "semantic_hash": ""
+  },
+  "resources/views/webhooks/create.blade.php": {
+    "mtime": 1790117820.5787032,
+    "seen": 1790117849.8869388,
+    "ast_hash": "9178f51b250485a4550b507f0b3ef567",
+    "semantic_hash": ""
+  },
+  "resources/views/webhooks/edit.blade.php": {
+    "mtime": 1790117828.8350646,
+    "seen": 1790117849.8869388,
+    "ast_hash": "2eefd2866df4262be7e698f6ee29d692",
+    "semantic_hash": ""
+  },
+  "resources/views/webhooks/index.blade.php": {
+    "mtime": 1790117810.9743738,
+    "seen": 1790117849.88694,
+    "ast_hash": "b742cb0db965cc5c5fed65902c2e8423",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/components/TemporalSlider.jsx": {
+    "mtime": 1790120539.8958466,
+    "seen": 1790120729.7347531,
+    "ast_hash": "8776cfced00082c83b03d2ad2e623098",
+    "semantic_hash": ""
+  },
+  "app/Support/ConsoleProps.php": {
+    "mtime": 1790197142.19322,
+    "seen": 1790197365.788407,
+    "ast_hash": "718f8a831f105f256d2aa88f8db7c9f1",
+    "semantic_hash": ""
+  },
+  "resources/js/console/App.jsx": {
+    "mtime": 1790119845.7932458,
+    "seen": 1790119869.644161,
+    "ast_hash": "8fe976c5557616b1e157aa19f35e6613",
+    "semantic_hash": ""
+  },
+  "resources/js/console/main.jsx": {
+    "mtime": 1790119736.456797,
+    "seen": 1790119869.644161,
+    "ast_hash": "25c619e2526fdef95edd45f8e339d2a3",
+    "semantic_hash": ""
+  },
+  "resources/js/console/pages/BladeHost.jsx": {
+    "mtime": 1790120516.5019996,
+    "seen": 1790120729.734747,
+    "ast_hash": "f53f086dd3d69b0704bbb89897cee619",
+    "semantic_hash": ""
+  },
+  "resources/js/console/pages/DashboardHome.jsx": {
+    "mtime": 1790191596.8589735,
+    "seen": 1790191675.345634,
+    "ast_hash": "34f5c398790bd0843aa12658be21a333",
+    "semantic_hash": ""
+  },
+  "resources/js/console/shell/AppShell.jsx": {
+    "mtime": 1790189917.2402544,
+    "seen": 1790190016.857764,
+    "ast_hash": "a8434e90ffc7373a51f9cc4ceba7df16",
+    "semantic_hash": ""
+  },
+  "resources/js/console/shell/GuestShell.jsx": {
+    "mtime": 1790188463.2848372,
+    "seen": 1790188655.839127,
+    "ast_hash": "e708203982d97d0fa2cfa27a8d95f05d",
+    "semantic_hash": ""
+  },
+  "resources/js/console/shell/Sidebar.jsx": {
+    "mtime": 1790190180.2215302,
+    "seen": 1790190375.813547,
+    "ast_hash": "d5cc817033330c554e05401eb630afa1",
+    "semantic_hash": ""
+  },
+  "resources/js/console/shell/Topbar.jsx": {
+    "mtime": 1790190522.2416387,
+    "seen": 1790190635.51726,
+    "ast_hash": "a175d3641ba0be34dae6d2b0ab0a64cd",
+    "semantic_hash": ""
+  },
+  "resources/views/layouts/console.blade.php": {
+    "mtime": 1790188435.5056245,
+    "seen": 1790188655.839162,
+    "ast_hash": "f738037094e6d32dfb3aa69f6a939711",
+    "semantic_hash": ""
+  },
+  "resources/views/layouts/map-builder.blade.php": {
+    "mtime": 1790120541.1510286,
+    "seen": 1790120729.734783,
+    "ast_hash": "c00bbf3c19d6f9e8926cf36df8aa79ab",
+    "semantic_hash": ""
+  },
+  "resources/js/console/bladeIcons.js": {
+    "mtime": 1790121747.8899162,
+    "seen": 1790121832.4778109,
+    "ast_hash": "26e8a13d53ebbfb89538a2684468308c",
+    "semantic_hash": ""
+  },
+  ".impeccable/config.json": {
+    "mtime": 1790121057.7032318,
+    "seen": 1790121491.464818,
+    "ast_hash": "f0e171bf8dad7043fef4c4d8b7890aec",
+    "semantic_hash": ""
+  },
+  ".impeccable/live/config.json": {
+    "mtime": 1790121041.525137,
+    "seen": 1790121491.464821,
+    "ast_hash": "16cee014a819f413ee91c2d63ebeec32",
+    "semantic_hash": ""
+  },
+  "PRODUCT.md": {
+    "mtime": 1790121040.2377386,
+    "seen": 1790121491.465011,
+    "ast_hash": "0ad82be9137e7bb94b1d8cbea3be37d1",
+    "semantic_hash": ""
+  },
+  "app/Http/Controllers/Api/V1/ExportApiController.php": {
+    "mtime": 1790177335.0553994,
+    "seen": 1790177490.625151,
+    "ast_hash": "1efe59a970844200b678066a9e9cca5c",
+    "semantic_hash": ""
+  },
+  "app/Services/ExpressionEvaluator.php": {
+    "mtime": 1790177171.0953007,
+    "seen": 1790177490.6251872,
+    "ast_hash": "06a715d93328f899c4cb04a53b1c9aa0",
+    "semantic_hash": ""
+  },
+  "app/Services/SldGenerator.php": {
+    "mtime": 1790177176.0625575,
+    "seen": 1790177490.625189,
+    "ast_hash": "003f75e1bafa9385809464bd18de22c9",
+    "semantic_hash": ""
+  },
+  "resources/js/dashboards/DashboardBoard.jsx": {
+    "mtime": 1790177405.5667436,
+    "seen": 1790177490.625222,
+    "ast_hash": "45f874a8487a8f6bcf5b6ac45fc55d24",
+    "semantic_hash": ""
+  },
+  "resources/js/dashboards/main.jsx": {
+    "mtime": 1790177400.6271737,
+    "seen": 1790177490.625222,
+    "ast_hash": "bc7e3dba3d873291c4c2648574d19230",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/components/FeatureDock.jsx": {
+    "mtime": 1790176934.2625504,
+    "seen": 1790177490.625223,
+    "ast_hash": "48221b41578eec0492736decd316b6b5",
+    "semantic_hash": ""
+  },
+  "resources/js/map-workspace/components/GisAssistantPanel.jsx": {
+    "mtime": 1790177047.3610623,
+    "seen": 1790177490.6252239,
+    "ast_hash": "7eec983449759f5e6ae9235f0451c340",
+    "semantic_hash": ""
+  },
+  "tests/Feature/ContentAccessAndApiGapsTest.php": {
+    "mtime": 1790177486.0500886,
+    "seen": 1790177490.625259,
+    "ast_hash": "33dd61d326fe60d6c513af39bd7d25e4",
+    "semantic_hash": ""
+  },
+  "tests/Feature/MvtTemporalFilterTest.php": {
+    "mtime": 1790177463.3474343,
+    "seen": 1790177490.625261,
+    "ast_hash": "e07dce6dd1a208dddd3fb9877896631d",
+    "semantic_hash": ""
+  },
+  "tests/Unit/ExpressionEvaluatorTest.php": {
+    "mtime": 1790177428.9087534,
+    "seen": 1790177490.625265,
+    "ast_hash": "d69bdbc74aa2ba224c54dea96ca229f7",
+    "semantic_hash": ""
+  },
+  ".impeccable/critique/2026-09-23T18-06-28Z__resources-js-console.md": {
+    "mtime": 1790190401.6486206,
+    "seen": 1790190635.517327,
+    "ast_hash": "a37c61c9df396e5e115c4cd78afd2530",
+    "semantic_hash": ""
+  },
+  "app/Http/Requests/ImageryImportRequest.php": {
+    "mtime": 1790191539.4701705,
+    "seen": 1790191675.345564,
+    "ast_hash": "4d51d9128bbb5e69b54a1cdf73a33c95",
+    "semantic_hash": ""
+  },
+  "app/Jobs/ProcessImageryJob.php": {
+    "mtime": 1790191539.366722,
+    "seen": 1790191675.345567,
+    "ast_hash": "407e8b508489514d63d2a742632ceb99",
+    "semantic_hash": ""
+  },
+  "app/Services/ImageryImportService.php": {
+    "mtime": 1790191545.061857,
+    "seen": 1790191675.345591,
+    "ast_hash": "36a403f540427c90b3a831f3bddef4d3",
+    "semantic_hash": ""
+  },
+  "config/imagery.php": {
+    "mtime": 1790191497.9501836,
+    "seen": 1790191675.3456042,
+    "ast_hash": "03165dbd6f8cb5918444dff182c68851",
+    "semantic_hash": ""
+  },
+  "tests/Unit/ImageryImportServiceTest.php": {
+    "mtime": 1790191659.3793612,
+    "seen": 1790191675.345702,
+    "ast_hash": "fd8ec698bf624151f085a9890963e3ac",
+    "semantic_hash": ""
+  },
+  ".cursor/mcp.json": {
+    "mtime": 1790195955.287907,
+    "seen": 1790197365.7883341,
+    "ast_hash": "5ac68975a1fefdcb6ee8eec7312a0d6c",
+    "semantic_hash": ""
+  },
+  "app/Http/Middleware/HandleInertiaRequests.php": {
+    "mtime": 1790196408.2372906,
+    "seen": 1790197365.788378,
+    "ast_hash": "509b2478065ee744b791e102d9c02da9",
+    "semantic_hash": ""
+  },
+  "resources/js/Components/SharedMap.jsx": {
+    "mtime": 1790196824.9615028,
+    "seen": 1790197365.7884429,
+    "ast_hash": "432ec5657b1c73a2c9e84779947715fe",
+    "semantic_hash": ""
+  },
+  "resources/js/Components/WidgetGrid.jsx": {
+    "mtime": 1790196900.2718904,
+    "seen": 1790197365.7884438,
+    "ast_hash": "6893eda1e9ddfde6460d7e64fe01c12f",
+    "semantic_hash": ""
+  },
+  "resources/js/Components/ui.jsx": {
+    "mtime": 1790198446.9237623,
+    "seen": 1790198490.6103659,
+    "ast_hash": "20c03870598de810a0584e56708fface",
+    "semantic_hash": ""
+  },
+  "resources/js/Layouts/AppLayout.jsx": {
+    "mtime": 1790198308.0532808,
+    "seen": 1790198490.610367,
+    "ast_hash": "f05b0f5b5fd310bc537c2db3a39af397",
+    "semantic_hash": ""
+  },
+  "resources/js/Layouts/GuestLayout.jsx": {
+    "mtime": 1790198318.7609167,
+    "seen": 1790198490.610368,
+    "ast_hash": "5df217aa4d735a8dddcc0e45885857d8",
+    "semantic_hash": ""
+  },
+  "resources/js/Layouts/PublicLayout.jsx": {
+    "mtime": 1790198319.093528,
+    "seen": 1790198490.610368,
+    "ast_hash": "45e2a6e778bb5080c89518dcae2ce247",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/ConfirmPassword.jsx": {
+    "mtime": 1790196651.485486,
+    "seen": 1790197365.788447,
+    "ast_hash": "e172a6a648c4e2ab53b6cc80055aabd3",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/ForgotPassword.jsx": {
+    "mtime": 1790196650.8484294,
+    "seen": 1790197365.788447,
+    "ast_hash": "65013b010e9fd348729b71188fdc60f3",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/Login.jsx": {
+    "mtime": 1790196650.8970053,
+    "seen": 1790197365.788448,
+    "ast_hash": "c74cc51fbebaebc2f65799820361722b",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/Register.jsx": {
+    "mtime": 1790196639.179399,
+    "seen": 1790197365.788448,
+    "ast_hash": "3810b84c680d2e5894caf33484858eed",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/ResetPassword.jsx": {
+    "mtime": 1790196651.1280105,
+    "seen": 1790197365.788449,
+    "ast_hash": "3856e602d72d8953409fb4f4a38796a6",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Auth/VerifyEmail.jsx": {
+    "mtime": 1790196651.4538674,
+    "seen": 1790197365.788449,
+    "ast_hash": "91e22f92d7bd358799d1d653282c19a3",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Catalog/Index.jsx": {
+    "mtime": 1790198342.9130821,
+    "seen": 1790198490.610373,
+    "ast_hash": "8ffa6c1d868d79fb4565878e514e1986",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Dashboard.jsx": {
+    "mtime": 1790198357.631522,
+    "seen": 1790198490.610374,
+    "ast_hash": "9dff264c2c258484fb9e7762f4711fe0",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Dashboards/Editor.jsx": {
+    "mtime": 1790198364.032662,
+    "seen": 1790198490.610374,
+    "ast_hash": "25f44a127c6d8a07cbf18439ce86013d",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Dashboards/Index.jsx": {
+    "mtime": 1790198342.91412,
+    "seen": 1790198490.610375,
+    "ast_hash": "ebfdc5686380f616bdb41ffeeb72c4e9",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Dashboards/Public.jsx": {
+    "mtime": 1790196907.5851297,
+    "seen": 1790197365.7884521,
+    "ast_hash": "945c778fca8e4a9d524137a9e59e3a29",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Dashboards/Show.jsx": {
+    "mtime": 1790196913.860181,
+    "seen": 1790197365.7884521,
+    "ast_hash": "7717ea12261543158e445aafdb7011d0",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Forms/Editor.jsx": {
+    "mtime": 1790198342.9111853,
+    "seen": 1790198490.610377,
+    "ast_hash": "5359c6315928534258043e73e42637d5",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Forms/Index.jsx": {
+    "mtime": 1790198342.9107983,
+    "seen": 1790198490.610377,
+    "ast_hash": "ae93035d673d32699817d54c46b05984",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Forms/Public.jsx": {
+    "mtime": 1790196896.671078,
+    "seen": 1790197365.7884538,
+    "ast_hash": "4756b32a181cbc188b80a478d2c58274",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Forms/Show.jsx": {
+    "mtime": 1790196892.019334,
+    "seen": 1790197365.788457,
+    "ast_hash": "25673d354e381337a85b6879154df279",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Groups/Form.jsx": {
+    "mtime": 1790196872.676786,
+    "seen": 1790197365.7884579,
+    "ast_hash": "5a8d9ee1ce1493373d14a6d72cdfc176",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Groups/Index.jsx": {
+    "mtime": 1790198342.9134068,
+    "seen": 1790198490.61038,
+    "ast_hash": "5a4a089f852e23215a41e89c475bae86",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Groups/Show.jsx": {
+    "mtime": 1790196872.8226163,
+    "seen": 1790197365.788459,
+    "ast_hash": "e663e5fd24c9f53855ff98cf21ee39d2",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Imports/Create.jsx": {
+    "mtime": 1790196729.198277,
+    "seen": 1790197365.788459,
+    "ast_hash": "4f361b34ab2cca0c6534a217eed5ced6",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Imports/Index.jsx": {
+    "mtime": 1790198342.9136772,
+    "seen": 1790198490.610382,
+    "ast_hash": "0a0447f32a1a5c50a2e8ef06a72b1d3b",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Imports/Show.jsx": {
+    "mtime": 1790198329.9384143,
+    "seen": 1790198490.610383,
+    "ast_hash": "aa53da1674031a6ccbdfc3177827a933",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Layers/Attributes/Index.jsx": {
+    "mtime": 1790198329.9363549,
+    "seen": 1790198490.610383,
+    "ast_hash": "ffecbebce1484ffe34097bf362b3937e",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Layers/Create.jsx": {
+    "mtime": 1790196686.9105136,
+    "seen": 1790197365.788461,
+    "ast_hash": "2bd5b7495457be8f9a73751d2d85b366",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Layers/Edit.jsx": {
+    "mtime": 1790198342.9114883,
+    "seen": 1790198490.610385,
+    "ast_hash": "827819c69e1629e926b604df1e1c2f31",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Layers/Index.jsx": {
+    "mtime": 1790198342.9116943,
+    "seen": 1790198490.610385,
+    "ast_hash": "1e36d989eab1a8df1820bcdfb5343076",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Layers/Show.jsx": {
+    "mtime": 1790198342.9118865,
+    "seen": 1790198490.610386,
+    "ast_hash": "eb201479e9348a876ba17af196bdda4f",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Builder.jsx": {
+    "mtime": 1790196826.5565984,
+    "seen": 1790197365.788463,
+    "ast_hash": "7253168bb83e615a01d2441c49a435f9",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Form.jsx": {
+    "mtime": 1790196812.7173567,
+    "seen": 1790197365.788464,
+    "ast_hash": "3bc5112457ee22b972aeeb5330fda5a7",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Index.jsx": {
+    "mtime": 1790198342.9104505,
+    "seen": 1790198490.610388,
+    "ast_hash": "a55da3bcd192230410ad637d4bb8e7d0",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Share.jsx": {
+    "mtime": 1790198342.910171,
+    "seen": 1790198490.610388,
+    "ast_hash": "d2453e89e7dbc616da68f02d2a687a73",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Shared.jsx": {
+    "mtime": 1790196826.068292,
+    "seen": 1790197365.7884648,
+    "ast_hash": "98ece4da2e99c9b7c2262e27ba41b9bf",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Maps/Show.jsx": {
+    "mtime": 1790196817.4767454,
+    "seen": 1790197365.788466,
+    "ast_hash": "dbc374f530959fda816824e9250e865a",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Organization/Settings.jsx": {
+    "mtime": 1790196865.4555645,
+    "seen": 1790197365.788467,
+    "ast_hash": "6c97196e141f04f17cd971e08246f92d",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Print/Map.jsx": {
+    "mtime": 1790196931.61498,
+    "seen": 1790197365.788467,
+    "ast_hash": "2592d667dd8aa1f6bab557337c62dae0",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Form.jsx": {
+    "mtime": 1790196846.0993361,
+    "seen": 1790197365.788468,
+    "ast_hash": "1aa8abd77b6d11671ad907e196826149",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Index.jsx": {
+    "mtime": 1790198342.912629,
+    "seen": 1790198490.610393,
+    "ast_hash": "b3ebedc08238d7ad50b3edb384ed223a",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Invite.jsx": {
+    "mtime": 1790198329.9373434,
+    "seen": 1790198490.610393,
+    "ast_hash": "7c9fc03ada147c861456ccdd9ce84db9",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Share.jsx": {
+    "mtime": 1790198342.9124014,
+    "seen": 1790198490.610394,
+    "ast_hash": "8c5bb2e6f87c867c7315c3c5452d32fc",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Shared.jsx": {
+    "mtime": 1790196850.4659228,
+    "seen": 1790197365.78847,
+    "ast_hash": "3b755fe4ddeb6ddef1dfe7d29cc13836",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Projects/Show.jsx": {
+    "mtime": 1790198342.9128087,
+    "seen": 1790198490.610395,
+    "ast_hash": "6d44ca3bcf50b4885a37b0fbe4d8fa1e",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Settings/ApiTokens.jsx": {
+    "mtime": 1790196931.6149614,
+    "seen": 1790197365.788471,
+    "ast_hash": "3434791c1792f0f9c4dfc0a7a2719644",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Users/Edit.jsx": {
+    "mtime": 1790198363.7741778,
+    "seen": 1790198490.610396,
+    "ast_hash": "2dc3e64e95b5bf5fc2a18f1618169cdc",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Users/Index.jsx": {
+    "mtime": 1790198342.914432,
+    "seen": 1790198490.6103969,
+    "ast_hash": "03352c170f16c91cc8922217bccca143",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Webhooks/Editor.jsx": {
+    "mtime": 1790198363.946712,
+    "seen": 1790198490.6103969,
+    "ast_hash": "545a733c3dcd73b0c0a320f1a2c8cf02",
+    "semantic_hash": ""
+  },
+  "resources/js/Pages/Webhooks/Index.jsx": {
+    "mtime": 1790196918.6235795,
+    "seen": 1790197365.7884731,
+    "ast_hash": "3a81d188f39b444da8432971b2dcef27",
+    "semantic_hash": ""
+  },
+  "resources/js/app.jsx": {
+    "mtime": 1790196594.753845,
+    "seen": 1790197365.788474,
+    "ast_hash": "11736ee9cba6e8328a30b7f9309aaa73",
+    "semantic_hash": ""
+  },
+  "resources/js/lib/format.js": {
+    "mtime": 1790196604.595524,
+    "seen": 1790197365.788482,
+    "ast_hash": "0854e991a77fc1e2a6bc150cbef6c25a",
+    "semantic_hash": ""
+  },
+  "resources/views/app.blade.php": {
+    "mtime": 1790198256.4493177,
+    "seen": 1790198490.6104178,
+    "ast_hash": "5056d776808ae7d5f3401851e5fd1989",
+    "semantic_hash": ""
+  }
+}

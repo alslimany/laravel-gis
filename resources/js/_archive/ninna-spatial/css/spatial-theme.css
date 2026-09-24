@@ -1,0 +1,128 @@
+/**
+ * Spatial theme — Stitch “Spatial Intelligence Platform” tokens on Ninna’s
+ * CSS-variable contract so @ninna-ui components keep working.
+ *
+ * Usage: <html data-theme="spatial" class="dark|light">
+ */
+
+@import '@ninna-ui/core/theme/tailwind.css';
+
+/* Light — rare for this product; keep cool slate, not generic SaaS blue-gray */
+[data-theme='spatial'] {
+    color-scheme: light;
+
+    --color-primary: #0891b2;
+    --color-primary-content: #f0fdfa;
+    --color-secondary: #0284c7;
+    --color-secondary-content: #f0f9ff;
+    --color-accent: #d97706;
+    --color-accent-content: #fffbeb;
+    --color-neutral: #0f172a;
+    --color-neutral-content: #f8fafc;
+    --color-success: #059669;
+    --color-success-content: #ecfdf5;
+    --color-danger: #dc2626;
+    --color-danger-content: #fef2f2;
+    --color-warning: #d97706;
+    --color-warning-content: #fffbeb;
+    --color-info: #0284c7;
+    --color-info-content: #f0f9ff;
+
+    --color-base-50: #f8fafc;
+    --color-base-100: #f1f5f9;
+    --color-base-200: #e2e8f0;
+    --color-base-300: #cbd5e1;
+    --color-base-400: #94a3b8;
+    --color-base-500: #64748b;
+    --color-base-600: #475569;
+    --color-base-700: #334155;
+    --color-base-800: #1e293b;
+    --color-base-900: #0f172a;
+    --color-base-content: #0f172a;
+
+    --color-border: #cbd5e1;
+    --color-border-hover: #94a3b8;
+    --color-border-active: #64748b;
+    --color-border-disabled: #e2e8f0;
+}
+
+/* Dark — Stitch mission-control surfaces */
+.dark [data-theme='spatial'],
+[data-theme='spatial'].dark {
+    color-scheme: dark;
+
+    --color-primary: #4cd7f6;
+    --color-primary-content: #003640;
+    --color-secondary: #89ceff;
+    --color-secondary-content: #00344d;
+    --color-accent: #ffb95f;
+    --color-accent-content: #472a00;
+    --color-neutral: #bcc9cd;
+    --color-neutral-content: #0b1326;
+    --color-success: #34d399;
+    --color-success-content: #022c22;
+    --color-danger: #ffb4ab;
+    --color-danger-content: #690005;
+    --color-warning: #ffb95f;
+    --color-warning-content: #472a00;
+    --color-info: #89ceff;
+    --color-info-content: #00344d;
+
+    /* base-50 = panel chrome (darkest UI chrome); base-100 = canvas */
+    --color-base-50: #060e20;
+    --color-base-100: #0b1326;
+    --color-base-200: #131b2e;
+    --color-base-300: #171f33;
+    --color-base-400: #222a3d;
+    --color-base-500: #2d3449;
+    --color-base-600: #869397;
+    --color-base-700: #bcc9cd;
+    --color-base-800: #dae2fd;
+    --color-base-900: #f8fafc;
+    --color-base-content: #dae2fd;
+
+    --color-border: #3d494c;
+    --color-border-hover: #869397;
+    --color-border-active: #4cd7f6;
+    --color-border-disabled: #222a3d;
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme='spatial']:not(.light):not(.dark) {
+        color-scheme: dark;
+
+        --color-primary: #4cd7f6;
+        --color-primary-content: #003640;
+        --color-secondary: #89ceff;
+        --color-secondary-content: #00344d;
+        --color-accent: #ffb95f;
+        --color-accent-content: #472a00;
+        --color-neutral: #bcc9cd;
+        --color-neutral-content: #0b1326;
+        --color-success: #34d399;
+        --color-success-content: #022c22;
+        --color-danger: #ffb4ab;
+        --color-danger-content: #690005;
+        --color-warning: #ffb95f;
+        --color-warning-content: #472a00;
+        --color-info: #89ceff;
+        --color-info-content: #00344d;
+
+        --color-base-50: #060e20;
+        --color-base-100: #0b1326;
+        --color-base-200: #131b2e;
+        --color-base-300: #171f33;
+        --color-base-400: #222a3d;
+        --color-base-500: #2d3449;
+        --color-base-600: #869397;
+        --color-base-700: #bcc9cd;
+        --color-base-800: #dae2fd;
+        --color-base-900: #f8fafc;
+        --color-base-content: #dae2fd;
+
+        --color-border: #3d494c;
+        --color-border-hover: #869397;
+        --color-border-active: #4cd7f6;
+        --color-border-disabled: #222a3d;
+    }
+}

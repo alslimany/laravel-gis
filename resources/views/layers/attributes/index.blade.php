@@ -36,14 +36,14 @@
                         </div>
                         <div class="col-md-6 text-end">
                             <div class="btn-group">
-                                <a href="{{ route('layers.attributes', array_merge(request()->all(), ['per_page' => 10])) }}" 
+                                {{-- <a href="{{ route('layers.attributes', array_merge(request()->all(), ['per_page' => 10])) }}" 
                                    class="btn btn-sm btn-outline-secondary {{ request('per_page', 25) == 10 ? 'active' : '' }}">10</a>
                                 <a href="{{ route('layers.attributes', array_merge(request()->all(), ['per_page' => 25])) }}" 
                                    class="btn btn-sm btn-outline-secondary {{ request('per_page', 25) == 25 ? 'active' : '' }}">25</a>
                                 <a href="{{ route('layers.attributes', array_merge(request()->all(), ['per_page' => 50])) }}" 
                                    class="btn btn-sm btn-outline-secondary {{ request('per_page', 25) == 50 ? 'active' : '' }}">50</a>
                                 <a href="{{ route('layers.attributes', array_merge(request()->all(), ['per_page' => 100])) }}" 
-                                   class="btn btn-sm btn-outline-secondary {{ request('per_page', 25) == 100 ? 'active' : '' }}">100</a>
+                                   class="btn btn-sm btn-outline-secondary {{ request('per_page', 25) == 100 ? 'active' : '' }}">100</a> --}}
                             </div>
                             <span class="text-muted ms-2">per page</span>
                         </div>
@@ -60,7 +60,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         @foreach($columns as $column)
-                                            <th>{{ ucfirst(str_replace('_', ' ', $column)) }}</th>
+                                            <th>{{ $columnLabels[$column] ?? ucfirst(str_replace('_', ' ', $column)) }}</th>
                                         @endforeach
                                     </tr>
                                 </thead>
