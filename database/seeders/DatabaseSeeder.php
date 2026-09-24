@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\Organization;
 use App\Models\Project;
-use App\Models\User;
+use App\Models\Role;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,8 +18,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed roles first
+        // Seed roles first. Roles are not demo credentials.
         $this->call(RoleSeeder::class);
+
+        // Demo users use the stock factory password. Local setup only.
+        if (! app()->environment('local')) {
+            $message = 'Refusing to seed demo users because APP_ENV is not local. Demo credentials are local-setup only. RoleSeeder already ran; do not seed demo users on a shared or public host.';
+            $this->command?->error($message);
+
+            throw new RuntimeException($message);
+        }
+
+        $this->command?->warn('LOCAL SETUP ONLY: seeding demo user test@example.com with the stock factory password. Change that account before any network exposure.');
 
         // Create test user with specific location
         $user = User::factory()->create([
@@ -37,7 +49,7 @@ class DatabaseSeeder extends Seeder
         $user->update(['organization_id' => $organization->id]);
 
         // Assign admin role to test user
-        $adminRole = \App\Models\Role::where('name', 'admin')->first();
+        $adminRole = Role::where('name', 'admin')->first();
         $user->roles()->attach($adminRole);
 
         // Create project for the organization with bounding box
@@ -59,7 +71,7 @@ class DatabaseSeeder extends Seeder
             $additionalUser->update(['organization_id' => $org->id]);
 
             // Assign viewer role to additional users
-            $viewerRole = \App\Models\Role::where('name', 'viewer')->first();
+            $viewerRole = Role::where('name', 'viewer')->first();
             $additionalUser->roles()->attach($viewerRole);
 
             // Create projects

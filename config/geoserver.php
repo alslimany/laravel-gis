@@ -44,12 +44,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | The admin username and password for authenticating with GeoServer
-    | REST API endpoints.
+    | REST API endpoints. Set both in the environment. There is no demo
+    | password fallback.
     |
     */
 
     'admin_user' => env('GEOSERVER_ADMIN_USER', 'admin'),
-    'admin_password' => env('GEOSERVER_ADMIN_PASSWORD', 'geoserver'),
+    'admin_password' => env('GEOSERVER_ADMIN_PASSWORD', ''),
 
     /*
     |--------------------------------------------------------------------------
@@ -90,7 +91,7 @@ return [
         'database' => env('DB_DATABASE', 'laravel_gis'),
         'schema' => env('DB_SCHEMA', 'public'),
         'user' => env('DB_USERNAME', 'postgres'),
-        'password' => env('DB_PASSWORD', 'secret'),
+        'password' => env('DB_PASSWORD', ''),
     ],
 
     /*
