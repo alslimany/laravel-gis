@@ -14,13 +14,15 @@ The GeoServer integration provides:
 
 ## Configuration
 
-All GeoServer settings are configured in `config/geoserver.php` and can be overridden using environment variables in `.env`:
+All GeoServer settings are configured in `config/geoserver.php` and can be overridden using environment variables in `.env`.
+
+**Local demo only.** Replace `CHANGE_ME` with your own password. **Change it before any network exposure. Never use it on a public host.** The stock localhost default (`geoserver`) is not a secret — rotate it if it was ever used outside localhost. See the [Public repo security](README.md#public-repo-security) note in the README.
 
 ```env
-# GeoServer Configuration
+# GeoServer Configuration — CHANGE_ME is a placeholder, not a password to deploy
 GEOSERVER_URL=http://geoserver:8080/geoserver
 GEOSERVER_ADMIN_USER=admin
-GEOSERVER_ADMIN_PASSWORD=geoserver
+GEOSERVER_ADMIN_PASSWORD=CHANGE_ME
 GEOSERVER_WORKSPACE=webgis
 GEOSERVER_DATASTORE=postgis_store
 GEOSERVER_TIMEOUT=30
@@ -283,7 +285,7 @@ $geoserver->createPostGISDatastore('workspace', 'custom_datastore', [
     'database' => 'custom_db',
     'schema' => 'public',
     'user' => 'custom_user',
-    'password' => 'custom_password'
+    'password' => 'CHANGE_ME', // unique secret; never a local demo password
 ]);
 ```
 

@@ -123,21 +123,31 @@ make seed
 
 This creates:
 - Default roles (admin, editor, viewer)
-- Test user with admin privileges (email: test@example.com, password: password)
+- A **local demo** admin user
 - Sample organization with projects
+
+**Change every demo credential before any network exposure. Never use them on a public host.**
 
 ### 4. Access the Application
 
 - **Laravel Application**: http://localhost
-  - Login: test@example.com / password
   - Dashboard: http://localhost/dashboard
 - **GeoServer Admin**: http://localhost:8080/geoserver
-  - Username: `admin`
-  - Password: `geoserver`
-- **PostgreSQL/PostGIS**: localhost:5432
-  - Database: `laravel_gis`
-  - Username: `postgres`
-  - Password: `secret`
+- **PostgreSQL/PostGIS**: localhost:5432 (database `laravel_gis`)
+
+Sign-in values for a stock local install are under [Local demo credentials (localhost only)](#local-demo-credentials-localhost-only).
+
+### Local demo credentials (localhost only)
+
+**Local demo only.** These are the stock localhost logins. **Change them before any network exposure. Never use them on a public host.** If any of them was ever used outside localhost, rotate it.
+
+| Service | Username | Password |
+| --- | --- | --- |
+| App | `test@example.com` | `password` |
+| GeoServer | `admin` | `geoserver` |
+| PostgreSQL | `postgres` | `secret` |
+
+Set your own values in `.env` (see [Environment Configuration](#environment-configuration)). Do not copy this table into production.
 
 ## Manual Installation
 
@@ -236,26 +246,26 @@ make install        # Complete installation
 
 ## Environment Configuration
 
-Key environment variables in `.env`:
+Key environment variables in `.env`. **Local demo only** until you replace each `CHANGE_ME`. **Change them before any network exposure. Never use them on a public host.** A stock local install may still fall back to the values in [Local demo credentials (localhost only)](#local-demo-credentials-localhost-only) until `.env` overrides them.
 
 ```env
-# Database
+# Database — replace CHANGE_ME before start
 DB_CONNECTION=pgsql
 DB_HOST=postgis
 DB_PORT=5432
 DB_DATABASE=laravel_gis
 DB_USERNAME=postgres
-DB_PASSWORD=secret
+DB_PASSWORD=CHANGE_ME
 
 # Redis
 REDIS_HOST=redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
-# GeoServer
+# GeoServer — replace CHANGE_ME; never publish the local demo password
 GEOSERVER_URL=http://geoserver:8080/geoserver
 GEOSERVER_ADMIN_USER=admin
-GEOSERVER_ADMIN_PASSWORD=geoserver
+GEOSERVER_ADMIN_PASSWORD=CHANGE_ME
 GEOSERVER_WORKSPACE=webgis
 GEOSERVER_DATASTORE=postgis_store
 ```
@@ -345,7 +355,7 @@ To connect GeoServer to PostGIS:
    - Port: `5432`
    - Database: `laravel_gis`
    - User: `postgres`
-   - Password: `secret`
+   - Password: the `DB_PASSWORD` in your local `.env` (`CHANGE_ME` until you set one). The stock local demo fallback is `secret` — **localhost only. Change it before any network exposure. Never use it on a public host.**
 
 ## Troubleshooting
 
@@ -408,6 +418,15 @@ docker compose exec postgis psql -U postgres -d laravel_gis_test -c "CREATE EXTE
 
 See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing documentation.
 
+## Public repo security
+
+This repository is public. Do not commit secrets, and never commit `.env` (it is gitignored). Sample passwords in this README are **local demo only**.
+
+- Keep real credentials out of git, issues, and pull requests.
+- **Change demo passwords before any network exposure. Never use them on a public host.**
+- If a demo password (`password`, `geoserver`, or `secret`) was ever used outside localhost, rotate it.
+- Production needs unique strong secrets. See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+
 ## Production Deployment
 
 ### Quick Production Setup
@@ -415,7 +434,7 @@ See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing documentation.
 ```bash
 # 1. Configure environment
 cp .env.production.example .env
-nano .env  # Update passwords and domain
+nano .env  # Set unique strong secrets and your domain. Never reuse local demo passwords.
 
 # 2. Generate SSL certificates (see docker/ssl/README.md)
 
