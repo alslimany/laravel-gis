@@ -25,7 +25,7 @@ Complete guide for testing the Laravel WebGIS application.
 
 ### Test Database
 
-Tests use SQLite in-memory database by default (configured in `phpunit.xml`).
+Tests use PostGIS, the same database CI uses. `phpunit.xml` points at PostgreSQL database `laravel_gis_test` on `127.0.0.1:5432` (`postgres` / `secret`). That matches `.github/workflows/tests.yml` and the `postgis/postgis:13-3.1` service in `docker-compose.yml`.
 
 ### Test Structure
 
@@ -57,45 +57,37 @@ tests/
 
 ```bash
 composer install
-npm install
+npm ci
 ```
+
+`npm ci` is required for the map-icon test, which reads Tabler SVGs from `node_modules`. CI runs the same install before `php artisan test`.
 
 ### Configure Test Environment
 
-Test configuration is in `phpunit.xml`:
-
-```xml
-<env name="APP_ENV" value="testing"/>
-<env name="DB_CONNECTION" value="sqlite"/>
-<env name="DB_DATABASE" value=":memory:"/>
-```
-
-### Create Test Database (if using PostgreSQL)
+Connection settings live in `phpunit.xml` (`DB_CONNECTION=pgsql`, database `laravel_gis_test`). Create that database once on the PostGIS instance:
 
 ```bash
-# Create test database
-docker compose exec postgis psql -U postgres -c "CREATE DATABASE laravel_gis_test;"
-
-# Enable PostGIS
-docker compose exec postgis psql -U postgres -d laravel_gis_test -c "CREATE EXTENSION postgis;"
+# Host PostGIS (published on localhost:5432), or any Postgres you point phpunit at
+psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE laravel_gis_test;"
+psql -h 127.0.0.1 -U postgres -d laravel_gis_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 ```
 
-Update `phpunit.xml` to use PostgreSQL:
-```xml
-<env name="DB_CONNECTION" value="pgsql"/>
-<env name="DB_DATABASE" value="laravel_gis_test"/>
-```
+Docker Compose does this inside `make test` (the app container reaches the database at host `postgis`).
 
 ## Running Tests
 
 ### All Tests
 
-```bash
-# Run all tests
-php artisan test
+This is the command CI runs:
 
-# With Docker
-docker compose exec laravel-app php artisan test
+```bash
+php artisan test
+```
+
+With Docker Compose (sets `DB_HOST=postgis` and creates `laravel_gis_test` if needed):
+
+```bash
+make test
 ```
 
 ### Specific Test Suites
@@ -541,55 +533,18 @@ In `phpunit.xml`:
 
 ### GitHub Actions
 
-Create `.github/workflows/tests.yml`:
+`.github/workflows/tests.yml` runs on pushes and pull requests to `main` (and `*.x` branches). The job uses PHP 8.4 and a `postgis/postgis:13-3.1` service, then runs:
 
-```yaml
-name: Tests
+```bash
+php artisan test
+```
 
-on: [push, pull_request]
+Credentials match `phpunit.xml`: database `laravel_gis_test`, user `postgres`, password `secret` (the stock local demo database password), host `127.0.0.1` on the runner. Locally, `make test` is the same suite with `DB_HOST=postgis`.
 
-jobs:
-  tests:
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgis/postgis:13-3.1
-        env:
-          POSTGRES_DB: laravel_gis_test
-          POSTGRES_USER: postgres
-          # Throwaway CI database only. Do not reuse local demo passwords.
-          POSTGRES_PASSWORD: CHANGE_ME
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.2
-          extensions: pdo, pgsql, mbstring, zip
-          coverage: xdebug
-      
-      - name: Install Dependencies
-        run: composer install --no-interaction
-      
-      - name: Run Tests
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_DATABASE: laravel_gis_test
-          DB_USERNAME: postgres
-          DB_PASSWORD: CHANGE_ME
-        run: php artisan test --coverage
+If GitHub shows the Tests workflow as disabled for inactivity, open **Actions → Tests → Enable workflow**. Merging this file does not by itself clear `disabled_inactivity`. You can also enable it with:
+
+```bash
+gh api -X PUT repos/alslimany/laravel-gis/actions/workflows/tests.yml/enable
 ```
 
 ### Pre-commit Hook

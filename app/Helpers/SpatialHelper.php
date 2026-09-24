@@ -93,7 +93,7 @@ class SpatialHelper
     {
         $result = DB::selectOne(
             'SELECT ST_Within(
-                ST_MakePoint(?, ?)::geography,
+                ST_SetSRID(ST_MakePoint(?, ?), 4326),
                 ST_GeomFromText(?, 4326)
             ) as within',
             [$longitude, $latitude, $polygonWkt]
@@ -163,7 +163,6 @@ class SpatialHelper
      *
      * @param  string  $wkt1  First geometry in WKT format
      * @param  string  $wkt2  Second geometry in WKT format
-     * @return bool
      */
     public static function intersects(string $wkt1, string $wkt2): bool
     {
@@ -183,7 +182,6 @@ class SpatialHelper
      *
      * @param  string  $wkt1  Container geometry in WKT format
      * @param  string  $wkt2  Contained geometry in WKT format
-     * @return bool
      */
     public static function contains(string $wkt1, string $wkt2): bool
     {
@@ -203,7 +201,6 @@ class SpatialHelper
      *
      * @param  string  $wkt1  Inner geometry in WKT format
      * @param  string  $wkt2  Outer geometry in WKT format
-     * @return bool
      */
     public static function within(string $wkt1, string $wkt2): bool
     {

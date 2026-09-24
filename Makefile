@@ -15,7 +15,7 @@ help:
 	@echo "make migrate       - Run database migrations"
 	@echo "make migrate-fresh - Fresh database with migrations"
 	@echo "make seed          - Seed the database"
-	@echo "make test          - Run tests"
+	@echo "make test          - Run the PostGIS suite (same command as CI)"
 	@echo "make clean         - Remove all containers and volumes"
 	@echo "make install       - Complete installation (build, up, composer, key, migrate)"
 
@@ -63,9 +63,12 @@ migrate-fresh:
 seed:
 	docker compose exec laravel-app php artisan db:seed
 
-# Run tests
+# Run the same PostGIS suite as CI (`php artisan test` against laravel_gis_test).
+# Inside Compose the database host is `postgis`; CI and a host-side PostGIS use 127.0.0.1.
 test:
-	docker compose exec laravel-app php artisan test
+	docker compose exec -T postgis sh -c 'psql -U "$$POSTGRES_USER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '\''laravel_gis_test'\''" | grep -q 1 || psql -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE laravel_gis_test"'
+	docker compose exec -T postgis sh -c 'psql -U "$$POSTGRES_USER" -d laravel_gis_test -c "CREATE EXTENSION IF NOT EXISTS postgis"'
+	docker compose exec -T -e DB_HOST=postgis laravel-app php artisan test
 
 # Clean up containers and volumes
 clean:

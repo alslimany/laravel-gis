@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Layer;
 use App\Models\Project;
+use App\Services\ContentAccessService;
+use App\Services\FeatureService;
+use App\Services\SldGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class LayerController extends Controller
@@ -19,7 +24,7 @@ class LayerController extends Controller
         $this->authorize('viewAny', Layer::class);
 
         $user = Auth::user();
-        $access = app(\App\Services\ContentAccessService::class);
+        $access = app(ContentAccessService::class);
         $all = Layer::where('organization_id', $user->organization_id)
             ->with(['user', 'project', 'organization'])
             ->orderBy('created_at', 'desc')
@@ -27,7 +32,7 @@ class LayerController extends Controller
         $visible = $access->filterVisible($user, 'layer', $all);
         $page = max(1, (int) $request->input('page', 1));
         $perPage = 15;
-        $layers = new \Illuminate\Pagination\LengthAwarePaginator(
+        $layers = new LengthAwarePaginator(
             $visible->forPage($page, $perPage)->values(),
             $visible->count(),
             $perPage,
@@ -89,12 +94,12 @@ class LayerController extends Controller
             'style_config' => $validated['style_config'] ?? [],
         ]);
 
-        // Count features in the table
-        try {
-            $count = DB::table($layer->table_name)->count();
-            $layer->update(['feature_count' => $count]);
-        } catch (\Exception $e) {
-            // Table might not exist yet
+        // A missing table is normal for a new layer. On PostgreSQL a failed
+        // SELECT aborts the surrounding test/request transaction, so check first.
+        if (Schema::hasTable($layer->table_name)) {
+            $layer->update([
+                'feature_count' => DB::table($layer->table_name)->count(),
+            ]);
         }
 
         return redirect()
@@ -112,9 +117,9 @@ class LayerController extends Controller
         $layer->load(['user', 'project', 'organization', 'fields']);
 
         $shapes = [];
-        if ($layer->table_name) {
+        if ($layer->table_name && Schema::hasTable($layer->table_name)) {
             try {
-                $shapes = app(\App\Services\FeatureService::class)->shapeCounts($layer->table_name);
+                $shapes = app(FeatureService::class)->shapeCounts($layer->table_name);
             } catch (\Throwable) {
                 $shapes = [];
             }
@@ -177,13 +182,13 @@ class LayerController extends Controller
         $this->authorize('delete', $layer);
 
         // Delete from GeoServer if published
-        if ($layer->isPublished()) {
+        if ($layer->isPublished() && filled($layer->geoserver_layer_name)) {
             try {
                 $organization = $layer->organization;
                 if (method_exists($organization, 'deleteLayerFromGeoServer')) {
                     $organization->deleteLayerFromGeoServer($layer->geoserver_layer_name);
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Log error but continue with deletion
             }
         }
@@ -211,7 +216,7 @@ class LayerController extends Controller
         try {
             $organization = $layer->organization;
             $workspace = $organization->getGeoServerWorkspace();
-            
+
             // Publish to GeoServer
             $organization->publishLayerToGeoServer($layer->table_name, [
                 'title' => $layer->name,
@@ -228,7 +233,7 @@ class LayerController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('layers.show', $layer)
-                ->with('error', 'Failed to publish layer: ' . $e->getMessage());
+                ->with('error', 'Failed to publish layer: '.$e->getMessage());
         }
     }
 
@@ -239,7 +244,7 @@ class LayerController extends Controller
     {
         $this->authorize('update', $layer);
 
-        if (!$layer->isPublished()) {
+        if (! $layer->isPublished()) {
             return redirect()
                 ->route('layers.show', $layer)
                 ->with('error', 'Layer is not published.');
@@ -258,7 +263,7 @@ class LayerController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('layers.show', $layer)
-                ->with('error', 'Failed to unpublish layer: ' . $e->getMessage());
+                ->with('error', 'Failed to unpublish layer: '.$e->getMessage());
         }
     }
 
@@ -307,10 +312,10 @@ class LayerController extends Controller
                 $organization = $layer->organization;
                 // Generate SLD from style config
                 $sldContent = $this->generateSLD($layer, $styleConfig);
-                
+
                 // Update style in GeoServer if method exists
                 if (method_exists($organization, 'updateLayerStyle')) {
-                    $styleName = $layer->geoserver_layer_name . '_style';
+                    $styleName = $layer->geoserver_layer_name.'_style';
                     $organization->updateLayerStyle(
                         $layer->geoserver_layer_name,
                         $styleName,
@@ -318,7 +323,7 @@ class LayerController extends Controller
                     );
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Failed to update style in GeoServer: ' . $e->getMessage());
+                \Log::warning('Failed to update style in GeoServer: '.$e->getMessage());
                 // Style is still saved to DB
             }
         }
@@ -326,7 +331,7 @@ class LayerController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'style' => $styleConfig
+                'style' => $styleConfig,
             ]);
         }
 
@@ -340,6 +345,6 @@ class LayerController extends Controller
      */
     protected function generateSLD(Layer $layer, array $styleConfig)
     {
-        return app(\App\Services\SldGenerator::class)->generate($layer, $styleConfig);
+        return app(SldGenerator::class)->generate($layer, $styleConfig);
     }
 }

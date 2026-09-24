@@ -328,8 +328,6 @@ docker compose exec postgis psql -U postgres -d laravel_gis
 
 ```bash
 make test
-# or
-docker compose exec laravel-app php artisan test
 ```
 
 ## Volume Management
@@ -407,31 +405,19 @@ docker compose exec postgis psql -U postgres -l
 
 ### Running Tests
 
+CI and a host with PostGIS on `127.0.0.1:5432` use the same command:
+
 ```bash
-# Run all tests
 php artisan test
-
-# Run specific test suite
-php artisan test --testsuite=Unit
-php artisan test --testsuite=Feature
-
-# Run with coverage (requires Xdebug)
-php artisan test --coverage
 ```
 
-### Test Database Setup
-
-For full spatial test coverage, configure PostgreSQL:
+Docker Compose (creates `laravel_gis_test` if needed):
 
 ```bash
-# Create test database
-docker compose exec postgis psql -U postgres -c "CREATE DATABASE laravel_gis_test;"
-docker compose exec postgis psql -U postgres -d laravel_gis_test -c "CREATE EXTENSION postgis;"
-
-# Update phpunit.xml to use PostgreSQL instead of SQLite
+make test
 ```
 
-See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete testing documentation.
+`phpunit.xml` already targets PostGIS (`laravel_gis_test`, user `postgres`, password `secret`). See [TESTING_GUIDE.md](TESTING_GUIDE.md).
 
 ## Public repo security
 
