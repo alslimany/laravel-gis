@@ -1,5 +1,7 @@
 # Map Builder Usage Examples
 
+> **Historical snapshot (not the current stack).** The code samples below are Vue 3. The current builder is React 19 and Inertia. Start at [MAP_BUILDER_README.md](MAP_BUILDER_README.md) and `resources/js/map-workspace/`. Versions live in `composer.json` and `package.json`.
+
 This document provides practical examples of using the Map Builder feature.
 
 ## Table of Contents

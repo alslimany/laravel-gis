@@ -1,5 +1,7 @@
 # Map Builder Issues - Fix Documentation
 
+> **Historical snapshot (not the current stack).** Paths below point at the earlier Vue map builder. The current builder is React under `resources/js/map-workspace/` and `resources/js/Pages/Maps/`. Start at [MAP_BUILDER_README.md](MAP_BUILDER_README.md).
+
 ## Issues Identified and Fixed
 
 ### 1. ❌ Tools Icon Not Appearing

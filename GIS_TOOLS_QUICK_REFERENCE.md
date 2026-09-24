@@ -171,44 +171,31 @@ map.once('rendercomplete', () => {
 map.renderSync();
 ```
 
-## Vue Component Usage
+## React components
 
-### Using ToolPanel
-```vue
-<template>
-    <ToolPanel 
-        :map="mapInstance" 
-        @tool-selected="handleToolSelection" 
-    />
-</template>
+GIS tool panels are React components inside the Inertia map builder (`resources/js/Pages/Maps/Builder.tsx` → `resources/js/map-workspace/MapWorkspace.jsx`). Active tool and layers live in the Zustand store `resources/js/map-workspace/store/mapStore.js`.
 
-<script setup>
-const handleToolSelection = (toolId) => {
-    console.log('Selected tool:', toolId);
-    // toolId can be: 'pan', 'select', 'draw-point', 'draw-line', 
-    // 'draw-polygon', 'measure-distance', 'measure-area', etc.
-};
-</script>
+### ToolPanel
+
+`resources/js/map-workspace/panels/ToolPanel.jsx`
+
+```jsx
+<ToolPanel map={map} mode="edit" onToolSelected={handleToolSelection} />
 ```
 
-### Using AnalysisPanel
-```vue
-<template>
-    <AnalysisPanel 
-        v-if="showAnalysis"
-        :selected-layer="currentLayer"
-        :selected-geometry="drawnGeometry"
-        @close="showAnalysis = false"
-        @analysis-complete="handleResults"
-    />
-</template>
+`onToolSelected` receives a tool id such as `pan`, `select`, `identify`, `draw-point`, `draw-line`, `draw-polygon`, `measure-distance`, or `measure-area`.
 
-<script setup>
-const handleResults = (result) => {
-    console.log('Analysis type:', result.type);
-    console.log('Result data:', result.result);
-};
-</script>
+### AnalysisPanel
+
+`resources/js/map-workspace/panels/AnalysisPanel.jsx`
+
+```jsx
+<AnalysisPanel
+    selectedLayer={selectedLayer}
+    selectedGeometry={drawnGeometryWkt}
+    onClose={() => setPanel(null)}
+    onAnalysisComplete={handleAnalysisComplete}
+/>
 ```
 
 ## Common WKT Formats

@@ -1,5 +1,7 @@
 # GIS Platform Enhancements Summary
 
+> **Historical snapshot (not the current stack).** Map builder paths in this note are the earlier Vue components (`*.vue`). The current builder is React 19 and Inertia under `resources/js/Pages/Maps/` and `resources/js/map-workspace/`. Start at [MAP_BUILDER_README.md](MAP_BUILDER_README.md).
+
 This document summarizes the recent enhancements and bug fixes implemented in the Laravel GIS platform.
 
 ## Bug Fixes

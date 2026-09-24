@@ -1,5 +1,7 @@
 # GIS Tools and Analysis Implementation Summary
 
+> **Historical snapshot (not the current stack).** Frontend paths in this note are the earlier Vue components. Current panels are React files under `resources/js/map-workspace/panels/`. See [GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md). Versions live in `composer.json` and `package.json`.
+
 ## Overview
 
 This document summarizes the implementation of GIS tools and analysis capabilities for the Laravel GIS application. The implementation includes measurement tools, spatial analysis, attribute queries, drawing tools, and comprehensive export functionality.

@@ -2,11 +2,11 @@
 
 ## 🎉 Welcome to the Map Builder!
 
-The Map Builder is a comprehensive, OpenLayers-based interactive map creation tool for the Laravel GIS application. This feature allows users to create, manage, share, and embed custom maps with multiple layers and styling options.
+The Map Builder is an OpenLayers map workspace in the Laravel GIS application. Users create, manage, share, and embed maps. The UI is React 19 and Inertia (`resources/js/Pages/Maps/Builder.tsx` and `resources/js/map-workspace/`). Stack versions are in `composer.json` and `package.json`.
 
-## 📚 Documentation Files
+## Documentation
 
-This feature comes with extensive documentation:
+Current guides:
 
 1. **MAP_BUILDER_QUICK_REFERENCE.md** ⚡
    - Quick access guide
@@ -22,23 +22,7 @@ This feature comes with extensive documentation:
    - Configuration options
    - Troubleshooting
 
-3. **MAP_BUILDER_IMPLEMENTATION_SUMMARY.md** 🔧
-   - Technical implementation details
-   - Files created and modified
-   - Architecture decisions
-   - Success metrics
-
-4. **MAP_BUILDER_ARCHITECTURE.md** 🏗️
-   - System architecture diagrams
-   - Component relationships
-   - Data flow diagrams
-   - Integration points
-
-5. **MAP_BUILDER_EXAMPLES.md** 💡
-   - Practical usage examples
-   - Code samples
-   - Integration scenarios
-   - Advanced techniques
+`MAP_BUILDER_IMPLEMENTATION_SUMMARY.md`, `MAP_BUILDER_ARCHITECTURE.md`, `MAP_BUILDER_EXAMPLES.md`, `MAP_BUILDER_CHECKLIST.md`, `MAP_BUILDER_FINAL_SUMMARY.md`, and `MAP_BUILDER_FIXES.md` are historical Vue 3 snapshots. Each file is labeled at the top. The getting-started path is this file, the quick reference, and the documentation guide.
 
 ## 🚀 Quick Start
 
@@ -62,22 +46,26 @@ This feature comes with extensive documentation:
 
 ### For Developers
 
-1. **Install Dependencies**
+The builder is a React page. `MapController::builder` returns `Inertia::render('Maps/Builder')`, which loads `resources/js/Pages/Maps/Builder.tsx`. That page mounts `MapWorkspace` from `resources/js/map-workspace/`.
+
+1. **Install dependencies**
    ```bash
+   composer install
    npm install
    ```
 
-2. **Build Assets**
+2. **Build assets**
    ```bash
    npm run build
    ```
+   Vite compiles `resources/js/app.tsx` (Inertia) and `resources/js/map-workspace/main.jsx`.
 
-3. **Run Migration**
+3. **Run migrations**
    ```bash
    php artisan migrate
    ```
 
-4. **Access the Builder**
+4. **Open the builder**
    ```
    Navigate to: /maps/builder
    ```
@@ -86,7 +74,7 @@ This feature comes with extensive documentation:
 
 ### Map Building
 - ✅ Interactive OpenLayers map
-- ✅ Multiple base map options (OSM, Bing)
+- ✅ Base maps: Street (OpenStreetMap) and Satellite (`mapStore.js`)
 - ✅ WMS/WFS/Vector layer support
 - ✅ Drag-and-drop layer ordering
 - ✅ Layer visibility toggle
@@ -120,63 +108,43 @@ This feature comes with extensive documentation:
 - ✅ Authorization
 - ✅ RESTful API
 
-## 📊 Statistics
+## Where the code lives
 
-- **Lines of Code**: ~1,800 (application code)
-- **Documentation**: ~2,000 lines
-- **Vue Components**: 5
-- **Backend Controllers**: 1
-- **Database Tables**: 1
-- **Routes**: 8 web + 2 API
-- **Views**: 5 Blade templates
+- **Inertia pages**: `resources/js/Pages/Maps/` (`Builder.tsx`, `Index.tsx`, `Show.tsx`, `Share.tsx`, `Form.tsx`, `Shared.tsx`)
+- **Workspace**: `resources/js/map-workspace/MapWorkspace.jsx`
+- **Map**: `resources/js/map-workspace/map/MapView.jsx` (OpenLayers)
+- **Panels**: `resources/js/map-workspace/panels/` (`LayerPanel.jsx`, `ToolPanel.jsx`, `StyleEditor.jsx`, `AnalysisPanel.jsx`)
+- **State**: Zustand store `resources/js/map-workspace/store/mapStore.js` (`useMapStore`)
+- **Controller**: `app/Http/Controllers/MapController.php`
+- **Model**: `app/Models/Map.php`
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-User Interface (Vue 3)
+Inertia page (React) — resources/js/Pages/Maps/Builder.tsx
     ↓
-State Management (Pinia)
+MapWorkspace — resources/js/map-workspace/MapWorkspace.jsx
     ↓
-Laravel Backend
+Zustand (useMapStore) and OpenLayers (ol)
     ↓
-PostgreSQL Database
+Laravel (MapController) and PostgreSQL / PostGIS
     ↓
-GeoServer (optional)
+GeoServer (optional WMS/WFS)
 ```
 
-## 📦 Components
+## Technology stack
 
-### Frontend
-- **MapBuilder.vue** - Main container
-- **MapComponent.vue** - OpenLayers map
-- **LayerPanel.vue** - Layer management
-- **ToolPanel.vue** - Map tools
-- **StyleEditor.vue** - Style controls
-- **mapStore.js** - State management
-
-### Backend
-- **MapController.php** - CRUD operations
-- **Map.php** - Eloquent model
-- **create_maps_table.php** - Migration
-
-### Views
-- **builder.blade.php** - Map builder UI
-- **index.blade.php** - Maps list
-- **show.blade.php** - Map viewer
-- **share.blade.php** - Share settings
-- **shared.blade.php** - Public viewer
-
-## 🔧 Technology Stack
+Versions are declared in `composer.json` and `package.json`.
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Vue 3, OpenLayers 9, Pinia |
-| **Build** | Vite |
-| **Backend** | Laravel 12 |
+| **Frontend** | React 19, `@inertiajs/react`, OpenLayers (`ol` ^10) |
+| **Build** | Vite, `@vitejs/plugin-react` |
+| **Backend** | Laravel 13 (`laravel/framework` ^13.0), PHP ^8.3 |
+| **Server adapter** | `inertiajs/inertia-laravel` |
 | **Database** | PostgreSQL with PostGIS |
-| **Mapping** | OpenLayers |
-| **State** | Pinia |
-| **Styling** | Bootstrap 5 |
+| **State** | Zustand |
+| **Layer order** | `@dnd-kit` in `LayerPanel.jsx` |
 
 ## 🔐 Security
 
@@ -189,15 +157,13 @@ GeoServer (optional)
 
 ## 🎓 Learning Path
 
-**Beginner** → Start with `MAP_BUILDER_QUICK_REFERENCE.md`
+**Getting started** → This file, then [MAP_BUILDER_QUICK_REFERENCE.md](MAP_BUILDER_QUICK_REFERENCE.md)
 
-**Intermediate** → Read `MAP_BUILDER_DOCUMENTATION.md`
+**Usage** → [MAP_BUILDER_DOCUMENTATION.md](MAP_BUILDER_DOCUMENTATION.md)
 
-**Advanced** → Study `MAP_BUILDER_ARCHITECTURE.md`
+**Code** → `resources/js/Pages/Maps/Builder.tsx` and `resources/js/map-workspace/`
 
-**Developer** → Review `MAP_BUILDER_IMPLEMENTATION_SUMMARY.md`
-
-**Examples** → Check `MAP_BUILDER_EXAMPLES.md`
+`MAP_BUILDER_ARCHITECTURE.md`, `MAP_BUILDER_IMPLEMENTATION_SUMMARY.md`, `MAP_BUILDER_EXAMPLES.md`, `MAP_BUILDER_CHECKLIST.md`, `MAP_BUILDER_FINAL_SUMMARY.md`, and `MAP_BUILDER_FIXES.md` are historical Vue 3 snapshots. They are not the current builder.
 
 ## 📞 Support
 
@@ -274,10 +240,9 @@ This feature is part of the Laravel GIS project and follows the same license ter
 
 ## 🙏 Acknowledgments
 
-- OpenLayers team for the excellent mapping library
-- Vue.js team for the reactive framework
-- Laravel team for the robust backend framework
-- Bootstrap team for the UI components
+- OpenLayers team for the mapping library
+- React and Inertia teams for the UI stack
+- Laravel team for the backend framework
 
 ## 📈 Future Enhancements
 

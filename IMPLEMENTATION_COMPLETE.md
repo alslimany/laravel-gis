@@ -1,5 +1,7 @@
 # Implementation Complete ✅
 
+> **Historical snapshot (not the current stack).** Frontend paths below are the earlier Vue map builder. Current panels are React files under `resources/js/map-workspace/panels/`. See [GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md).
+
 ## GIS Tools and Analysis Capabilities
 
 All requirements from the problem statement have been successfully implemented and tested.

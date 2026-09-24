@@ -1,5 +1,7 @@
 # GIS Tools & Analysis Features Overview
 
+> **Historical snapshot (not the current stack).** Component paths below are the earlier Vue map builder. Current panels are React files under `resources/js/map-workspace/panels/`. See [GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md).
+
 ## 📊 What Was Built
 
 This document provides a high-level overview of the GIS tools and analysis features added to the Laravel GIS application.

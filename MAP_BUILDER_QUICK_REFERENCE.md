@@ -11,24 +11,28 @@
 | **Share Settings** | `/maps/{id}/share` |
 | **Public Shared Map** | `/maps/shared/{token}` |
 
-## Key Components
+## Key components
 
-### Vue Components
+The builder is React and Inertia. `MapController::builder` renders `Maps/Builder` (`resources/js/Pages/Maps/Builder.tsx`), which mounts `MapWorkspace`.
+
 ```
-MapBuilder.vue      - Main container
-├── MapComponent.vue    - OpenLayers map
-├── LayerPanel.vue      - Layer management
-├── ToolPanel.vue       - Map tools
-└── StyleEditor.vue     - Style controls
+Pages/Maps/Builder.tsx
+└── map-workspace/MapWorkspace.jsx
+    ├── map/MapView.jsx              - OpenLayers map
+    ├── panels/LayerPanel.jsx        - Layer management (@dnd-kit reorder)
+    ├── panels/ToolPanel.jsx         - Map tools
+    ├── panels/StyleEditor.jsx       - Style controls
+    └── panels/AnalysisPanel.jsx     - Analysis tools
 ```
 
-### State Management
+### State management
+
+Zustand store: `resources/js/map-workspace/store/mapStore.js`.
+
 ```javascript
-// Access the store
-import { useMapStore } from '@/stores/mapStore';
-const mapStore = useMapStore();
+import { useMapStore } from '@/map-workspace/store/mapStore';
 
-// Common operations
+const mapStore = useMapStore.getState();
 mapStore.addLayer(layer);
 mapStore.removeLayer(id);
 mapStore.toggleLayerVisibility(id);
@@ -313,19 +317,21 @@ User → Organization → Maps (scoped)
 
 ## Support Resources
 
-- **Documentation**: See `MAP_BUILDER_DOCUMENTATION.md`
-- **Examples**: See `MAP_BUILDER_EXAMPLES.md`
-- **Architecture**: See `MAP_BUILDER_ARCHITECTURE.md`
+- **Getting started**: [MAP_BUILDER_README.md](MAP_BUILDER_README.md)
+- **Documentation**: [MAP_BUILDER_DOCUMENTATION.md](MAP_BUILDER_DOCUMENTATION.md)
 - **Laravel Logs**: `storage/logs/laravel.log`
 - **Browser Console**: Press F12
 
 ## Version Info
 
-- **OpenLayers**: 9.x
-- **Vue**: 3.x
-- **Pinia**: 2.x
-- **Laravel**: 12.x
-- **Built**: 2025-10-08
+Declared in `package.json` and `composer.json`:
+
+- **OpenLayers**: `ol` ^10
+- **React**: ^19
+- **Inertia**: `@inertiajs/react` and `inertiajs/inertia-laravel`
+- **State**: Zustand (`useMapStore`)
+- **Laravel**: `laravel/framework` ^13.0
+- **PHP**: ^8.3
 
 ---
 
