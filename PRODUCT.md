@@ -36,6 +36,11 @@ Confirmed:
 - Imports (including spatial files and Excel), layers, feature editing, styling, vector tiles, attribute tables, and export.
 - Map builder: draw, measure, identify, buffer, spatial and attribute query, geocode, print.
 - Sharing links, groups, content access, forms, dashboards, catalog, webhooks, API tokens, and an in-app GIS assistant.
+- Optional connections. A form, layer, map, or dashboard can link to another when that helps. None of those links is required to use either side:
+  - Form and layer. A form may collect into a layer, and a layer may supply the fields a form uses. A form does not require a layer. A layer does not require a form.
+  - Dashboard and layer. A dashboard may summarize a layer, and a layer may appear on a dashboard. Neither requires the other.
+  - Dashboard and map. A dashboard may embed a saved map. A dashboard does not require a map. A map does not require a dashboard.
+  - Map and layer. A map may include layers, and a layer may be placed on a map. A map does not require a layer. A layer does not require a map.
 
 Open:
 
