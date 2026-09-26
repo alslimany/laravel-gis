@@ -353,10 +353,10 @@ class DashboardMonitoringTest extends TestCase
         $guest->assertOk();
         $ids = array_column($guest->json('widgets'), 'id');
         $this->assertNotContains('blank-map', $ids);
-        $this->assertContains('saved-map', $ids);
+        $this->assertNotContains('saved-map', $ids);
         $this->assertContains('note', $ids);
         $this->assertSame(1, $this->widget($guest->json('widgets'), 'kpi')['value']);
-        $this->assertSame('Tripoli operations', $this->widget($guest->json('widgets'), 'saved-map')['map']['name']);
+        $this->assertStringNotContainsString('Tripoli operations', $guest->getContent());
 
         $this->get(route('dashboards.public', $dashboard->share_token))
             ->assertOk()
@@ -380,7 +380,8 @@ class DashboardMonitoringTest extends TestCase
         $this->actingAs($this->user)
             ->getJson(route('dashboards.data', $dashboard))
             ->assertOk()
-            ->assertJsonFragment(['id' => 'blank-map', 'status' => 'empty']);
+            ->assertJsonFragment(['id' => 'blank-map', 'status' => 'empty'])
+            ->assertJsonFragment(['name' => 'Tripoli operations']);
     }
 
     public function test_editor_lists_saved_maps_without_requiring_one(): void

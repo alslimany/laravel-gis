@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
+use App\Services\DashboardWidgetData;
 use App\Services\FeatureService;
 use Illuminate\Http\Request;
 
@@ -41,6 +43,24 @@ class MvtController extends Controller
         );
 
         if (! $map || ! $listed || (int) $map->organization_id !== (int) $layer->organization_id) {
+            abort(404);
+        }
+
+        return $this->renderTile($request, $layer, $z, $x, $y);
+    }
+
+    /**
+     * Tiles for a layer a public dashboard map widget points at directly.
+     * Layers that belong only to an embedded saved map use that map's share route.
+     */
+    public function publicDashboardTile(Request $request, string $token, Layer $layer, int $z, int $x, int $y)
+    {
+        $dashboard = DashboardBoard::query()
+            ->where('share_token', $token)
+            ->where('is_public', true)
+            ->first();
+
+        if (! $dashboard || ! app(DashboardWidgetData::class)->shareExposesLayer($dashboard, $layer)) {
             abort(404);
         }
 

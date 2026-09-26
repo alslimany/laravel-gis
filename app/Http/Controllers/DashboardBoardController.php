@@ -209,7 +209,8 @@ class DashboardBoardController extends Controller
             $dashboard->organization_id,
             $widgets,
             $this->requestFilters($request),
-            true
+            true,
+            $dashboard->share_token,
         );
 
         return $this->widgets->withoutUnconfiguredMaps($widgets, $widgetData);

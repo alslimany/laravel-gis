@@ -16,6 +16,12 @@ The queue worker must be running (`php artisan queue:work`, or the `queue` servi
 8. In **Analysis**, run a buffer, spatial query, or attribute query. A failed analysis states why instead of doing nothing. **Export as GeoJSON**, **Export as CSV**, and **Export Map Config** download a file and leave you on the map. A failed layer export from the layer page returns to that layer with the reason. **Export as Image** downloads a PNG.
 9. On the saved map, choose **Share**, turn on **Make this map public**, and copy the link. The page stays on Share. Open the link while signed out: the basemap and the map's vector layers load. The link does not expose other layers in the organization.
 
+## Guests
+
+A signed-out guest with a public map link gets that map's basemap and vector layers. A map with no vector layers still shows its basemap. The link does not include other layers in the organization.
+
+A public dashboard shows its widgets to guests. A saved map on that dashboard is included only when the map is public, and guests get that map's vector tiles. A private map is omitted: its title, id, and layer list are not on the public page. A map widget pointed at a layer serves that layer's tiles. Guests do not get tiles for another organization, a private map, or a layer that is not on the share.
+
 ## Checks that are out of this script
 
 - A form does not need a layer, and a dashboard does not need a layer or a map.

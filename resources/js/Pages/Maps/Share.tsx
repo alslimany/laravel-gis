@@ -31,7 +31,7 @@ export default function Share({ map }) {
                 <input type="checkbox" checked={form.data.is_public} onChange={toggle} />
                 Make this map public
             </label>
-            <p className="mt-2 text-muted-foreground">Public maps can be viewed by anyone with the share link.</p>
+            <p className="mt-2 text-muted-foreground">Anyone with the link sees the basemap and vector layers on this map. Other layers in the organization stay off the link.</p>
             {map.is_public && shareUrl ? (
                 <div className="mt-6 max-w-xl space-y-4">
                     <div>
