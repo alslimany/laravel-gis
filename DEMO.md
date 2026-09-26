@@ -4,6 +4,32 @@ A short path for a clean organization: import a dataset, publish the layer, styl
 
 The queue worker must be running (`php artisan queue:work`, or the `queue` service in Docker). Imports stay on the import page until that worker finishes the file. GeoServer must be reachable for Publish. Vector maps still draw from PostGIS tiles after a layer is published.
 
+## Live smoke
+
+A live walkthrough of this script needs three services up: **PostGIS**, **GeoServer**, and **Redis** (the queue). With Docker Compose those are the `postgis`, `geoserver`, and `redis` services, plus the `queue` worker.
+
+GitHub Actions is not the check for this path. Run this local filter instead. It is the CI substitute and covers `CoreLoopDemoTest`, `DataImportTest`, `LayerTest`, and `ExportTest`:
+
+```bash
+php artisan test --filter='CoreLoopDemoTest|DataImportTest|LayerTest|ExportTest'
+```
+
+From the app container:
+
+```bash
+docker compose exec laravel-app php artisan test --filter='CoreLoopDemoTest|DataImportTest|LayerTest|ExportTest'
+```
+
+**GeoServer URL.** Inside Docker Compose, the app must call GeoServer by service name on the container port **8080**:
+
+```env
+GEOSERVER_URL=http://geoserver:8080/geoserver
+```
+
+`.env.example` already sets that. Compose publishes GeoServer to the host as `8081:8080`, so a browser on the host uses `http://localhost:8081/geoserver`. That host port is the wrong value for `GEOSERVER_URL`. The app container is on the Compose network, where the `geoserver` service listens on **8080**. `GEOSERVER_PUBLIC_URL` (`http://127.0.0.1:8081/geoserver` in `.env.example`) is the host-facing URL and is a separate setting.
+
+The same notes are in [TESTING_GUIDE.md](TESTING_GUIDE.md#live-demo-smoke-ci-substitute).
+
 ## Script
 
 1. Sign in as an editor on an organization that has no imports, layers, or maps.
