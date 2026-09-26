@@ -30,7 +30,7 @@ class ExportController extends Controller
         }
 
         try {
-            $geometryColumn = 'geometry'; // Default column name
+            $geometryColumn = GeometryColumnHelper::resolve($layer->table_name);
 
             // Get all features with geometry as GeoJSON
             $features = DB::select(
@@ -76,7 +76,7 @@ class ExportController extends Controller
         }
 
         try {
-            $geometryColumn = 'geometry'; // Default column name
+            $geometryColumn = GeometryColumnHelper::resolve($layer->table_name);
 
             // Get all features with geometry as WKT
             $features = DB::select(
