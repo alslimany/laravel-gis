@@ -9,6 +9,7 @@ use App\Models\Map;
 use App\Services\FormSubmissionService;
 use App\Services\WebhookDispatcher;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -238,7 +239,22 @@ class FormController extends Controller
             'wkt' => 'nullable|string',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'attachment' => 'nullable|file|max:10240',
+            'attachment' => [
+                'nullable',
+                'file',
+                'max:10240',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! $value instanceof UploadedFile) {
+                        return;
+                    }
+
+                    try {
+                        $this->submissions->acceptedAttachment($value);
+                    } catch (ValidationException $e) {
+                        $fail($e->errors()[$attribute][0] ?? 'This file type is not allowed.');
+                    }
+                },
+            ],
             'attributes' => 'nullable|array',
         ];
 
@@ -296,15 +312,18 @@ class FormController extends Controller
                 $request->file('attachment'),
                 Auth::id()
             );
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::warning('Form submission failed', [
                 'form_id' => $form->id,
                 'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
 
             return back()
                 ->withInput()
-                ->with('error', 'Submission failed: '.$e->getMessage());
+                ->with('error', 'Submission failed. Please try again.');
         }
 
         $this->webhooks->dispatch($form->organization_id, 'form.submitted', [

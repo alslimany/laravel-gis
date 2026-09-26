@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -45,6 +46,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('form_submissions');
+
+        // Standalone forms have a null layer_id. The original column is NOT NULL
+        // and cascade-deletes with its layer, so those rows cannot be kept.
+        DB::table('forms')->whereNull('layer_id')->delete();
 
         Schema::table('forms', function (Blueprint $table) {
             $table->dropForeign(['layer_id']);
