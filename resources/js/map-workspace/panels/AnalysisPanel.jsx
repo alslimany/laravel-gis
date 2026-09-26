@@ -9,10 +9,53 @@ function publishAnalysisResult(payload, setAnalysisResults, onAnalysisComplete) 
     onAnalysisComplete?.(payload);
 }
 
+function analysisError(data) {
+    if (!data) {
+        return 'Analysis failed';
+    }
+    if (typeof data.error === 'string' && data.error) {
+        return data.error;
+    }
+    if (typeof data.message === 'string' && data.message) {
+        return data.message;
+    }
+    return 'Analysis failed';
+}
+
+async function downloadExport(url, fallbackName) {
+    const response = await fetch(url, {
+        headers: { Accept: 'application/json, application/geo+json, text/csv, */*' },
+    });
+    if (!response.ok) {
+        let message = 'Export failed';
+        try {
+            const body = await response.json();
+            if (typeof body.error === 'string' && body.error) {
+                message = body.error;
+            }
+        } catch {
+            message = 'Export failed';
+        }
+        alert(message);
+        return;
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const anchor = document.createElement('a');
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = match?.[1] || fallbackName;
+    anchor.click();
+    URL.revokeObjectURL(anchor.href);
+}
+
 export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose, onAnalysisComplete }) {
     const map = useMapStore((state) => state.map);
     const mapId = useMapStore((state) => state.mapId);
     const layers = useMapStore((state) => state.layers);
+    const viewport = useMapStore((state) => state.viewport);
+    const basemap = useMapStore((state) => state.basemap);
     const setAnalysisResults = useMapStore((state) => state.setAnalysisResults);
 
     const [bufferDistance, setBufferDistance] = useState(100);
@@ -64,13 +107,16 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
             const data = await response.json();
 
-            if (data.success) {
-                publishAnalysisResult(
-                    { type: 'buffer', result: data, geojson: data.geojson || data.result },
-                    setAnalysisResults,
-                    onAnalysisComplete
-                );
+            if (!response.ok || !data.success) {
+                alert(analysisError(data));
+                return;
             }
+
+            publishAnalysisResult(
+                { type: 'buffer', result: data, geojson: data.geojson || data.result },
+                setAnalysisResults,
+                onAnalysisComplete
+            );
         } catch (error) {
             console.error('Buffer analysis failed:', error);
             alert('Buffer analysis failed');
@@ -99,21 +145,24 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
             const data = await response.json();
 
-            if (data.success) {
-                setResults(data);
-                publishAnalysisResult(
-                    {
-                        type: 'spatial-query',
-                        result: data,
-                        geojson: data.geojson || {
-                            type: 'FeatureCollection',
-                            features: data.features || [],
-                        },
-                    },
-                    setAnalysisResults,
-                    onAnalysisComplete
-                );
+            if (!response.ok || !data.success) {
+                alert(analysisError(data));
+                return;
             }
+
+            setResults(data);
+            publishAnalysisResult(
+                {
+                    type: 'spatial-query',
+                    result: data,
+                    geojson: data.geojson || {
+                        type: 'FeatureCollection',
+                        features: data.features || [],
+                    },
+                },
+                setAnalysisResults,
+                onAnalysisComplete
+            );
         } catch (error) {
             console.error('Spatial query failed:', error);
             alert('Spatial query failed');
@@ -148,21 +197,24 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
             const data = await response.json();
 
-            if (data.success) {
-                setResults(data);
-                publishAnalysisResult(
-                    {
-                        type: 'attribute-query',
-                        result: data,
-                        geojson: data.geojson || {
-                            type: 'FeatureCollection',
-                            features: data.features || [],
-                        },
-                    },
-                    setAnalysisResults,
-                    onAnalysisComplete
-                );
+            if (!response.ok || !data.success) {
+                alert(analysisError(data));
+                return;
             }
+
+            setResults(data);
+            publishAnalysisResult(
+                {
+                    type: 'attribute-query',
+                    result: data,
+                    geojson: data.geojson || {
+                        type: 'FeatureCollection',
+                        features: data.features || [],
+                    },
+                },
+                setAnalysisResults,
+                onAnalysisComplete
+            );
         } catch (error) {
             console.error('Attribute query failed:', error);
             alert('Attribute query failed');
@@ -222,29 +274,36 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
     const exportGeoJSON = () => {
         if (!selectedLayer) {
-            alert('Please select a layer to export');
+            alert('Select a layer in the layer list, then export again.');
             return;
         }
 
-        window.location.href = `/export/layer/${selectedLayer.id}/geojson`;
+        downloadExport(`/export/layer/${selectedLayer.id}/geojson`, `${selectedLayer.name || 'layer'}.geojson`);
     };
 
     const exportCSV = () => {
         if (!selectedLayer) {
-            alert('Please select a layer to export');
+            alert('Select a layer in the layer list, then export again.');
             return;
         }
 
-        window.location.href = `/export/layer/${selectedLayer.id}/csv`;
+        downloadExport(`/export/layer/${selectedLayer.id}/csv`, `${selectedLayer.name || 'layer'}.csv`);
     };
 
     const exportMapConfig = () => {
         if (!mapId) {
-            alert('Please save the map first');
+            const blob = new Blob([JSON.stringify({ viewport, basemap, layers }, null, 2)], {
+                type: 'application/json',
+            });
+            const anchor = document.createElement('a');
+            anchor.href = URL.createObjectURL(blob);
+            anchor.download = 'map-config.json';
+            anchor.click();
+            URL.revokeObjectURL(anchor.href);
             return;
         }
 
-        window.location.href = `/export/map/${mapId}/config`;
+        downloadExport(`/export/map/${mapId}/config`, 'map-config.json');
     };
 
     const exportMapImage = () => {
@@ -254,35 +313,56 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
         }
 
         map.once('rendercomplete', () => {
-            const mapCanvas = document.createElement('canvas');
-            const size = map.getSize();
-            mapCanvas.width = size[0];
-            mapCanvas.height = size[1];
-            const mapContext = mapCanvas.getContext('2d');
+            try {
+                const mapCanvas = document.createElement('canvas');
+                const size = map.getSize();
+                if (!size || !size[0] || !size[1]) {
+                    alert('Map is not ready to export yet.');
+                    return;
+                }
+                mapCanvas.width = size[0];
+                mapCanvas.height = size[1];
+                const mapContext = mapCanvas.getContext('2d');
+                if (!mapContext) {
+                    alert('Could not export the map image.');
+                    return;
+                }
 
-            Array.prototype.forEach.call(
-                document.querySelectorAll('.ol-layer canvas'),
-                (canvas) => {
-                    if (canvas.width > 0) {
+                Array.prototype.forEach.call(
+                    document.querySelectorAll('.ol-layer canvas'),
+                    (canvas) => {
+                        if (canvas.width <= 0) {
+                            return;
+                        }
                         const opacity = canvas.parentNode.style.opacity;
                         mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
-                        const transform = canvas.style.transform;
-                        const matrix = transform
-                            .match(/^matrix\(([^()]*)\)$/)[1]
-                            .split(',')
-                            .map(Number);
-                        CanvasRenderingContext2D.prototype.setTransform.apply(mapContext, matrix);
+                        const transform = canvas.style.transform || '';
+                        const matched = transform.match(/^matrix\(([^()]*)\)$/);
+                        if (matched) {
+                            const matrix = matched[1].split(',').map(Number);
+                            CanvasRenderingContext2D.prototype.setTransform.apply(mapContext, matrix);
+                        } else {
+                            mapContext.setTransform(1, 0, 0, 1, 0, 0);
+                        }
                         mapContext.drawImage(canvas, 0, 0);
                     }
-                }
-            );
+                );
 
-            mapCanvas.toBlob((blob) => {
-                const link = document.createElement('a');
-                link.download = `map_${Date.now()}.png`;
-                link.href = URL.createObjectURL(blob);
-                link.click();
-            });
+                mapCanvas.toBlob((blob) => {
+                    if (!blob) {
+                        alert('Could not export the map image.');
+                        return;
+                    }
+                    const link = document.createElement('a');
+                    link.download = `map_${Date.now()}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                });
+            } catch (error) {
+                console.error(error);
+                alert('Could not export the map image.');
+            }
         });
 
         map.renderSync();

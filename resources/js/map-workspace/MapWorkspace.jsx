@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { IconButton } from './components/IconButton';
-import { ArrowLeft, Bot, ChartColumn, Download, Info, Layers, List, Palette, Pencil, Printer, Save, X } from 'lucide-react';
+import { ArrowLeft, Bot, ChartColumn, Download, Info, Layers, List, Palette, Pencil, Printer, Save, Share2, X } from 'lucide-react';
 
 const SKIP_DETAIL_KEYS = new Set(['geometry', 'geom', 'the_geom', 'wkb_geometry', 'geojson']);
 
@@ -854,12 +854,20 @@ export default function MapWorkspace({ mode = 'edit' }) {
                     </div>
                     <div className="map-topbar-actions">
                         {viewing && mapId ? (
-                            <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
-                                <a href={`/maps/builder/${mapId}`}>
-                                    <Pencil className="size-4" />
-                                    Edit
-                                </a>
-                            </Button>
+                            <>
+                                <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
+                                    <a href={`/maps/${mapId}/share`}>
+                                        <Share2 className="size-4" />
+                                        Share
+                                    </a>
+                                </Button>
+                                <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
+                                    <a href={`/maps/builder/${mapId}`}>
+                                        <Pencil className="size-4" />
+                                        Edit
+                                    </a>
+                                </Button>
+                            </>
                         ) : null}
                         {viewing ? null : (
                             <Button size="sm" className="h-9 gap-1.5" onClick={saveMap}>

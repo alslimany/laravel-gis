@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\DeleteLayerFromGeoServer;
+use App\Jobs\PublishLayerToGeoServer;
 use App\Models\Layer;
 use App\Models\Project;
+use App\Services\ContentAccessService;
+use App\Services\FeatureService;
+use App\Services\SldGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -19,15 +26,28 @@ class LayerController extends Controller
         $this->authorize('viewAny', Layer::class);
 
         $user = Auth::user();
-        $access = app(\App\Services\ContentAccessService::class);
-        $all = Layer::where('organization_id', $user->organization_id)
+        $access = app(ContentAccessService::class);
+        $jsonCatalog = ($request->expectsJson() || $request->is('api/*')) && ! $request->header('X-Inertia');
+        $query = Layer::where('organization_id', $user->organization_id)
             ->with(['user', 'project', 'organization'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        if ($jsonCatalog && $request->boolean('published')) {
+            $query->where('published', true);
+        }
+
+        $all = $query->get();
         $visible = $access->filterVisible($user, 'layer', $all);
+
+        if ($jsonCatalog && $request->boolean('published')) {
+            return response()->json([
+                'data' => $visible->values(),
+            ]);
+        }
+
         $page = max(1, (int) $request->input('page', 1));
         $perPage = 15;
-        $layers = new \Illuminate\Pagination\LengthAwarePaginator(
+        $layers = new LengthAwarePaginator(
             $visible->forPage($page, $perPage)->values(),
             $visible->count(),
             $perPage,
@@ -114,7 +134,7 @@ class LayerController extends Controller
         $shapes = [];
         if ($layer->table_name) {
             try {
-                $shapes = app(\App\Services\FeatureService::class)->shapeCounts($layer->table_name);
+                $shapes = app(FeatureService::class)->shapeCounts($layer->table_name);
             } catch (\Throwable) {
                 $shapes = [];
             }
@@ -177,13 +197,13 @@ class LayerController extends Controller
         $this->authorize('delete', $layer);
 
         // Delete from GeoServer if published
-        if ($layer->isPublished()) {
+        if ($layer->isPublished() && filled($layer->geoserver_layer_name)) {
             try {
                 $organization = $layer->organization;
                 if (method_exists($organization, 'deleteLayerFromGeoServer')) {
                     $organization->deleteLayerFromGeoServer($layer->geoserver_layer_name);
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // Log error but continue with deletion
             }
         }
@@ -208,18 +228,30 @@ class LayerController extends Controller
                 ->with('error', 'Layer is already published.');
         }
 
+        if (blank($layer->table_name)) {
+            return redirect()
+                ->route('layers.show', $layer)
+                ->with('error', 'This layer has no data table to publish.');
+        }
+
         try {
             $organization = $layer->organization;
             $workspace = $organization->getGeoServerWorkspace();
-            
-            // Publish to GeoServer
-            $organization->publishLayerToGeoServer($layer->table_name, [
-                'title' => $layer->name,
-                'abstract' => $layer->description ?? "Layer: {$layer->name}",
-                'srs' => 'EPSG:4326',
-            ]);
+            $datastore = (string) Config::get('geoserver.datastore');
 
-            // Mark as published
+            // Wait for GeoServer in this request so a failure stays a draft
+            // instead of a published layer whose job later dies on the queue.
+            PublishLayerToGeoServer::dispatchSync(
+                $workspace,
+                $datastore,
+                $layer->table_name,
+                [
+                    'title' => $layer->name,
+                    'abstract' => $layer->description ?? "Layer: {$layer->name}",
+                    'srs' => 'EPSG:4326',
+                ]
+            );
+
             $layer->markAsPublished($layer->table_name, $workspace);
 
             return redirect()
@@ -228,7 +260,7 @@ class LayerController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('layers.show', $layer)
-                ->with('error', 'Failed to publish layer: ' . $e->getMessage());
+                ->with('error', 'Failed to publish layer: '.$e->getMessage());
         }
     }
 
@@ -239,7 +271,7 @@ class LayerController extends Controller
     {
         $this->authorize('update', $layer);
 
-        if (!$layer->isPublished()) {
+        if (! $layer->isPublished()) {
             return redirect()
                 ->route('layers.show', $layer)
                 ->with('error', 'Layer is not published.');
@@ -247,9 +279,12 @@ class LayerController extends Controller
 
         try {
             $organization = $layer->organization;
-            $organization->deleteLayerFromGeoServer($layer->geoserver_layer_name);
+            DeleteLayerFromGeoServer::dispatchSync(
+                $organization->getGeoServerWorkspace(),
+                (string) Config::get('geoserver.datastore'),
+                (string) $layer->geoserver_layer_name
+            );
 
-            // Mark as unpublished
             $layer->markAsUnpublished();
 
             return redirect()
@@ -258,7 +293,7 @@ class LayerController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('layers.show', $layer)
-                ->with('error', 'Failed to unpublish layer: ' . $e->getMessage());
+                ->with('error', 'Failed to unpublish layer: '.$e->getMessage());
         }
     }
 
@@ -307,10 +342,10 @@ class LayerController extends Controller
                 $organization = $layer->organization;
                 // Generate SLD from style config
                 $sldContent = $this->generateSLD($layer, $styleConfig);
-                
+
                 // Update style in GeoServer if method exists
                 if (method_exists($organization, 'updateLayerStyle')) {
-                    $styleName = $layer->geoserver_layer_name . '_style';
+                    $styleName = $layer->geoserver_layer_name.'_style';
                     $organization->updateLayerStyle(
                         $layer->geoserver_layer_name,
                         $styleName,
@@ -318,7 +353,7 @@ class LayerController extends Controller
                     );
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Failed to update style in GeoServer: ' . $e->getMessage());
+                \Log::warning('Failed to update style in GeoServer: '.$e->getMessage());
                 // Style is still saved to DB
             }
         }
@@ -326,7 +361,7 @@ class LayerController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'style' => $styleConfig
+                'style' => $styleConfig,
             ]);
         }
 
@@ -340,6 +375,6 @@ class LayerController extends Controller
      */
     protected function generateSLD(Layer $layer, array $styleConfig)
     {
-        return app(\App\Services\SldGenerator::class)->generate($layer, $styleConfig);
+        return app(SldGenerator::class)->generate($layer, $styleConfig);
     }
 }

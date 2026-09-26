@@ -162,6 +162,23 @@ class DataImportTest extends TestCase
         $this->assertDatabaseMissing('data_imports', ['id' => $import->id]);
     }
 
+    public function test_shapefile_sidecar_alone_fails_instead_of_staying_pending(): void
+    {
+        Storage::fake('local');
+
+        $file = UploadedFile::fake()->create('bounds.prj', 1, 'application/octet-stream');
+
+        $response = $this->actingAs($this->user)->post(route('imports.store'), [
+            'file' => $file,
+        ]);
+
+        $response->assertRedirect();
+        $import = DataImport::query()->first();
+        $this->assertNotNull($import);
+        $this->assertSame('failed', $import->status);
+        $this->assertNotEmpty($import->error_message);
+    }
+
     public function test_upload_validates_required_file()
     {
         $response = $this->actingAs($this->user)->post(route('imports.store'), []);

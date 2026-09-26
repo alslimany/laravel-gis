@@ -49,6 +49,9 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 // Public shared / public form / public dashboard
 Route::get('/maps/shared/{token}', [MapController::class, 'viewShared'])->name('maps.shared');
+Route::get('/maps/shared/{token}/tiles/{layer}/{z}/{x}/{y}.mvt', [MvtController::class, 'publicTile'])
+    ->whereNumber(['layer', 'z', 'x', 'y'])
+    ->name('maps.shared.tiles');
 Route::get('/projects/shared/{token}', [ProjectController::class, 'viewShared'])->name('projects.shared');
 Route::get('/f/{token}', [FormController::class, 'publicShow'])->name('forms.public.show');
 Route::post('/f/{token}', [FormController::class, 'publicSubmit'])->name('forms.public.submit');

@@ -75,7 +75,15 @@ export default function Show({ import: record }: { import: ImportRecord }) {
                     />
                 </div>
                 {active ? (
-                    <p className="text-sm text-muted-foreground">This page refreshes while the import is running.</p>
+                    <p className="text-sm text-muted-foreground">
+                        This page refreshes while the import runs. It stays here until the queue worker finishes the file.
+                    </p>
+                ) : null}
+                {record.status === 'failed' ? (
+                    <p className="text-sm text-muted-foreground">This import did not create a layer. Try another file.</p>
+                ) : null}
+                {record.status === 'completed' && !layerId ? (
+                    <p className="text-sm text-muted-foreground">The file finished without a layer.</p>
                 ) : null}
                 {record.error_message ? <p className="text-sm text-destructive">{record.error_message}</p> : null}
                 <dl>
@@ -87,10 +95,20 @@ export default function Show({ import: record }: { import: ImportRecord }) {
                     <Fact label="Finished" value={when(record.completed_at)} />
                 </dl>
                 {layerId ? (
+                    <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            Next: open the layer and publish it, then style it and add it to a map.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            <PrimaryLink href={`/layers/${layerId}`}>Open layer</PrimaryLink>
+                            <GhostLink href={`/layers/${layerId}/attributes`}>Review features</GhostLink>
+                            <GhostLink href={`/maps/builder?layer=${layerId}`}>Open in map</GhostLink>
+                        </div>
+                    </div>
+                ) : record.status === 'failed' || record.status === 'completed' ? (
                     <div className="flex flex-wrap gap-2">
-                        <PrimaryLink href={`/layers/${layerId}/attributes`}>Review features</PrimaryLink>
-                        <GhostLink href={`/layers/${layerId}`}>Open layer</GhostLink>
-                        <GhostLink href={`/maps/builder?layer=${layerId}`}>Open in map</GhostLink>
+                        <PrimaryLink href="/imports/create">Import another file</PrimaryLink>
+                        <GhostLink href="/layers">Open layers</GhostLink>
                     </div>
                 ) : null}
             </Panel>
