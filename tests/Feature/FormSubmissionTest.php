@@ -12,10 +12,12 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Webhook;
 use App\Services\FeatureService;
+use App\Services\FormSubmissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -258,13 +260,151 @@ class FormSubmissionTest extends TestCase
 
         $this->post(route('forms.public.submit', $form->share_token), [
             'attributes' => ['site' => 'North well'],
-            'attachment' => UploadedFile::fake()->create('site.jpg', 20, 'image/jpeg'),
+            'attachment' => UploadedFile::fake()->image('site.jpg'),
         ])->assertRedirect();
 
         $submission = FormSubmission::first();
         $this->assertSame('site.jpg', $submission->attachment_name);
+        $this->assertSame('image/jpeg', $submission->attachment_mime);
+        $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}_site\.jpg$/', basename((string) $submission->attachment_path));
         Storage::disk('local')->assertExists($submission->attachment_path);
         $this->assertDatabaseCount('feature_attachments', 0);
+    }
+
+    public function test_public_submit_rejects_dangerous_attachments_and_sanitizes_names(): void
+    {
+        Storage::fake('local');
+        $form = $this->storeForm(['name' => 'Attachment guard']);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['site' => 'North well'],
+            'attachment' => UploadedFile::fake()->create('shell.php', 4, 'application/x-php'),
+        ])->assertSessionHasErrors('attachment');
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['site' => 'North well'],
+            'attachment' => UploadedFile::fake()->image('evil.php.jpg'),
+        ])->assertSessionHasErrors('attachment');
+
+        $this->assertDatabaseCount('form_submissions', 0);
+
+        $image = UploadedFile::fake()->image('secret.jpg');
+        $upload = new UploadedFile(
+            $image->getPathname(),
+            '..\\..\\My Site (north).jpg',
+            'image/jpeg',
+            null,
+            true
+        );
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['site' => 'North well'],
+            'attachment' => $upload,
+        ])->assertRedirect();
+
+        $submission = FormSubmission::first();
+        $this->assertSame('My_Site_north.jpg', $submission->attachment_name);
+        $this->assertSame('image/jpeg', $submission->attachment_mime);
+        $stored = basename((string) $submission->attachment_path);
+        $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}_My_Site_north\.jpg$/', $stored);
+        $this->assertStringNotContainsString('..', (string) $submission->attachment_path);
+        Storage::disk('local')->assertExists($submission->attachment_path);
+    }
+
+    public function test_public_submit_hides_internal_exception_details(): void
+    {
+        $form = $this->storeForm(['name' => 'Fragile form']);
+
+        $this->mock(FormSubmissionService::class, function ($mock) {
+            $mock->shouldReceive('record')
+                ->once()
+                ->andThrow(new \RuntimeException('SQLSTATE[secret] duplicate key'));
+        });
+
+        $logged = [];
+        Log::listen(function ($message) use (&$logged) {
+            $logged[] = $message;
+        });
+
+        $response = $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['site' => 'North well'],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', 'Submission failed. Please try again.');
+        $this->assertStringNotContainsString('SQLSTATE', (string) session('error'));
+        $this->assertStringNotContainsString('duplicate key', (string) session('error'));
+
+        $match = collect($logged)->first(function ($message) use ($form) {
+            return $message->level === 'warning'
+                && $message->message === 'Form submission failed'
+                && ($message->context['form_id'] ?? null) === $form->id
+                && str_contains((string) ($message->context['error'] ?? ''), 'SQLSTATE[secret] duplicate key');
+        });
+        $this->assertNotNull($match);
+    }
+
+    public function test_csv_export_prefixes_formula_triggers_including_leading_hyphen(): void
+    {
+        $form = $this->storeForm(['name' => 'Formula export']);
+
+        foreach (['=1+1', '+1+1', '-1+1', '@SUM(A1)', 'North well'] as $value) {
+            $this->submitPublic($form, [
+                'attributes' => ['site' => $value],
+            ])->assertRedirect();
+        }
+
+        FormSubmission::create([
+            'form_id' => $form->id,
+            'organization_id' => $form->organization_id,
+            'attributes' => ['site' => '  -2+2'],
+        ]);
+
+        $csv = $this->actingAs($this->editor)->get(route('forms.export.csv', $form));
+        $csv->assertOk();
+        $content = $csv->getContent();
+
+        $this->assertStringContainsString("'=1+1", $content);
+        $this->assertStringContainsString("'+1+1", $content);
+        $this->assertStringContainsString("'-1+1", $content);
+        $this->assertStringContainsString("'@SUM(A1)", $content);
+        $this->assertStringContainsString("'  -2+2", $content);
+        $this->assertStringContainsString('North well', $content);
+        $this->assertDoesNotMatchRegularExpression('/(?<!\')-1\+1/', $content);
+    }
+
+    public function test_optional_layer_migration_down_drops_forms_with_null_layer_id(): void
+    {
+        $standalone = $this->storeForm(['name' => 'Standalone rollback']);
+        $layer = $this->makeLayer();
+        $linked = $this->storeForm([
+            'name' => 'Linked rollback',
+            'layer_id' => $layer->id,
+        ]);
+        $this->submitPublic($standalone)->assertRedirect();
+
+        $migration = require database_path('migrations/2026_09_26_120000_make_form_layer_optional_and_store_submissions.php');
+
+        try {
+            $migration->down();
+
+            $this->assertFalse(Schema::hasTable('form_submissions'));
+            $this->assertFalse(Schema::hasColumn('forms', 'collect_geometry'));
+            $this->assertDatabaseMissing('forms', ['id' => $standalone->id]);
+            $this->assertDatabaseHas('forms', [
+                'id' => $linked->id,
+                'layer_id' => $layer->id,
+            ]);
+            $this->assertSame(0, DB::table('forms')->whereNull('layer_id')->count());
+
+            $column = collect(Schema::getColumns('forms'))->firstWhere('name', 'layer_id');
+            $this->assertNotNull($column);
+            $this->assertFalse((bool) $column['nullable']);
+        } finally {
+            if (! Schema::hasTable('form_submissions')) {
+                $migration->up();
+            }
+        }
     }
 
     public function test_required_fields_and_private_forms_are_enforced(): void

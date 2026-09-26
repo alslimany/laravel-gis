@@ -12,12 +12,43 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class FormSubmissionService
 {
+    /**
+     * Client extension => detected MIME types accepted on public submit.
+     *
+     * @var array<string, list<string>>
+     */
+    public const ATTACHMENT_MIMES = [
+        'jpg' => ['image/jpeg'],
+        'jpeg' => ['image/jpeg'],
+        'png' => ['image/png'],
+        'gif' => ['image/gif'],
+        'webp' => ['image/webp'],
+        'pdf' => ['application/pdf'],
+        'txt' => ['text/plain'],
+        'csv' => ['text/plain', 'text/csv', 'application/csv', 'text/x-csv'],
+        'doc' => ['application/msword'],
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
+        'xls' => ['application/vnd.ms-excel'],
+        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip'],
+        'zip' => ['application/zip', 'application/x-zip-compressed'],
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected const DANGEROUS_EXTENSIONS = [
+        'php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'php7', 'php8',
+        'exe', 'dll', 'so', 'sh', 'bash', 'bat', 'cmd', 'com',
+        'js', 'mjs', 'html', 'htm', 'svg', 'xhtml', 'htaccess',
+    ];
+
     public function __construct(protected FeatureService $features) {}
 
     /**
@@ -360,10 +391,12 @@ class FormSubmissionService
             return [];
         }
 
+        $safe = $this->acceptedAttachment($file);
+
         $directory = $featureId && $form->layer_id
             ? "attachments/{$form->layer_id}/{$featureId}"
             : "attachments/forms/{$form->id}";
-        $storedName = Str::uuid().'_'.$file->getClientOriginalName();
+        $storedName = Str::uuid().'_'.$safe['name'];
         $path = $file->storeAs($directory, $storedName, 'local');
 
         if ($featureId && $form->layer_id) {
@@ -371,18 +404,69 @@ class FormSubmissionService
                 'layer_id' => $form->layer_id,
                 'feature_id' => $featureId,
                 'user_id' => $userId,
-                'file_name' => $file->getClientOriginalName(),
+                'file_name' => $safe['name'],
                 'file_path' => $path,
-                'mime_type' => $file->getMimeType(),
+                'mime_type' => $safe['mime'],
                 'file_size' => $file->getSize() ?: 0,
             ]);
         }
 
         return [
-            'name' => $file->getClientOriginalName(),
+            'name' => $safe['name'],
             'path' => $path,
-            'mime' => $file->getMimeType(),
+            'mime' => $safe['mime'],
             'size' => $file->getSize() ?: 0,
+        ];
+    }
+
+    /**
+     * Accept a public attachment only when its extension and detected MIME are allowlisted.
+     *
+     * @return array{name: string, extension: string, mime: string}|null
+     */
+    public function acceptedAttachment(?UploadedFile $file): ?array
+    {
+        if (! $file) {
+            return null;
+        }
+
+        $raw = str_replace("\0", '', $file->getClientOriginalName());
+        $raw = basename(str_replace('\\', '/', $raw));
+        $parts = $raw === '' ? [] : explode('.', $raw);
+        $extension = strtolower((string) preg_replace('/[^a-z0-9]/', '', (string) array_pop($parts)));
+
+        foreach ($parts as $part) {
+            $token = strtolower((string) preg_replace('/[^a-z0-9]/', '', $part));
+            if ($token !== '' && in_array($token, self::DANGEROUS_EXTENSIONS, true)) {
+                throw ValidationException::withMessages([
+                    'attachment' => 'This file type is not allowed.',
+                ]);
+            }
+        }
+
+        if ($extension === '' || ! isset(self::ATTACHMENT_MIMES[$extension])) {
+            throw ValidationException::withMessages([
+                'attachment' => 'This file type is not allowed.',
+            ]);
+        }
+
+        $mime = strtolower((string) $file->getMimeType());
+        if (! in_array($mime, self::ATTACHMENT_MIMES[$extension], true)) {
+            throw ValidationException::withMessages([
+                'attachment' => 'This file type is not allowed.',
+            ]);
+        }
+
+        $stem = preg_replace('/[^A-Za-z0-9._-]+/', '_', implode('.', $parts)) ?? '';
+        $stem = trim((string) preg_replace('/_+/', '_', $stem), '._-');
+        if ($stem === '' || $stem === '.' || $stem === '..') {
+            $stem = 'attachment';
+        }
+
+        return [
+            'name' => substr($stem, 0, 80).'.'.$extension,
+            'extension' => $extension,
+            'mime' => $mime,
         ];
     }
 
@@ -482,7 +566,8 @@ class FormSubmissionService
     protected function csvValue(mixed $value): string
     {
         $string = $this->stringify($value);
-        if ($string !== '' && in_array($string[0], ['=', '+', '@'], true)) {
+        $probe = ltrim($string, " \t\r\n");
+        if ($probe !== '' && in_array($probe[0], ['=', '+', '-', '@'], true)) {
             return "'".$string;
         }
 
