@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Helpers\GeometryColumnHelper;
 use App\Helpers\QueryBuilder;
 use App\Helpers\SpatialHelper;
+use App\Models\AnalysisResult;
 use App\Models\Layer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -191,6 +193,75 @@ class AnalysisController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Save a query or analysis result so a dashboard widget can use it.
+     * Saving is optional. The result stores feature ids, not geometries.
+     */
+    public function storeResult(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'layer_id' => 'nullable|integer',
+            'kind' => 'required|in:spatial_query,attribute_query,layer_buffer,overlay,query',
+            'feature_ids' => 'nullable|array|max:2000',
+            'feature_ids.*' => 'integer|min:1',
+            'feature_count' => 'nullable|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        $layer = null;
+        if ($request->filled('layer_id')) {
+            $layer = Layer::query()->find($request->integer('layer_id'));
+            if (! $layer || (int) $layer->organization_id !== (int) auth()->user()->organization_id) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+        }
+
+        $sentIds = is_array($request->input('feature_ids'));
+        $ids = collect($request->input('feature_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($sentIds && $ids->isNotEmpty()) {
+            if (! $layer || ! $layer->table_name || ! Schema::hasTable($layer->table_name) || ! Schema::hasColumn($layer->table_name, 'id')) {
+                return response()->json(['error' => 'Layer or table not found.'], 422);
+            }
+
+            $ids = DB::table($layer->table_name)
+                ->whereIn('id', $ids->all())
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        $result = AnalysisResult::create([
+            'organization_id' => auth()->user()->organization_id,
+            'user_id' => auth()->id(),
+            'layer_id' => $layer?->id,
+            'name' => (string) $request->input('name'),
+            'kind' => (string) $request->input('kind'),
+            'feature_count' => $sentIds ? $ids->count() : (int) $request->input('feature_count', 0),
+            'feature_ids' => $ids->isNotEmpty() ? $ids->all() : null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'analysis' => [
+                'id' => $result->id,
+                'name' => $result->name,
+                'kind' => $result->kind,
+                'layer_id' => $result->layer_id,
+                'feature_count' => $result->feature_count,
+            ],
+        ]);
     }
 
     /**

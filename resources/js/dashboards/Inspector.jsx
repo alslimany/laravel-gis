@@ -1,7 +1,9 @@
 import { fieldLabel } from './widgetDocument';
 import { Field, Select, TextArea, TextInput } from '@/components/gis';
 
-export default function Inspector({ widget, layers = [], maps = [], onChange, onClose }) {
+const ANALYSIS_TYPES = ['indicator', 'serial', 'pie', 'table', 'list'];
+
+export default function Inspector({ widget, layers = [], maps = [], analyses = [], onChange, onClose }) {
     if (!widget) {
         return (
             <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
@@ -11,10 +13,16 @@ export default function Inspector({ widget, layers = [], maps = [], onChange, on
         );
     }
 
-    const layer = layers.find((item) => item.id === widget.layer_id) || null;
-    const fields = layer?.fields || [];
     const mapSource = widget.type === 'map' && widget.source === 'map' ? 'map' : 'layer';
-    const showLayer = widget.type !== 'text' && !(widget.type === 'map' && mapSource === 'map');
+    const supportsAnalysis = ANALYSIS_TYPES.includes(widget.type);
+    const dataSource = supportsAnalysis && widget.source === 'analysis' ? 'analysis' : 'layer';
+    const analysis = analyses.find((item) => item.id === widget.analysis_id) || null;
+    const layer =
+        (dataSource === 'analysis'
+            ? layers.find((item) => item.id === analysis?.layer_id)
+            : layers.find((item) => item.id === widget.layer_id)) || null;
+    const fields = layer?.fields || [];
+    const showLayer = widget.type !== 'text' && !(widget.type === 'map' && mapSource === 'map') && dataSource !== 'analysis';
 
     function patch(partial) {
         onChange({ ...widget, ...partial });
@@ -32,6 +40,44 @@ export default function Inspector({ widget, layers = [], maps = [], onChange, on
                 <Field label="Title">
                     <TextInput value={widget.title || ''} onChange={(event) => patch({ title: event.target.value })} />
                 </Field>
+
+                {supportsAnalysis ? (
+                    <Field label="Source" hint="Choose a layer or a saved analysis when this widget should show data.">
+                        <Select
+                            value={dataSource}
+                            onChange={(event) => {
+                                const next = event.target.value === 'analysis' ? 'analysis' : 'layer';
+                                patch(next === 'analysis' ? { source: 'analysis' } : { source: 'layer' });
+                            }}
+                        >
+                            <option value="layer">Layer</option>
+                            <option value="analysis">Saved analysis</option>
+                        </Select>
+                    </Field>
+                ) : null}
+
+                {supportsAnalysis && dataSource === 'analysis' ? (
+                    <Field label="Saved analysis" hint="Choose a saved analysis when this widget should show a query result.">
+                        <Select
+                            value={widget.analysis_id || ''}
+                            onChange={(event) =>
+                                patch({
+                                    analysis_id: event.target.value ? Number(event.target.value) : null,
+                                    source: 'analysis',
+                                })
+                            }
+                        >
+                            <option value="">No saved analysis</option>
+                            {analyses.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.name}
+                                    {item.layer_name ? ` · ${item.layer_name}` : ''}
+                                    {typeof item.feature_count === 'number' ? ` · ${item.feature_count}` : ''}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+                ) : null}
 
                 {widget.type === 'map' ? (
                     <Field label="Source" hint="Choose a layer or a saved map when this widget should show a map.">

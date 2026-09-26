@@ -16,6 +16,19 @@ class DashboardWidgetDocument
     ];
 
     /**
+     * Widget types that may read a layer or a saved analysis result.
+     *
+     * @var array<int, string>
+     */
+    public const ANALYSIS_TYPES = [
+        'indicator',
+        'serial',
+        'pie',
+        'table',
+        'list',
+    ];
+
+    /**
      * Default grid size per widget type (12-column canvas).
      *
      * @var array<string, array{w: int, h: int}>
@@ -106,9 +119,14 @@ class DashboardWidgetDocument
 
         if (array_key_exists('source', $raw)) {
             $source = strtolower((string) $raw['source']);
-            if (in_array($source, ['layer', 'map'], true)) {
+            $allowed = $type === 'map' ? ['layer', 'map'] : (in_array($type, self::ANALYSIS_TYPES, true) ? ['layer', 'analysis'] : []);
+            if (in_array($source, $allowed, true)) {
                 $widget['source'] = $source;
             }
+        }
+
+        if (array_key_exists('analysis_id', $raw) && in_array($type, self::ANALYSIS_TYPES, true)) {
+            $widget['analysis_id'] = (int) $raw['analysis_id'] ?: null;
         }
 
         if ($type === 'map' && empty($widget['source'])) {
@@ -174,8 +192,8 @@ class DashboardWidgetDocument
     public function catalog(): array
     {
         return [
-            ['type' => 'indicator', 'label' => 'Indicator', 'group' => 'Data', 'description' => 'Count, sum, or average'],
-            ['type' => 'serial', 'label' => 'Serial chart', 'group' => 'Data', 'description' => 'Bar or line by category'],
+            ['type' => 'indicator', 'label' => 'Indicator', 'group' => 'Data', 'description' => 'Count, sum, or average from a layer or saved analysis'],
+            ['type' => 'serial', 'label' => 'Serial chart', 'group' => 'Data', 'description' => 'Bar or line from a layer or saved analysis'],
             ['type' => 'pie', 'label' => 'Pie chart', 'group' => 'Data', 'description' => 'Share of categories'],
             ['type' => 'table', 'label' => 'Table', 'group' => 'Data', 'description' => 'Attribute rows'],
             ['type' => 'list', 'label' => 'List', 'group' => 'Data', 'description' => 'Title and description rows'],

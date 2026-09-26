@@ -173,6 +173,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('analysis')->group(function () {
+            Route::post('/results', [AnalysisController::class, 'storeResult'])->name('api.analysis.results.store');
             Route::post('/buffer', [AnalysisController::class, 'buffer'])->name('api.analysis.buffer');
             Route::post('/spatial-query', [AnalysisController::class, 'spatialQuery'])->name('api.analysis.spatial-query');
             Route::post('/attribute-query', [AnalysisController::class, 'attributeQuery'])->name('api.analysis.attribute-query');

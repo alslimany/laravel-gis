@@ -38,4 +38,29 @@ class DashboardWidgetDocumentTest extends TestCase
         $this->assertSame('serial', $widgets[6]['type']);
         $this->assertSame('line', $widgets[6]['chart_style']);
     }
+
+    public function test_analysis_source_is_kept_for_data_widgets_and_ignored_on_maps(): void
+    {
+        $widgets = (new DashboardWidgetDocument)->normalize([
+            ['type' => 'indicator', 'title' => 'From analysis', 'source' => 'analysis', 'analysis_id' => '4'],
+            ['type' => 'serial', 'title' => 'Chart'],
+            ['type' => 'map', 'title' => 'Map', 'source' => 'analysis', 'analysis_id' => 3],
+            ['type' => 'text', 'title' => 'Note', 'source' => 'analysis', 'analysis_id' => 8, 'body' => 'Hello'],
+        ]);
+
+        $this->assertSame('analysis', $widgets[0]['source']);
+        $this->assertSame(4, $widgets[0]['analysis_id']);
+        $this->assertArrayNotHasKey('layer_id', $widgets[0]);
+
+        $this->assertArrayNotHasKey('source', $widgets[1]);
+        $this->assertArrayNotHasKey('analysis_id', $widgets[1]);
+
+        $this->assertSame('layer', $widgets[2]['source']);
+        $this->assertArrayNotHasKey('analysis_id', $widgets[2]);
+
+        $this->assertSame('text', $widgets[3]['type']);
+        $this->assertArrayNotHasKey('source', $widgets[3]);
+        $this->assertArrayNotHasKey('analysis_id', $widgets[3]);
+        $this->assertSame('Hello', $widgets[3]['body']);
+    }
 }

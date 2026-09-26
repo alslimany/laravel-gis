@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AnalysisResult;
 use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
@@ -402,7 +403,188 @@ class DashboardMonitoringTest extends TestCase
                 ->has('maps', 1)
                 ->where('maps.0.name', 'Tripoli operations')
                 ->where('catalog.5.type', 'map')
-                ->where('catalog.5.description', 'Layer or a saved map'));
+                ->where('catalog.5.description', 'Layer or a saved map')
+                ->has('analyses', 0));
+    }
+
+    public function test_indicator_and_chart_can_use_a_saved_analysis(): void
+    {
+        $this->postJson(route('api.analysis.results.store'), [
+            'name' => 'Guest',
+            'kind' => 'query',
+        ])->assertUnauthorized();
+
+        $saved = $this->actingAs($this->user)->postJson(route('api.analysis.results.store'), [
+            'name' => 'Open pumps',
+            'layer_id' => $this->layer->id,
+            'kind' => 'attribute_query',
+            'feature_ids' => [1, 2, 99],
+        ]);
+        $saved->assertOk()
+            ->assertJsonPath('analysis.name', 'Open pumps')
+            ->assertJsonPath('analysis.feature_count', 2)
+            ->assertJsonMissingPath('analysis.feature_ids');
+
+        $resultId = $saved->json('analysis.id');
+        $stored = AnalysisResult::findOrFail($resultId);
+        $this->assertSame([1, 2], array_map('intval', $stored->feature_ids));
+        $this->assertSame($this->layer->id, $stored->layer_id);
+
+        $foreignOrg = Organization::factory()->create();
+        $foreignUser = User::factory()->create(['organization_id' => $foreignOrg->id]);
+        $foreign = AnalysisResult::create([
+            'organization_id' => $foreignOrg->id,
+            'user_id' => $foreignUser->id,
+            'name' => 'Other org result',
+            'kind' => 'query',
+            'feature_count' => 9,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('api.analysis.results.store'), [
+                'name' => 'Foreign layer',
+                'layer_id' => $this->otherLayer->id,
+                'kind' => 'query',
+                'feature_ids' => [1],
+            ])
+            ->assertOk();
+
+        $foreignLayer = Layer::factory()->create([
+            'user_id' => $foreignUser->id,
+            'organization_id' => $foreignOrg->id,
+            'table_name' => 'ops_status_points',
+        ]);
+        $this->actingAs($this->user)
+            ->postJson(route('api.analysis.results.store'), [
+                'name' => 'Not ours',
+                'layer_id' => $foreignLayer->id,
+                'kind' => 'query',
+                'feature_ids' => [1],
+            ])
+            ->assertForbidden();
+
+        $response = $this->actingAs($this->user)->post(route('dashboards.store'), [
+            'name' => 'Analysis board',
+            'description' => 'Query result board',
+            'is_public' => 1,
+            'widgets' => [
+                [
+                    'id' => 'kpi',
+                    'type' => 'indicator',
+                    'title' => 'Open count',
+                    'source' => 'analysis',
+                    'analysis_id' => $resultId,
+                    'aggregation' => 'count',
+                ],
+                [
+                    'id' => 'sum',
+                    'type' => 'indicator',
+                    'title' => 'Open exposure',
+                    'source' => 'analysis',
+                    'analysis_id' => $resultId,
+                    'aggregation' => 'sum',
+                    'column' => 'amount',
+                ],
+                [
+                    'id' => 'chart',
+                    'type' => 'serial',
+                    'title' => 'By status',
+                    'source' => 'analysis',
+                    'analysis_id' => $resultId,
+                    'group_by' => 'status',
+                    'aggregation' => 'count',
+                    'chart_style' => 'bar',
+                ],
+                [
+                    'id' => 'layer-kpi',
+                    'type' => 'indicator',
+                    'title' => 'All pumps',
+                    'layer_id' => $this->layer->id,
+                    'aggregation' => 'count',
+                ],
+                [
+                    'id' => 'unset',
+                    'type' => 'indicator',
+                    'title' => 'Unset analysis',
+                    'source' => 'analysis',
+                ],
+                [
+                    'id' => 'foreign',
+                    'type' => 'indicator',
+                    'title' => 'Foreign analysis',
+                    'source' => 'analysis',
+                    'analysis_id' => $foreign->id,
+                ],
+                [
+                    'id' => 'filter',
+                    'type' => 'category',
+                    'title' => 'Status',
+                    'layer_id' => $this->layer->id,
+                    'group_by' => 'status',
+                ],
+                [
+                    'id' => 'note',
+                    'type' => 'text',
+                    'title' => 'Note',
+                    'body' => 'Analysis is optional.',
+                ],
+            ],
+        ]);
+        $response->assertRedirect();
+
+        $dashboard = DashboardBoard::where('name', 'Analysis board')->firstOrFail();
+        $this->assertSame('analysis', $dashboard->widgets[0]['source']);
+        $this->assertSame($resultId, $dashboard->widgets[0]['analysis_id']);
+        $this->assertArrayNotHasKey('layer_id', $dashboard->widgets[0]);
+        $this->assertArrayNotHasKey('source', $dashboard->widgets[3]);
+
+        $data = $this->actingAs($this->user)
+            ->getJson(route('dashboards.data', $dashboard))
+            ->assertOk()
+            ->json('widgets');
+
+        $this->assertSame('analysis', $this->widget($data, 'kpi')['source']);
+        $this->assertSame('ok', $this->widget($data, 'kpi')['status']);
+        $this->assertSame(2, $this->widget($data, 'kpi')['value']);
+        $this->assertEquals(15, $this->widget($data, 'sum')['value']);
+        $this->assertSame(['Open'], $this->widget($data, 'chart')['labels']);
+        $this->assertEquals([2], $this->widget($data, 'chart')['values']);
+        $this->assertSame(3, $this->widget($data, 'layer-kpi')['value']);
+        $this->assertNull($this->widget($data, 'layer-kpi')['source']);
+        $this->assertSame('empty', $this->widget($data, 'unset')['status']);
+        $this->assertStringContainsString('saved analysis', $this->widget($data, 'unset')['message']);
+        $this->assertSame('error', $this->widget($data, 'foreign')['status']);
+        $this->assertSame('Saved analysis not found.', $this->widget($data, 'foreign')['error']);
+        $this->assertSame('ok', $this->widget($data, 'note')['status']);
+
+        $filtered = $this->actingAs($this->user)->getJson(
+            route('dashboards.data', $dashboard).'?'.http_build_query([
+                'filters' => [$this->layer->id => 'Closed'],
+            ])
+        );
+        $this->assertSame(0, $this->widget($filtered->json('widgets'), 'kpi')['value']);
+        $this->assertTrue($this->widget($filtered->json('widgets'), 'kpi')['filtered']);
+        $this->assertSame(1, $this->widget($filtered->json('widgets'), 'layer-kpi')['value']);
+
+        auth()->logout();
+        $guest = $this->getJson(route('dashboards.public.data', $dashboard->share_token));
+        $guest->assertOk();
+        $publicKpi = $this->widget($guest->json('widgets'), 'kpi');
+        $this->assertSame(2, $publicKpi['value']);
+        $this->assertArrayNotHasKey('feature_ids', $publicKpi);
+        $this->assertStringNotContainsString('feature_ids', $guest->getContent());
+        $this->assertStringNotContainsString('Other org result', $guest->getContent());
+
+        $this->actingAs($this->user)
+            ->get(route('dashboards.create'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboards/Editor', false)
+                ->has('analyses', 2)
+                ->where('analyses.0.name', 'Foreign layer')
+                ->where('analyses.1.name', 'Open pumps')
+                ->where('analyses.1.layer_name', 'Pumps')
+                ->where('analyses.1.feature_count', 2));
     }
 
     /**

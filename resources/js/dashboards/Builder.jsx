@@ -23,7 +23,7 @@ function seedBinding(widget, layers) {
     return widget;
 }
 
-export default function Builder({ dashboard = null, layers = [], maps = [], catalog = [], previewUrl }) {
+export default function Builder({ dashboard = null, layers = [], maps = [], analyses = [], catalog = [], previewUrl }) {
     const editing = Boolean(dashboard);
     const [widgets, setWidgets] = useState(() => normalizeWidgets(dashboard?.widgets || []));
     const [selectedId, setSelectedId] = useState(null);
@@ -197,7 +197,7 @@ export default function Builder({ dashboard = null, layers = [], maps = [], cata
                         onLayoutChange={(layout) => updateWidgetsFrom((current) => applyGridLayout(current, layout))}
                     />
                 </main>
-                <Inspector widget={selected} layers={layers} maps={maps} onChange={patchWidget} onClose={() => setSelectedId(null)} />
+                <Inspector widget={selected} layers={layers} maps={maps} analyses={analyses} onChange={patchWidget} onClose={() => setSelectedId(null)} />
             </div>
         </div>
     );

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\GeometryColumnHelper;
+use App\Models\AnalysisResult;
 use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
@@ -194,6 +195,7 @@ class DashboardBoardController extends Controller
                 : null,
             'layers' => $this->layerCatalog($organizationId),
             'maps' => $this->mapCatalog($organizationId),
+            'analyses' => $this->analysisCatalog($organizationId),
             'catalog' => $this->document->catalog(),
             'previewUrl' => route('dashboards.preview'),
         ];
@@ -232,6 +234,30 @@ class DashboardBoardController extends Controller
                 'basemap' => $map->basemap,
                 'is_public' => (bool) $map->is_public,
                 'layer_count' => is_array($map->layers) ? count($map->layers) : 0,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Saved analyses are optional widget sources. An empty list is valid.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function analysisCatalog(int $organizationId): array
+    {
+        return AnalysisResult::query()
+            ->where('organization_id', $organizationId)
+            ->with('layer:id,name')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (AnalysisResult $result) => [
+                'id' => $result->id,
+                'name' => $result->name,
+                'kind' => $result->kind,
+                'layer_id' => $result->layer_id,
+                'layer_name' => $result->layer?->name,
+                'feature_count' => $result->feature_count,
             ])
             ->values()
             ->all();
