@@ -5,33 +5,37 @@ namespace App\Http\Controllers;
 use App\Helpers\GeometryColumnHelper;
 use App\Models\DashboardBoard;
 use App\Models\Layer;
+use App\Models\Map;
+use App\Services\ContentAccessService;
+use App\Services\DashboardWidgetData;
 use App\Services\DashboardWidgetDocument;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class DashboardBoardController extends Controller
 {
     public function __construct(
-        protected DashboardWidgetDocument $document
+        protected DashboardWidgetDocument $document,
+        protected DashboardWidgetData $widgets
     ) {
-        $this->middleware('auth')->except(['publicView']);
-        $this->middleware('organization')->except(['publicView']);
+        $this->middleware('auth')->except(['publicView', 'publicData']);
+        $this->middleware('organization')->except(['publicView', 'publicData']);
     }
 
     public function index()
     {
         $user = Auth::user();
-        $access = app(\App\Services\ContentAccessService::class);
+        $access = app(ContentAccessService::class);
         $all = DashboardBoard::where('organization_id', $user->organization_id)
             ->with('user')
             ->latest()
             ->get();
         $visible = $access->filterVisible($user, 'dashboard', $all);
         $page = max(1, (int) request('page', 1));
-        $dashboards = new \Illuminate\Pagination\LengthAwarePaginator(
+        $dashboards = new LengthAwarePaginator(
             $visible->forPage($page, 15)->values(),
             $visible->count(),
             15,
@@ -68,7 +72,7 @@ class DashboardBoardController extends Controller
 
         $widgets = $this->document->normalize($dashboard->widgets ?? []);
         $filters = $this->requestFilters(request());
-        $widgetData = $this->buildWidgetData($dashboard->organization_id, $widgets, $filters);
+        $widgetData = $this->widgets->build($dashboard->organization_id, $widgets, $filters);
 
         return Inertia::render('Dashboards/Show', [
             'dashboard' => array_merge($dashboard->toArray(), ['widgets' => $widgets]),
@@ -119,7 +123,7 @@ class DashboardBoardController extends Controller
         return response()->json([
             'success' => true,
             'dashboard_id' => $dashboard->id,
-            'widgets' => $this->buildWidgetData($dashboard->organization_id, $widgets, $filters),
+            'widgets' => $this->widgets->build($dashboard->organization_id, $widgets, $filters),
         ]);
     }
 
@@ -139,7 +143,7 @@ class DashboardBoardController extends Controller
 
         return response()->json([
             'success' => true,
-            'widgets' => $this->buildWidgetData($organizationId, $widgets, $filters),
+            'widgets' => $this->widgets->build($organizationId, $widgets, $filters),
         ]);
     }
 
@@ -149,15 +153,13 @@ class DashboardBoardController extends Controller
             ->where('is_public', true)
             ->firstOrFail();
 
-        $widgets = $this->document->normalize($dashboard->widgets ?? []);
-        $filters = $this->requestFilters(request());
-        $widgetData = $this->buildWidgetData($dashboard->organization_id, $widgets, $filters);
+        [$widgets, $widgetData] = $this->publicWidgets($dashboard, request());
 
         return Inertia::render('Dashboards/Public', [
             'dashboard' => array_merge($dashboard->toArray(), ['widgets' => $widgets]),
             'widgetData' => $widgetData,
-            'layers' => $this->layerCatalog($dashboard->organization_id),
-            'dataUrl' => url('/dashboards/shared/'.$token.'/data'),
+            'organizationName' => $dashboard->organization()->value('name'),
+            'dataUrl' => route('dashboards.public.data', $token),
         ]);
     }
 
@@ -167,18 +169,16 @@ class DashboardBoardController extends Controller
             ->where('is_public', true)
             ->firstOrFail();
 
-        $widgets = $this->document->normalize($dashboard->widgets ?? []);
-        $filters = $this->requestFilters($request);
+        [, $widgetData] = $this->publicWidgets($dashboard, $request);
 
         return response()->json([
             'success' => true,
             'dashboard_id' => $dashboard->id,
-            'widgets' => $this->buildWidgetData($dashboard->organization_id, $widgets, $filters),
+            'widgets' => $widgetData,
         ]);
     }
 
     /**
-     * @param  \App\Models\DashboardBoard|null  $dashboard
      * @return array<string, mixed>
      */
     protected function editorProps(?DashboardBoard $dashboard = null): array
@@ -193,9 +193,47 @@ class DashboardBoardController extends Controller
                 ? array_merge($dashboard->toArray(), ['widgets' => $widgets])
                 : null,
             'layers' => $this->layerCatalog($organizationId),
+            'maps' => $this->mapCatalog($organizationId),
             'catalog' => $this->document->catalog(),
             'previewUrl' => route('dashboards.preview'),
         ];
+    }
+
+    /**
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
+     */
+    protected function publicWidgets(DashboardBoard $dashboard, Request $request): array
+    {
+        $widgets = $this->document->normalize($dashboard->widgets ?? []);
+        $widgetData = $this->widgets->build(
+            $dashboard->organization_id,
+            $widgets,
+            $this->requestFilters($request),
+            true
+        );
+
+        return $this->widgets->withoutUnconfiguredMaps($widgets, $widgetData);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function mapCatalog(int $organizationId): array
+    {
+        return Map::query()
+            ->where('organization_id', $organizationId)
+            ->orderBy('name')
+            ->get(['id', 'name', 'description', 'basemap', 'is_public', 'layers'])
+            ->map(fn (Map $map) => [
+                'id' => $map->id,
+                'name' => $map->name,
+                'description' => $map->description,
+                'basemap' => $map->basemap,
+                'is_public' => (bool) $map->is_public,
+                'layer_count' => is_array($map->layers) ? count($map->layers) : 0,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -284,7 +322,7 @@ class DashboardBoardController extends Controller
             abort(403);
         }
 
-        if (! app(\App\Services\ContentAccessService::class)->canView(
+        if (! app(ContentAccessService::class)->canView(
             Auth::user(),
             'dashboard',
             $dashboard->id,
@@ -292,290 +330,5 @@ class DashboardBoardController extends Controller
         )) {
             abort(403);
         }
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $widgets
-     * @param  array<string, string>  $filters
-     * @return array<int, array<string, mixed>>
-     */
-    /**
-     * @param  array<int, array<string, mixed>>  $widgets
-     * @return array<string, string> layer_id => field name
-     */
-    protected function categoryFields(array $widgets): array
-    {
-        $fields = [];
-        foreach ($widgets as $widget) {
-            if (($widget['type'] ?? '') !== 'category') {
-                continue;
-            }
-            $layerId = $widget['layer_id'] ?? null;
-            $field = $widget['group_by'] ?? $widget['column'] ?? null;
-            if ($layerId && is_string($field) && $field !== '') {
-                $fields[(string) $layerId] = $field;
-            }
-        }
-
-        return $fields;
-    }
-
-    protected function buildWidgetData(int $organizationId, array $widgets, array $filters = []): array
-    {
-        $results = [];
-        $categoryFields = $this->categoryFields($widgets);
-
-        foreach ($widgets as $index => $widget) {
-            $type = $widget['type'] ?? 'indicator';
-            $title = $widget['title'] ?? ('Widget '.($index + 1));
-            $entry = [
-                'id' => $widget['id'] ?? ('w_'.$index),
-                'index' => $index,
-                'type' => $type,
-                'title' => $title,
-                'layout' => $widget['layout'] ?? null,
-                'prefix' => $widget['prefix'] ?? null,
-                'suffix' => $widget['suffix'] ?? null,
-                'body' => $widget['body'] ?? null,
-                'chart_style' => $widget['chart_style'] ?? 'bar',
-                'layer_id' => $widget['layer_id'] ?? null,
-                'labels' => [],
-                'values' => [],
-                'rows' => [],
-                'value' => null,
-                'options' => [],
-                'map' => null,
-                'error' => null,
-            ];
-
-            if ($type === 'text') {
-                $results[] = $entry;
-                continue;
-            }
-
-            $layerId = $widget['layer_id'] ?? null;
-            if (! $layerId) {
-                $entry['error'] = 'No layer configured.';
-                $results[] = $entry;
-                continue;
-            }
-
-            $layer = Layer::where('id', $layerId)
-                ->where('organization_id', $organizationId)
-                ->first();
-
-            if (! $layer || ! Schema::hasTable($layer->table_name)) {
-                $entry['error'] = 'Layer or table not found.';
-                $results[] = $entry;
-                continue;
-            }
-
-            try {
-                $filterValue = $type === 'category' ? null : ($filters[(string) $layerId] ?? null);
-                $filterField = $categoryFields[(string) $layerId] ?? null;
-                $entry = array_merge($entry, $this->aggregateLayer($layer, $type, $widget, $filterValue, $filterField));
-            } catch (\Throwable $e) {
-                $entry['error'] = $e->getMessage();
-            }
-
-            $results[] = $entry;
-        }
-
-        return $results;
-    }
-
-    /**
-     * @param  array<string, mixed>  $widget
-     * @return array<string, mixed>
-     */
-    protected function aggregateLayer(Layer $layer, string $type, array $widget, ?string $filterValue = null, ?string $filterField = null): array
-    {
-        $table = $layer->table_name;
-        $geom = GeometryColumnHelper::resolve($table);
-        $column = $this->safeColumn($table, $widget['column'] ?? null);
-        $groupBy = $this->safeColumn($table, $widget['group_by'] ?? $column);
-        $agg = strtolower((string) ($widget['aggregation'] ?? 'count'));
-        $query = DB::table($table);
-        $this->applyCategoryFilter($query, $table, $filterValue, $filterField);
-
-        if ($type === 'indicator' || $type === 'kpi') {
-            $value = match ($agg) {
-                'sum' => $column ? (float) (clone $query)->sum($column) : null,
-                'avg' => $column ? (float) (clone $query)->avg($column) : null,
-                default => (int) (clone $query)->count(),
-            };
-
-            return ['value' => $value, 'labels' => [], 'values' => [], 'rows' => [], 'options' => [], 'map' => null];
-        }
-
-        if ($type === 'category') {
-            $field = $groupBy ?: $column;
-            if (! $field) {
-                return ['value' => null, 'labels' => [], 'values' => [], 'rows' => [], 'options' => [], 'map' => null, 'error' => 'Choose a field for the filter.'];
-            }
-
-            $options = (clone $query)
-                ->select($field)
-                ->whereNotNull($field)
-                ->distinct()
-                ->orderBy($field)
-                ->limit(100)
-                ->pluck($field)
-                ->map(fn ($v) => (string) $v)
-                ->values()
-                ->all();
-
-            return [
-                'value' => $filterValue,
-                'labels' => $options,
-                'values' => [],
-                'rows' => [],
-                'options' => $options,
-                'map' => null,
-            ];
-        }
-
-        if (in_array($type, ['serial', 'bar', 'pie', 'line'], true) && $groupBy) {
-            $selectAgg = match ($agg) {
-                'sum' => $column
-                    ? DB::raw('SUM("'.$column.'") as value')
-                    : DB::raw('COUNT(*) as value'),
-                'avg' => $column
-                    ? DB::raw('AVG("'.$column.'") as value')
-                    : DB::raw('COUNT(*) as value'),
-                default => DB::raw('COUNT(*) as value'),
-            };
-
-            $rows = (clone $query)
-                ->select($groupBy, $selectAgg)
-                ->groupBy($groupBy)
-                ->orderByDesc('value')
-                ->limit(25)
-                ->get();
-
-            return [
-                'value' => null,
-                'labels' => $rows->pluck($groupBy)->map(fn ($v) => (string) ($v ?? 'null'))->all(),
-                'values' => $rows->pluck('value')->map(fn ($v) => (float) $v)->all(),
-                'rows' => [],
-                'options' => [],
-                'map' => null,
-            ];
-        }
-
-        if ($type === 'map') {
-            $style = is_array($layer->style_config) ? $layer->style_config : [];
-
-            return [
-                'value' => null,
-                'labels' => [],
-                'values' => [],
-                'rows' => [],
-                'options' => [],
-                'map' => [
-                    'basemap' => $widget['basemap'] ?? 'osm',
-                    'viewport' => ['center' => [0, 20], 'zoom' => 2],
-                    'layers' => [[
-                        'id' => $layer->id,
-                        'type' => 'mvt',
-                        'mvtUrl' => url("/api/layers/{$layer->id}/tiles/{z}/{x}/{y}.mvt"),
-                        'visible' => true,
-                        'opacity' => 1,
-                        'style_config' => [
-                            'fill_color' => $style['fill_color'] ?? '#06b6d4',
-                            'stroke_color' => $style['stroke_color'] ?? '#dae2fd',
-                            'stroke_width' => $style['stroke_width'] ?? 1,
-                        ],
-                    ]],
-                ],
-            ];
-        }
-
-        if ($type === 'list') {
-            $titleField = $this->safeColumn($table, $widget['title_field'] ?? null);
-            $descriptionField = $this->safeColumn($table, $widget['description_field'] ?? null);
-            $columns = array_values(array_filter([$titleField, $descriptionField]));
-            if (! $columns) {
-                $all = array_values(array_filter(
-                    Schema::getColumnListing($table),
-                    fn ($c) => $c !== $geom && $c !== 'id'
-                ));
-                $columns = array_slice($all, 0, 2);
-                $titleField = $columns[0] ?? null;
-                $descriptionField = $columns[1] ?? null;
-            }
-            $limit = min((int) ($widget['limit'] ?? 20), 100);
-            $rows = (clone $query)->select($columns ?: ['*'])->limit($limit)->get();
-
-            return [
-                'value' => null,
-                'labels' => array_values(array_filter([$titleField, $descriptionField])),
-                'values' => [],
-                'rows' => $rows->map(fn ($r) => [
-                    'title' => $titleField ? (string) (($r->{$titleField}) ?? '') : '',
-                    'description' => $descriptionField ? (string) (($r->{$descriptionField}) ?? '') : '',
-                ])->all(),
-                'options' => [],
-                'map' => null,
-            ];
-        }
-
-        // table
-        $requested = is_array($widget['columns'] ?? null) ? $widget['columns'] : null;
-        if ($requested) {
-            $columns = array_values(array_filter(
-                array_map(fn ($c) => $this->safeColumn($table, $c), $requested)
-            ));
-        } else {
-            $columns = array_values(array_filter(
-                Schema::getColumnListing($table),
-                fn ($c) => $c !== $geom
-            ));
-        }
-        if (! $columns) {
-            return ['value' => null, 'labels' => [], 'values' => [], 'rows' => [], 'options' => [], 'map' => null, 'error' => 'No columns available.'];
-        }
-
-        $limit = min((int) ($widget['limit'] ?? 20), 100);
-        $rows = (clone $query)->select($columns)->limit($limit)->get();
-
-        return [
-            'value' => null,
-            'labels' => $columns,
-            'values' => [],
-            'rows' => $rows->map(fn ($r) => (array) $r)->all(),
-            'options' => [],
-            'map' => null,
-        ];
-    }
-
-    protected function safeColumn(string $table, mixed $column): ?string
-    {
-        if (! is_string($column) || $column === '') {
-            return null;
-        }
-
-        if (! preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $column)) {
-            return null;
-        }
-
-        return Schema::hasColumn($table, $column) ? $column : null;
-    }
-
-    /**
-     * @param  \Illuminate\Database\Query\Builder  $query
-     */
-    protected function applyCategoryFilter($query, string $table, ?string $filterValue, ?string $filterField): void
-    {
-        if ($filterValue === null || $filterValue === '') {
-            return;
-        }
-
-        $field = $this->safeColumn($table, $filterField);
-        if (! $field) {
-            return;
-        }
-
-        $query->where($field, $filterValue);
     }
 }

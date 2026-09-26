@@ -10,13 +10,27 @@ function csrfToken() {
     return document.head.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-export default function Builder({ dashboard = null, layers = [], catalog = [], previewUrl }) {
+function seedBinding(widget, layers) {
+    if (widget.type === 'map') {
+        widget.source = widget.source || 'layer';
+        widget.map_id = widget.map_id ?? null;
+        return widget;
+    }
+    if (widget.type !== 'text') {
+        const preferred = layers.find((layer) => layer.published) || layers[0];
+        if (preferred) widget.layer_id = preferred.id;
+    }
+    return widget;
+}
+
+export default function Builder({ dashboard = null, layers = [], maps = [], catalog = [], previewUrl }) {
     const editing = Boolean(dashboard);
     const [widgets, setWidgets] = useState(() => normalizeWidgets(dashboard?.widgets || []));
     const [selectedId, setSelectedId] = useState(null);
     const [previewData, setPreviewData] = useState([]);
     const [previewError, setPreviewError] = useState(null);
     const [name, setName] = useState(dashboard?.name || 'Untitled dashboard');
+    const [description, setDescription] = useState(dashboard?.description || '');
     const [isPublic, setIsPublic] = useState(Boolean(dashboard?.is_public));
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState({});
@@ -63,11 +77,7 @@ export default function Builder({ dashboard = null, layers = [], catalog = [], p
     }
 
     function addWidget(type, layout = null) {
-        const widget = createWidget(type, widgets.length);
-        if (type !== 'text') {
-            const preferred = layers.find((layer) => layer.published) || layers[0];
-            if (preferred) widget.layer_id = preferred.id;
-        }
+        const widget = seedBinding(createWidget(type, widgets.length), layers);
         if (layout) {
             widget.layout = {
                 x: layout.x ?? 0,
@@ -81,11 +91,7 @@ export default function Builder({ dashboard = null, layers = [], catalog = [], p
     }
 
     function dropWidget(type, layout, nextLayout) {
-        const widget = createWidget(type, Date.now());
-        if (type !== 'text') {
-            const preferred = layers.find((layer) => layer.published) || layers[0];
-            if (preferred) widget.layer_id = preferred.id;
-        }
+        const widget = seedBinding(createWidget(type, Date.now()), layers);
         if (layout) {
             widget.layout = {
                 x: layout.x ?? 0,
@@ -123,7 +129,7 @@ export default function Builder({ dashboard = null, layers = [], catalog = [], p
         event.preventDefault();
         const payload = {
             name,
-            description: dashboard?.description || '',
+            description,
             is_public: isPublic ? 1 : 0,
             widgets,
         };
@@ -147,12 +153,18 @@ export default function Builder({ dashboard = null, layers = [], catalog = [], p
                         <Link href={editing ? `/dashboards/${dashboard.id}` : '/dashboards'} className="text-primary hover:underline">
                             Back
                         </Link>
-                        <div className="min-w-0 flex-1">
+                        <div className="grid min-w-0 flex-1 gap-2 md:grid-cols-2">
                             <TextInput value={name} onChange={(event) => setName(event.target.value)} aria-label="Dashboard name" />
+                            <TextInput
+                                value={description}
+                                onChange={(event) => setDescription(event.target.value)}
+                                placeholder="Description for the shared view"
+                                aria-label="Dashboard description"
+                            />
                         </div>
-                        <label className="hidden items-center gap-2 md:flex">
+                        <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
-                            Public
+                            Share publicly
                         </label>
                         <PrimaryButton type="button" disabled={processing} onClick={submit}>
                             {editing ? 'Save dashboard' : 'Create dashboard'}
@@ -185,7 +197,7 @@ export default function Builder({ dashboard = null, layers = [], catalog = [], p
                         onLayoutChange={(layout) => updateWidgetsFrom((current) => applyGridLayout(current, layout))}
                     />
                 </main>
-                <Inspector widget={selected} layers={layers} onChange={patchWidget} onClose={() => setSelectedId(null)} />
+                <Inspector widget={selected} layers={layers} maps={maps} onChange={patchWidget} onClose={() => setSelectedId(null)} />
             </div>
         </div>
     );

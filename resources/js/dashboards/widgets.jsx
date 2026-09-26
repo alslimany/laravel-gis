@@ -96,14 +96,19 @@ function ChartCanvas({ widget, style = 'bar' }) {
     return <canvas ref={canvas} />;
 }
 
+function Note({ tone = 'muted', children }) {
+    const className = tone === 'danger' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground';
+    return <p className={className}>{children}</p>;
+}
+
 export function WidgetFrame({ title, children, className = '', onClick, selected = false, actions = null }) {
     return (
         <section
             onClick={onClick}
-            className={`flex h-full flex-col overflow-hidden rounded-lg border bg-panel ${ selected ?'border-cyan ring-2 ring-cyan/30' :'border-line'} ${className}`}
+            className={`flex h-full flex-col overflow-hidden rounded-lg border bg-card ${selected ? 'border-primary ring-2 ring-primary/30' : 'border-border'} ${className}`}
         >
-            <div className="flex items-center justify-between gap-2 border-b border-line">
-                <h3 className="truncate font-semibold">{title}</h3>
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                <h3 className="truncate text-sm font-semibold">{title}</h3>
                 {actions}
             </div>
             <div className="min-h-0 flex-1 overflow-auto p-3">{children}</div>
@@ -112,38 +117,49 @@ export function WidgetFrame({ title, children, className = '', onClick, selected
 }
 
 export function IndicatorView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
+    const display = widget.value == null || widget.value === '' ? '—' : widget.value;
     return (
-        <p className="flex h-full items-center font-semibold tabular-nums text-copy">
-            {widget.prefix ? <span className="mr-1 text-muted">{widget.prefix}</span> : null}
-            <span>{widget.value ?? '—'}</span>
-            {widget.suffix ? <span className="ml-1 text-muted">{widget.suffix}</span> : null}
+        <p className="flex h-full items-end pb-1 text-3xl font-semibold tabular-nums text-foreground">
+            {widget.prefix ? <span className="mr-1 text-base font-medium text-muted-foreground">{widget.prefix}</span> : null}
+            <span>{display}</span>
+            {widget.suffix ? <span className="ml-1 text-base font-medium text-muted-foreground">{widget.suffix}</span> : null}
         </p>
     );
 }
 
 export function SerialView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty' || !(widget.labels || []).length) {
+        return <Note>{widget.message || 'No features in this layer.'}</Note>;
+    }
     return (
-        <div className="h-full min-h-[140px]">
+        <div className="h-full min-h-[180px]">
             <ChartCanvas widget={widget} style={widget.chart_style === 'line' ? 'line' : 'bar'} />
         </div>
     );
 }
 
 export function PieView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty' || !(widget.labels || []).length) {
+        return <Note>{widget.message || 'No features in this layer.'}</Note>;
+    }
     return (
-        <div className="h-full min-h-[140px]">
+        <div className="h-full min-h-[180px]">
             <ChartCanvas widget={widget} style="pie" />
         </div>
     );
 }
 
 export function TableView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
     const labels = widget.labels || [];
-    if (!labels.length) return <p className="text-muted">No columns.</p>;
+    const rows = widget.rows || [];
+    if (!labels.length) return <Note>{widget.message || 'Choose columns when this table should show attributes.'}</Note>;
+    if (!rows.length) return <Note>{widget.message || 'No features in this layer.'}</Note>;
     return (
         <DataTable>
             <Table.Header>
@@ -156,7 +172,7 @@ export function TableView({ widget }) {
                 </Table.Row>
             </Table.Header>
             <Table.Body>
-                {(widget.rows || []).map((row, index) => (
+                {rows.map((row, index) => (
                     <Table.Row key={index}>
                         {labels.map((col) => (
                             <Table.Cell key={col} className={tdMono}>
@@ -171,15 +187,16 @@ export function TableView({ widget }) {
 }
 
 export function ListView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
     const rows = widget.rows || [];
-    if (!rows.length) return <p className="text-muted">No rows.</p>;
+    if (!rows.length) return <Note>{widget.message || 'No features in this layer.'}</Note>;
     return (
         <ul className="space-y-2">
             {rows.map((row, index) => (
-                <li key={index} className="border-b border-line pb-2 last:border-b-0">
+                <li key={index} className="border-b border-border pb-2 last:border-b-0">
                     <p className="font-medium">{row.title || '—'}</p>
-                    {row.description ? <p className="text-muted">{row.description}</p> : null}
+                    {row.description ? <p className="text-sm text-muted-foreground">{row.description}</p> : null}
                 </li>
             ))}
         </ul>
@@ -187,11 +204,18 @@ export function ListView({ widget }) {
 }
 
 export function MapView({ widget }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
-    if (!widget.map) return <p className="text-muted">Choose a published layer.</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (!widget.map) {
+        return <Note>{widget.message || 'Choose a layer or a saved map when this widget should show a map.'}</Note>;
+    }
     return (
-        <div className="h-full min-h-[160px] overflow-hidden rounded-md border border-line">
-            <SharedMap map={widget.map} />
+        <div className="flex h-full min-h-[220px] flex-col gap-2">
+            {widget.source === 'map' && widget.map.name ? (
+                <p className="truncate text-sm text-muted-foreground">{widget.map.name}</p>
+            ) : null}
+            <div className="min-h-[200px] flex-1 overflow-hidden rounded-md border border-border">
+                <SharedMap map={widget.map} />
+            </div>
         </div>
     );
 }
@@ -199,22 +223,28 @@ export function MapView({ widget }) {
 export function TextView({ widget }) {
     return (
         <div className="space-y-2">
-            {widget.body ? <p className="whitespace-pre-wrap text-muted">{widget.body}</p> : <p className="text-muted">Add a note in the inspector.</p>}
+            {widget.body ? (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{widget.body}</p>
+            ) : (
+                <p className="text-sm text-muted-foreground">Add a note in the inspector.</p>
+            )}
         </div>
     );
 }
 
 export function CategoryView({ widget, value, onChange, interactive = false }) {
-    if (widget.error) return <p className="text-danger">{widget.error}</p>;
+    if (widget.error) return <Note tone="danger">{widget.error}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message}</Note>;
     const options = widget.options || widget.labels || [];
     if (!interactive) {
-        return <p className="text-muted">{options.length ? `${options.length} values` : 'Choose a field'}</p>;
+        return <p className="text-sm text-muted-foreground">{options.length ? `${options.length} values` : 'Choose a field'}</p>;
     }
+    if (!options.length) return <Note>{widget.message || 'No values in this field yet.'}</Note>;
     return (
         <label className="block">
             <span className="sr-only">{widget.title}</span>
             <select
-                className="w-full rounded-md border border-line bg-field px-3"
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
                 value={value ?? ''}
                 onChange={(event) => onChange?.(event.target.value || null)}
             >
@@ -269,6 +299,12 @@ export function mergeWidgetData(configWidgets, dataWidgets) {
             suffix: config.suffix ?? data.suffix,
             body: config.body ?? data.body,
             layer_id: config.layer_id ?? data.layer_id,
+            map_id: data.map_id ?? config.map_id ?? null,
+            source: data.source ?? config.source ?? null,
+            status: data.status,
+            message: data.message ?? null,
+            error: data.error ?? null,
+            map: data.map ?? null,
         };
     });
 }

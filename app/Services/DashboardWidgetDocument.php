@@ -34,7 +34,6 @@ class DashboardWidgetDocument
     /**
      * Normalize stored or posted widgets: stable ids, layouts, and type aliases.
      *
-     * @param  mixed  $widgets
      * @return array<int, array<string, mixed>>
      */
     public function normalize(mixed $widgets): array
@@ -101,6 +100,21 @@ class DashboardWidgetDocument
             $widget['layer_id'] = (int) $raw['layer_id'] ?: null;
         }
 
+        if (array_key_exists('map_id', $raw)) {
+            $widget['map_id'] = (int) $raw['map_id'] ?: null;
+        }
+
+        if (array_key_exists('source', $raw)) {
+            $source = strtolower((string) $raw['source']);
+            if (in_array($source, ['layer', 'map'], true)) {
+                $widget['source'] = $source;
+            }
+        }
+
+        if ($type === 'map' && empty($widget['source'])) {
+            $widget['source'] = ! empty($widget['map_id']) ? 'map' : 'layer';
+        }
+
         foreach (['column', 'group_by', 'aggregation', 'prefix', 'suffix', 'body', 'title_field', 'description_field', 'chart_style', 'basemap'] as $key) {
             if (array_key_exists($key, $raw) && $raw[$key] !== null && $raw[$key] !== '') {
                 $widget[$key] = $raw[$key];
@@ -165,7 +179,7 @@ class DashboardWidgetDocument
             ['type' => 'pie', 'label' => 'Pie chart', 'group' => 'Data', 'description' => 'Share of categories'],
             ['type' => 'table', 'label' => 'Table', 'group' => 'Data', 'description' => 'Attribute rows'],
             ['type' => 'list', 'label' => 'List', 'group' => 'Data', 'description' => 'Title and description rows'],
-            ['type' => 'map', 'label' => 'Map', 'group' => 'Map', 'description' => 'Published layer on a map'],
+            ['type' => 'map', 'label' => 'Map', 'group' => 'Map', 'description' => 'Layer or a saved map'],
             ['type' => 'text', 'label' => 'Text', 'group' => 'Content', 'description' => 'Heading and note'],
             ['type' => 'category', 'label' => 'Category selector', 'group' => 'Filters', 'description' => 'Filter other widgets'],
         ];
