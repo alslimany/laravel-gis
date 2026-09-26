@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FeatureAttachment;
 use App\Models\Form;
+use App\Models\FormSubmission;
 use App\Models\Layer;
-use App\Services\FeatureService;
+use App\Models\Map;
+use App\Services\FormSubmissionService;
 use App\Services\WebhookDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class FormController extends Controller
 {
     public function __construct(
-        protected FeatureService $features,
+        protected FormSubmissionService $submissions,
         protected WebhookDispatcher $webhooks
     ) {
         $this->middleware(['auth', 'organization'])->except(['publicShow', 'publicSubmit']);
@@ -30,6 +32,7 @@ class FormController extends Controller
 
         $forms = Form::where('organization_id', Auth::user()->organization_id)
             ->with(['layer', 'user'])
+            ->withCount('submissions')
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -45,12 +48,8 @@ class FormController extends Controller
     {
         $this->authorize('create', Form::class);
 
-        $layers = Layer::where('organization_id', Auth::user()->organization_id)
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('Forms/Editor', [
-            'layers' => $layers,
+            'layers' => $this->organizationLayers(),
         ]);
     }
 
@@ -61,37 +60,7 @@ class FormController extends Controller
     {
         $this->authorize('create', Form::class);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'layer_id' => 'required|exists:layers,id',
-            'schema' => 'nullable|array',
-            'schema.*.name' => 'nullable|string|max:100',
-            'schema.*.label' => 'nullable|string|max:255',
-            'schema.*.type' => 'nullable|string|in:text,textarea,number,select,checkbox,date',
-            'schema.*.required' => 'nullable|boolean',
-            'schema.*.options' => 'nullable|array',
-            'is_public' => 'nullable|boolean',
-        ]);
-
-        $user = Auth::user();
-        $layer = Layer::where('organization_id', $user->organization_id)
-            ->findOrFail($validated['layer_id']);
-
-        $schema = $validated['schema'] ?? [];
-        if ($schema === [] || $this->schemaLooksEmpty($schema)) {
-            $schema = $this->schemaFromLayerFields($layer);
-        }
-
-        $form = Form::create([
-            'organization_id' => $user->organization_id,
-            'layer_id' => $layer->id,
-            'user_id' => $user->id,
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'schema' => $this->normalizeSchema($schema),
-            'is_public' => (bool) ($validated['is_public'] ?? false),
-        ]);
+        $form = $this->persist($request);
 
         return redirect()
             ->route('forms.show', $form)
@@ -106,9 +75,37 @@ class FormController extends Controller
         $this->authorize('view', $form);
 
         $form->load(['layer', 'user', 'organization']);
+        $layer = $form->layer;
+
+        $submissions = $form->submissions()
+            ->latest()
+            ->paginate(20)
+            ->withQueryString()
+            ->through(fn (FormSubmission $submission) => [
+                'id' => $submission->id,
+                'created_at' => $submission->created_at?->toIso8601String(),
+                'feature_id' => $submission->feature_id,
+                'attributes' => $submission->attributes ?? [],
+                'latitude' => $submission->latitude,
+                'longitude' => $submission->longitude,
+                'geometry_wkt' => $submission->geometry_wkt,
+                'attachment_name' => $submission->attachment_name,
+            ]);
 
         return Inertia::render('Forms/Show', [
             'form' => $form,
+            'submissions' => $submissions,
+            'submissionCount' => $submissions->total(),
+            'requiresGeometry' => $form->requiresGeometry(),
+            'links' => [
+                'attributes' => $layer ? route('layers.attributes', $layer) : null,
+                'map' => $layer ? route('maps.builder', ['layer' => $layer->id]) : null,
+                'export_csv' => route('forms.export.csv', $form),
+                'export_excel' => route('forms.export.excel', $form),
+                'layer_csv' => $layer ? route('forms.export.layer.csv', $form) : null,
+                'layer_excel' => $layer ? route('forms.export.layer.excel', $form) : null,
+            ],
+            'maps' => $layer ? $this->mapsForLayer($layer) : [],
         ]);
     }
 
@@ -119,13 +116,9 @@ class FormController extends Controller
     {
         $this->authorize('update', $form);
 
-        $layers = Layer::where('organization_id', Auth::user()->organization_id)
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('Forms/Editor', [
             'form' => $form,
-            'layers' => $layers,
+            'layers' => $this->organizationLayers(),
         ]);
     }
 
@@ -136,29 +129,7 @@ class FormController extends Controller
     {
         $this->authorize('update', $form);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'layer_id' => 'required|exists:layers,id',
-            'schema' => 'nullable|array',
-            'schema.*.name' => 'nullable|string|max:100',
-            'schema.*.label' => 'nullable|string|max:255',
-            'schema.*.type' => 'nullable|string|in:text,textarea,number,select,checkbox,date',
-            'schema.*.required' => 'nullable|boolean',
-            'schema.*.options' => 'nullable|array',
-            'is_public' => 'nullable|boolean',
-        ]);
-
-        $layer = Layer::where('organization_id', Auth::user()->organization_id)
-            ->findOrFail($validated['layer_id']);
-
-        $form->update([
-            'layer_id' => $layer->id,
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'schema' => $this->normalizeSchema($validated['schema'] ?? []),
-            'is_public' => (bool) ($validated['is_public'] ?? false),
-        ]);
+        $this->persist($request, $form);
 
         return redirect()
             ->route('forms.show', $form)
@@ -180,6 +151,64 @@ class FormController extends Controller
     }
 
     /**
+     * Download submissions collected by this form.
+     */
+    public function exportCsv(Form $form)
+    {
+        $this->authorize('view', $form);
+
+        $table = $this->submissions->submissionTable($form);
+
+        return $this->csvResponse($this->exportFilename($form, 'submissions', 'csv'), $table['headers'], $table['rows']);
+    }
+
+    /**
+     * Download submissions collected by this form.
+     */
+    public function exportExcel(Form $form)
+    {
+        $this->authorize('view', $form);
+
+        $table = $this->submissions->submissionTable($form);
+
+        return $this->xlsxResponse(
+            $this->exportFilename($form, 'submissions', 'xlsx'),
+            $form->name.' submissions',
+            $table['headers'],
+            $table['rows']
+        );
+    }
+
+    /**
+     * Download features from the linked layer.
+     */
+    public function exportLayerCsv(Form $form)
+    {
+        $this->authorize('view', $form);
+
+        $table = $this->layerExportTable($form);
+
+        return $this->csvResponse($this->exportFilename($form, 'layer', 'csv'), $table['headers'], $table['rows']);
+    }
+
+    /**
+     * Download features from the linked layer.
+     */
+    public function exportLayerExcel(Form $form)
+    {
+        $this->authorize('view', $form);
+
+        $table = $this->layerExportTable($form);
+
+        return $this->xlsxResponse(
+            $this->exportFilename($form, 'layer', 'xlsx'),
+            ($form->layer?->name ?: $form->name).' features',
+            $table['headers'],
+            $table['rows']
+        );
+    }
+
+    /**
      * Public form fill page (by share token).
      */
     public function publicShow(string $token)
@@ -191,11 +220,12 @@ class FormController extends Controller
 
         return Inertia::render('Forms/Public', [
             'form' => $form,
+            'requiresGeometry' => $form->requiresGeometry(),
         ]);
     }
 
     /**
-     * Public form submit — creates a feature (+ optional attachment).
+     * Public form submit. Standalone forms store a submission; linked forms also write a feature.
      */
     public function publicSubmit(Request $request, string $token)
     {
@@ -203,11 +233,6 @@ class FormController extends Controller
             ->where('is_public', true)
             ->with('layer')
             ->firstOrFail();
-
-        $layer = $form->layer;
-        if (! $layer) {
-            return back()->with('error', 'This form is not linked to a valid layer.');
-        }
 
         $rules = [
             'wkt' => 'nullable|string',
@@ -242,91 +267,280 @@ class FormController extends Controller
 
         $validated = $request->validate($rules);
 
-        $wkt = $validated['wkt'] ?? null;
-        if (! $wkt && isset($validated['latitude'], $validated['longitude'])) {
-            $wkt = sprintf('POINT(%s %s)', $validated['longitude'], $validated['latitude']);
-        }
-
-        if (! $wkt) {
+        $latitude = $this->coordinate($validated['latitude'] ?? null);
+        $longitude = $this->coordinate($validated['longitude'] ?? null);
+        if (($latitude === null) xor ($longitude === null)) {
             return back()
                 ->withInput()
-                ->withErrors(['wkt' => 'Please provide a location (coordinates or WKT).']);
+                ->withErrors(['latitude' => 'Enter both latitude and longitude.']);
+        }
+
+        $wkt = $validated['wkt'] ?? null;
+        if (! $wkt && $latitude !== null && $longitude !== null) {
+            $wkt = sprintf('POINT(%s %s)', $this->formatCoordinate($longitude), $this->formatCoordinate($latitude));
+        }
+
+        if ($form->requiresGeometry() && ! $wkt) {
+            return back()
+                ->withInput()
+                ->withErrors(['wkt' => 'This form needs a location. Pick a point on the map or enter latitude and longitude.']);
         }
 
         try {
-            $feature = $this->features->create(
-                $layer,
+            $result = $this->submissions->record(
+                $form,
                 $validated['attributes'] ?? [],
-                $wkt
+                $wkt,
+                $latitude,
+                $longitude,
+                $request->file('attachment'),
+                Auth::id()
             );
-
-            $featureId = $feature['id'] ?? ($feature['properties']['id'] ?? null);
-
-            if ($request->hasFile('attachment') && $featureId) {
-                $file = $request->file('attachment');
-                $directory = "attachments/{$layer->id}/{$featureId}";
-                $storedName = Str::uuid().'_'.$file->getClientOriginalName();
-                $path = $file->storeAs($directory, $storedName, 'local');
-
-                FeatureAttachment::create([
-                    'layer_id' => $layer->id,
-                    'feature_id' => (int) $featureId,
-                    'user_id' => Auth::id(),
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
-                ]);
-            }
-
-            $this->webhooks->dispatch($form->organization_id, 'form.submitted', [
+        } catch (\Throwable $e) {
+            Log::warning('Form submission failed', [
                 'form_id' => $form->id,
-                'layer_id' => $layer->id,
-                'feature' => $feature,
+                'error' => $e->getMessage(),
             ]);
 
-            return redirect()
-                ->route('forms.public.show', $token)
-                ->with('success', 'Thank you! Your submission was recorded.');
-        } catch (\Throwable $e) {
             return back()
                 ->withInput()
                 ->with('error', 'Submission failed: '.$e->getMessage());
         }
+
+        $this->webhooks->dispatch($form->organization_id, 'form.submitted', [
+            'form_id' => $form->id,
+            'layer_id' => $form->layer_id,
+            'submission_id' => $result['submission']->id,
+            'feature' => $result['feature'],
+        ]);
+
+        return redirect()
+            ->route('forms.public.show', $token)
+            ->with('success', 'Thank you! Your submission was recorded.');
     }
 
     /**
-     * Normalize schema field definitions.
-     *
-     * @param  array<int, array<string, mixed>>  $schema
-     * @return array<int, array<string, mixed>>
+     * @return list<Layer>
      */
-    protected function normalizeSchema(array $schema): array
+    protected function organizationLayers()
     {
-        return array_values(array_filter(array_map(function ($field) {
-            if (! is_array($field) || empty($field['name'])) {
-                return null;
-            }
-
-            return [
-                'name' => preg_replace('/[^a-zA-Z0-9_]/', '_', (string) $field['name']),
-                'label' => $field['label'] ?? $field['name'],
-                'type' => $field['type'] ?? 'text',
-                'required' => (bool) ($field['required'] ?? false),
-                'options' => $field['options'] ?? [],
-            ];
-        }, $schema)));
+        return Layer::where('organization_id', Auth::user()->organization_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'geometry_type']);
     }
 
-    protected function schemaLooksEmpty(array $schema): bool
+    protected function persist(Request $request, ?Form $form = null): Form
     {
-        foreach ($schema as $field) {
-            if (is_array($field) && ! empty($field['name'])) {
-                return false;
-            }
+        $layerId = $request->input('layer_id');
+        $request->merge([
+            'layer_id' => ($layerId === '' || $layerId === null) ? null : $layerId,
+            'create_layer' => $request->boolean('create_layer'),
+            'collect_geometry' => $request->boolean('collect_geometry'),
+            'is_public' => $request->boolean('is_public'),
+        ]);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'layer_mode' => 'nullable|in:none,link,create',
+            'layer_id' => 'nullable|exists:layers,id',
+            'create_layer' => 'nullable|boolean',
+            'collect_geometry' => 'nullable|boolean',
+            'schema' => 'nullable|array',
+            'schema.*.name' => 'nullable|string|max:100',
+            'schema.*.label' => 'nullable|string|max:255',
+            'schema.*.type' => 'nullable|string|in:text,textarea,number,select,checkbox,date',
+            'schema.*.required' => 'nullable|boolean',
+            'schema.*.options' => 'nullable|array',
+            'is_public' => 'nullable|boolean',
+        ]);
+
+        $schema = $this->submissions->normalizeSchema($validated['schema'] ?? []);
+        [$layer, $schema] = $this->resolveLayer($validated, $schema);
+
+        $collectGeometry = (bool) ($validated['collect_geometry'] ?? false);
+        if ($layer && Form::layerRequiresGeometry($layer)) {
+            $collectGeometry = true;
         }
 
-        return true;
+        $attributes = [
+            'layer_id' => $layer?->id,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'schema' => $schema,
+            'is_public' => (bool) ($validated['is_public'] ?? false),
+            'collect_geometry' => $collectGeometry,
+        ];
+
+        if ($form) {
+            $form->update($attributes);
+
+            return $form->refresh();
+        }
+
+        $user = Auth::user();
+
+        return Form::create($attributes + [
+            'organization_id' => $user->organization_id,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  list<array<string, mixed>>  $schema
+     * @return array{0: ?Layer, 1: list<array<string, mixed>>}
+     */
+    protected function resolveLayer(array $validated, array $schema): array
+    {
+        $mode = $validated['layer_mode'] ?? null;
+        $create = (bool) ($validated['create_layer'] ?? false);
+        $layerId = $validated['layer_id'] ?? null;
+
+        if ($mode === 'none') {
+            $create = false;
+            $layerId = null;
+        } elseif ($mode === 'create') {
+            $create = true;
+            $layerId = null;
+        } elseif ($mode === 'link') {
+            $create = false;
+        }
+
+        if ($create && $layerId) {
+            throw ValidationException::withMessages([
+                'layer_id' => 'Link an existing layer or create one from these fields.',
+            ]);
+        }
+
+        if ($create) {
+            if ($schema === []) {
+                throw ValidationException::withMessages([
+                    'schema' => 'Add at least one field before creating a layer.',
+                ]);
+            }
+
+            $created = $this->submissions->createLayerFromSchema(
+                Auth::user(),
+                $validated['name'],
+                $validated['description'] ?? null,
+                $schema,
+                (bool) ($validated['collect_geometry'] ?? false)
+            );
+
+            return [$created['layer'], $created['schema']];
+        }
+
+        if ($mode === 'link' && ! $layerId) {
+            throw ValidationException::withMessages([
+                'layer_id' => 'Choose a layer or keep this form standalone.',
+            ]);
+        }
+
+        if (! $layerId) {
+            return [null, $schema];
+        }
+
+        $layer = Layer::where('organization_id', Auth::user()->organization_id)
+            ->findOrFail($layerId);
+
+        if ($schema === []) {
+            $schema = $this->submissions->normalizeSchema($this->schemaFromLayerFields($layer));
+        }
+
+        return [$layer, $schema];
+    }
+
+    /**
+     * @return array{headers: list<string>, rows: list<array<string, mixed>>}
+     */
+    protected function layerExportTable(Form $form): array
+    {
+        $layer = $form->layer;
+        if (! $layer) {
+            abort(404);
+        }
+
+        $table = $this->submissions->layerTable($layer);
+        if ($table === null) {
+            abort(404, 'Layer table is not available.');
+        }
+
+        return $table;
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @param  list<array<string, mixed>>  $rows
+     */
+    protected function csvResponse(string $filename, array $headers, array $rows)
+    {
+        return response($this->submissions->toCsv($headers, $rows), 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @param  list<array<string, mixed>>  $rows
+     */
+    protected function xlsxResponse(string $filename, string $title, array $headers, array $rows)
+    {
+        $tempPath = storage_path('app/tmp_'.uniqid('form_', true).'.xlsx');
+        $this->submissions->saveSpreadsheet($title, $headers, $rows, $tempPath);
+
+        return response()->download($tempPath, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    protected function exportFilename(Form $form, string $kind, string $extension): string
+    {
+        $base = preg_replace('/[^A-Za-z0-9_-]+/', '_', $form->name) ?: 'form';
+        $base = trim((string) $base, '_');
+
+        return ($base !== '' ? $base : 'form').'_'.$kind.'_'.now()->format('Y-m-d').'.'.$extension;
+    }
+
+    /**
+     * @return list<array{id: int, name: string, url: string}>
+     */
+    protected function mapsForLayer(Layer $layer): array
+    {
+        return Map::query()
+            ->where('organization_id', $layer->organization_id)
+            ->get(['id', 'name', 'layers'])
+            ->filter(function (Map $map) use ($layer) {
+                return collect($map->layers ?? [])->contains(function ($entry) use ($layer) {
+                    $id = is_array($entry) ? ($entry['id'] ?? null) : null;
+
+                    return (int) $id === (int) $layer->id;
+                });
+            })
+            ->map(fn (Map $map) => [
+                'id' => $map->id,
+                'name' => $map->name,
+                'url' => route('maps.show', $map),
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function coordinate(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (float) $value;
+    }
+
+    protected function formatCoordinate(float $value): string
+    {
+        $formatted = rtrim(rtrim(sprintf('%.8F', $value), '0'), '.');
+
+        return $formatted === '' || $formatted === '-' ? '0' : $formatted;
     }
 
     /**

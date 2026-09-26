@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import PublicLayout from '@/layouts/public-layout';
 import { Field, Flash, Heading, PrimaryButton, Select, TextArea, TextInput } from '@/components/gis';
+import LocationPicker from '@/Pages/Forms/LocationPicker';
 
-export default function Public({ form }) {
+export default function Public({ form, requiresGeometry = false }) {
     const fields = form.schema || [];
+    const [includeLocation, setIncludeLocation] = useState(Boolean(requiresGeometry));
     const formState = useForm({
         attributes: {},
         latitude: '',
@@ -11,6 +14,8 @@ export default function Public({ form }) {
         wkt: '',
         attachment: null,
     });
+
+    const showLocation = Boolean(requiresGeometry) || includeLocation;
 
     function setAttribute(name, value) {
         formState.setData('attributes', { ...formState.data.attributes, [name]: value });
@@ -51,17 +56,76 @@ export default function Public({ form }) {
                         </Field>
                     ) : null,
                 )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Latitude">
-                        <TextInput value={formState.data.latitude} onChange={(event) => formState.setData('latitude', event.target.value)} />
+                {!requiresGeometry ? (
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={includeLocation}
+                            onChange={(event) => {
+                                const checked = event.target.checked;
+                                setIncludeLocation(checked);
+                                if (!checked) {
+                                    formState.setData({
+                                        ...formState.data,
+                                        latitude: '',
+                                        longitude: '',
+                                        wkt: '',
+                                    });
+                                }
+                            }}
+                        />
+                        Include a location
+                    </label>
+                ) : null}
+                {showLocation ? (
+                    <Field
+                        label={requiresGeometry ? 'Location' : 'Location (optional)'}
+                        error={formState.errors.wkt || formState.errors.latitude}
+                        hint={
+                            requiresGeometry
+                                ? 'This layer stores geometry. Pick a point on the map or enter latitude and longitude. A WKT value is used when it is filled in.'
+                                : 'Leave this blank to submit without a location. A WKT value is used when it is filled in.'
+                        }
+                    >
+                        <div className="grid gap-3">
+                            <LocationPicker
+                                latitude={formState.data.latitude}
+                                longitude={formState.data.longitude}
+                                onPick={(latitude, longitude) =>
+                                    formState.setData({
+                                        ...formState.data,
+                                        latitude,
+                                        longitude,
+                                        wkt: '',
+                                    })
+                                }
+                            />
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <Field label="Latitude" error={formState.errors.latitude}>
+                                    <TextInput
+                                        value={formState.data.latitude}
+                                        inputMode="decimal"
+                                        onChange={(event) => formState.setData('latitude', event.target.value)}
+                                    />
+                                </Field>
+                                <Field label="Longitude" error={formState.errors.longitude}>
+                                    <TextInput
+                                        value={formState.data.longitude}
+                                        inputMode="decimal"
+                                        onChange={(event) => formState.setData('longitude', event.target.value)}
+                                    />
+                                </Field>
+                            </div>
+                            <Field label="Or WKT geometry" error={formState.errors.wkt}>
+                                <TextInput
+                                    value={formState.data.wkt}
+                                    placeholder="POINT(13.19 32.89)"
+                                    onChange={(event) => formState.setData('wkt', event.target.value)}
+                                />
+                            </Field>
+                        </div>
                     </Field>
-                    <Field label="Longitude">
-                        <TextInput value={formState.data.longitude} onChange={(event) => formState.setData('longitude', event.target.value)} />
-                    </Field>
-                </div>
-                <Field label="Or WKT geometry">
-                    <TextInput value={formState.data.wkt} placeholder="POINT(46.67 24.71)" onChange={(event) => formState.setData('wkt', event.target.value)} />
-                </Field>
+                ) : null}
                 <Field label="Attachment">
                     <input type="file" onChange={(event) => formState.setData('attachment', event.target.files?.[0] || null)} />
                 </Field>
