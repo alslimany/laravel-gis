@@ -11,35 +11,35 @@ export default function GuestLayout({ title, children }: { title?: string; child
     return (
         <div className="lumina-field grid min-h-screen lg:grid-cols-[minmax(280px,1fr)_minmax(320px,440px)]">
             {title ? <Head title={title} /> : null}
-            <aside className="flex flex-col justify-between gap-8 p-8 sm:p-12">
+            <aside className="flex flex-col justify-between gap-8 p-8 text-map-canvas-foreground sm:p-12">
                 <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-md border border-white/30 text-white">
+                    <div className="flex size-10 items-center justify-center rounded-md border border-map-canvas-foreground/30">
                         <AppLogoIcon className="size-6" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold tracking-[0.18em] text-white">{name.toUpperCase()}</p>
-                        <p className="text-[11px] tracking-[0.22em] text-white/60">SPATIAL INTELLIGENCE</p>
+                        <p className="text-sm font-semibold tracking-[0.18em]">{name.toUpperCase()}</p>
+                        <p className="text-[11px] tracking-[0.22em] text-map-canvas-foreground/60">SPATIAL INTELLIGENCE</p>
                     </div>
                 </div>
                 <div className="max-w-md">
-                    <h1 className="text-4xl font-semibold tracking-tight text-white">{name}</h1>
-                    <p className="mt-3 text-lg text-white/80">Illuminating spatial intelligence.</p>
-                    <p className="mt-4 max-w-prose text-sm leading-6 text-white/60">
+                    <h1 className="text-4xl font-semibold tracking-tight">{name}</h1>
+                    <p className="mt-3 text-lg text-map-canvas-foreground/80">Illuminating spatial intelligence.</p>
+                    <p className="mt-4 max-w-prose text-sm leading-6 text-map-canvas-foreground/60">
                         Import a dataset, publish a layer, and compose a map for this organization.
                     </p>
                 </div>
             </aside>
             <main className="flex items-center justify-center p-6 sm:p-10">
-                <div className="w-full max-w-sm space-y-6 rounded-lg border border-white/15 bg-black/80 p-6 text-white">
+                <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-6 text-card-foreground">
                     {children}
                     <div className="flex gap-4 text-sm">
                         {routes.login && !onLogin ? (
-                            <Link href={routes.login} className="text-white underline-offset-4 hover:underline">
+                            <Link href={routes.login} className="text-foreground underline-offset-4 hover:underline">
                                 Sign in
                             </Link>
                         ) : null}
                         {routes.register && !onRegister ? (
-                            <Link href={routes.register} className="text-white/70 hover:text-white">
+                            <Link href={routes.register} className="text-muted-foreground hover:text-foreground">
                                 Register
                             </Link>
                         ) : null}
