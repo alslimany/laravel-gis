@@ -35,6 +35,7 @@ tests/
 │   ├── AnalysisTest.php
 │   ├── AuthenticationTest.php
 │   ├── AuthorizationTest.php
+│   ├── CoreLoopDemoTest.php
 │   ├── DataImportTest.php
 │   ├── ExportTest.php
 │   ├── GeoServerJobsTest.php
@@ -97,6 +98,39 @@ php artisan test
 # With Docker
 docker compose exec laravel-app php artisan test
 ```
+
+### Live demo smoke (CI substitute)
+
+Live smoke of the [core loop demo](DEMO.md) needs **PostGIS**, **GeoServer**, and **Redis** (the queue) running. With Docker Compose, start `postgis`, `geoserver`, and `redis`, and keep the `queue` service (or `php artisan queue:work`) running so imports finish and Publish can reach GeoServer.
+
+GitHub Actions is not the gate for this check. This filter is the local command that replaces CI. The class names are `CoreLoopDemoTest`, `DataImportTest`, `LayerTest`, and `ExportTest`:
+
+```bash
+php artisan test --filter='CoreLoopDemoTest|DataImportTest|LayerTest|ExportTest'
+```
+
+From the app container:
+
+```bash
+docker compose exec laravel-app php artisan test --filter='CoreLoopDemoTest|DataImportTest|LayerTest|ExportTest'
+```
+
+| Class | File |
+| --- | --- |
+| `CoreLoopDemoTest` | `tests/Feature/CoreLoopDemoTest.php` |
+| `DataImportTest` | `tests/Feature/DataImportTest.php` |
+| `LayerTest` | `tests/Feature/LayerTest.php` |
+| `ExportTest` | `tests/Feature/ExportTest.php` |
+
+`phpunit.xml` runs that filter on SQLite in memory with a sync queue. The live [DEMO.md](DEMO.md) walkthrough is the pass that needs the three services above.
+
+**GeoServer URL.** Inside Docker Compose, set `GEOSERVER_URL` to the service name and container port **8080**:
+
+```env
+GEOSERVER_URL=http://geoserver:8080/geoserver
+```
+
+`.env.example` already has this value. Do not use the host-mapped port **8081** for `GEOSERVER_URL`. `docker-compose.yml` publishes GeoServer as `8081:8080`: port **8081** is only for a browser on the host (`http://localhost:8081/geoserver`). Inside the Compose network the `geoserver` service listens on **8080**. A URL of `http://localhost:8081/...` from the app container does not reach GeoServer, and Publish stays a draft. `GEOSERVER_PUBLIC_URL` in `.env.example` (`http://127.0.0.1:8081/geoserver`) is the host-facing URL and is not a substitute for `GEOSERVER_URL`.
 
 ### Specific Test Suites
 
@@ -252,6 +286,12 @@ php artisan test --testsuite=Feature
     - Spatial queries
     - PostGIS functions
     - Data integrity
+
+11. **CoreLoopDemoTest**: Core-loop demo path
+    - Map builder for a clean organization
+    - Publish after GeoServer accepts the layer
+    - Public share tiles
+    - Layer export failure returns to the layer
 
 ## Browser Tests
 
@@ -538,6 +578,8 @@ In `phpunit.xml`:
 ```
 
 ## Continuous Integration
+
+The demo-path substitute for CI is the local filter in [Live demo smoke (CI substitute)](#live-demo-smoke-ci-substitute). That command is the check for this path.
 
 ### GitHub Actions
 
