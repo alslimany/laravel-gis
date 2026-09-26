@@ -50,6 +50,10 @@ export const useMapStore = create((set, get) => ({
             return;
         }
 
+        const layers = Array.isArray(data.layers) ? data.layers : [];
+        const current = get().selectedLayer;
+        const stillThere = layers.some((layer) => String(layer.id) === String(current));
+
         set({
             mapId: data.id ?? null,
             mapName: data.name ?? null,
@@ -57,7 +61,8 @@ export const useMapStore = create((set, get) => ({
                 ? { ...defaultViewport, ...data.viewport }
                 : { ...defaultViewport },
             basemap: supportedBasemap(data.basemap),
-            layers: Array.isArray(data.layers) ? data.layers : [],
+            layers,
+            selectedLayer: stillThere ? current : (layers[0]?.id ?? null),
         });
     },
 

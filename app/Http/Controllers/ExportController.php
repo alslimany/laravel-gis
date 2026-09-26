@@ -31,7 +31,7 @@ class ExportController extends Controller
 
         try {
             $geometryColumn = 'geometry'; // Default column name
-            
+
             // Get all features with geometry as GeoJSON
             $features = DB::select(
                 "SELECT *, ST_AsGeoJSON({$geometryColumn}) as geojson 
@@ -61,7 +61,7 @@ class ExportController extends Controller
                 ->header('Content-Type', 'application/geo+json')
                 ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return $this->exportFailed($request, $layer, $e);
         }
     }
 
@@ -77,7 +77,7 @@ class ExportController extends Controller
 
         try {
             $geometryColumn = 'geometry'; // Default column name
-            
+
             // Get all features with geometry as WKT
             $features = DB::select(
                 "SELECT *, ST_AsText({$geometryColumn}) as wkt 
@@ -85,12 +85,12 @@ class ExportController extends Controller
             );
 
             if (empty($features)) {
-                return response()->json(['error' => 'No data to export'], 404);
+                return $this->exportFailed($request, $layer, new \RuntimeException('This layer has no features to export.'), 404);
             }
 
             // Create CSV content
             $output = fopen('php://temp', 'r+');
-            
+
             // Write header
             $firstFeature = (array) $features[0];
             unset($firstFeature[$geometryColumn]);
@@ -113,7 +113,7 @@ class ExportController extends Controller
                 ->header('Content-Type', 'text/csv')
                 ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return $this->exportFailed($request, $layer, $e);
         }
     }
 
@@ -170,7 +170,7 @@ class ExportController extends Controller
     /**
      * Export layer attributes to Excel (xlsx).
      */
-    public function exportExcel(Layer $layer)
+    public function exportExcel(Request $request, Layer $layer)
     {
         if ($layer->organization_id !== auth()->user()->organization_id) {
             abort(403, 'Unauthorized');
@@ -225,8 +225,22 @@ class ExportController extends Controller
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ])->deleteFileAfterSend(true);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return $this->exportFailed($request, $layer, $e);
         }
+    }
+
+    /**
+     * Browser downloads go back to the layer with the reason. API clients still get JSON.
+     */
+    protected function exportFailed(Request $request, Layer $layer, \Throwable $e, int $status = 500)
+    {
+        if ($request->expectsJson() || $request->ajax() || $request->is('api/*')) {
+            return response()->json(['error' => $e->getMessage()], $status);
+        }
+
+        return redirect()
+            ->route('layers.show', $layer)
+            ->with('error', 'Export failed: '.$e->getMessage());
     }
 
     /**

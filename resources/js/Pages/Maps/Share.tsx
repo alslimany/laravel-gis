@@ -7,6 +7,7 @@ export default function Share({ map }) {
     const form = useForm({
         name: map.name,
         is_public: Boolean(map.is_public),
+        return_to_share: true,
     });
     const [copied, setCopied] = useState('');
     const shareUrl = map.share_token ? `${window.location.origin}/maps/shared/${map.share_token}` : '';
@@ -56,7 +57,7 @@ export default function Share({ map }) {
                     {copied ? <p className="text-ok">Copied {copied}.</p> : null}
                 </div>
             ) : (
-                <p className="mt-4 text-muted-foreground">This map is private. Turn on public access to generate a share link.</p>
+                <p className="mt-4 text-muted-foreground">This map is private. Turn on public access to show the share link.</p>
             )}
         </AppLayout>
     );

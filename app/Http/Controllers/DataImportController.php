@@ -110,7 +110,7 @@ class DataImportController extends Controller
 
         return redirect()
             ->route('imports.show', $import)
-            ->with('success', 'Dataset accepted. It is publishing as a feature layer in the background.');
+            ->with('success', 'Dataset accepted. A draft layer is being created. Publish it from the layer page when this import finishes.');
     }
 
     /**
@@ -255,13 +255,17 @@ class DataImportController extends Controller
      */
     protected function dispatchProcessingJob(DataImport $import): void
     {
-        match ($import->file_type) {
+        $pending = match ($import->file_type) {
             'shapefile' => ProcessShapefileJob::dispatch($import->id)->afterResponse(),
             'geojson', 'csv' => ProcessGeoJSONJob::dispatch($import->id)->afterResponse(),
             'kml' => ProcessKMLJob::dispatch($import->id)->afterResponse(),
             'xlsx' => ProcessExcelJob::dispatch($import->id)->afterResponse(),
             default => null,
         };
+
+        if ($pending === null) {
+            $import->markAsFailed('This file cannot be imported as a feature layer. Use a zipped shapefile, KML, GeoJSON, CSV, or Excel file.');
+        }
     }
 
     /**

@@ -133,10 +133,11 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
         try {
             const response = await window.axios.get('/layers', {
                 headers: { Accept: 'application/json' },
+                params: { published: 1 },
             });
 
             const payload = response.data?.data || response.data || [];
-            const list = Array.isArray(payload) ? payload : [];
+            const list = (Array.isArray(payload) ? payload : []).filter((layer) => layer.published);
             setPublishedLayers(list);
         } catch (error) {
             console.error('Error loading published layers:', error);
@@ -415,7 +416,21 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-muted-foreground">Only published layers are shown.</p>
+                                {publishedLayers.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        No published layers yet.{' '}
+                                        <a href="/layers" className="font-medium text-primary underline-offset-4 hover:underline">
+                                            Publish a layer
+                                        </a>
+                                        {' '}or{' '}
+                                        <a href="/imports/create" className="font-medium text-primary underline-offset-4 hover:underline">
+                                            import a dataset
+                                        </a>
+                                        .
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">Only published layers are shown.</p>
+                                )}
                             </div>
                         ) : null}
 

@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Layer;
 use App\Models\Map;
+use App\Services\ContentAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class MapController extends Controller
@@ -16,14 +19,14 @@ class MapController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $access = app(\App\Services\ContentAccessService::class);
+        $access = app(ContentAccessService::class);
         $all = Map::where('organization_id', $user->organization_id)
             ->with('user')
             ->latest()
             ->get();
         $visible = $access->filterVisible($user, 'map', $all);
         $page = max(1, (int) request('page', 1));
-        $maps = new \Illuminate\Pagination\LengthAwarePaginator(
+        $maps = new LengthAwarePaginator(
             $visible->forPage($page, 15)->values(),
             $visible->count(),
             15,
@@ -58,7 +61,7 @@ class MapController extends Controller
 
         $seedLayer = null;
         if ($request->filled('layer')) {
-            $seedLayer = \App\Models\Layer::where('organization_id', Auth::user()->organization_id)
+            $seedLayer = Layer::where('organization_id', Auth::user()->organization_id)
                 ->findOrFail((int) $request->query('layer'));
             $this->authorize('view', $seedLayer);
         }
@@ -79,7 +82,7 @@ class MapController extends Controller
             'viewport' => 'nullable|array',
             'basemap' => 'nullable|string',
             'layers' => 'nullable|array',
-            'is_public' => 'boolean'
+            'is_public' => 'boolean',
         ]);
 
         $validated['user_id'] = Auth::id();
@@ -90,7 +93,7 @@ class MapController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'map' => $map
+                'map' => $map,
             ]);
         }
 
@@ -144,16 +147,22 @@ class MapController extends Controller
             'viewport' => 'nullable|array',
             'basemap' => 'nullable|string',
             'layers' => 'nullable|array',
-            'is_public' => 'boolean'
+            'is_public' => 'boolean',
         ]);
 
         $map->update($validated);
+        $this->ensureShareToken($map);
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'map' => $map
+                'map' => $map->fresh(),
             ]);
+        }
+
+        if ($request->boolean('return_to_share')) {
+            return redirect()->route('maps.share', $map)
+                ->with('success', 'Sharing updated.');
         }
 
         return redirect()->route('maps.show', $map)
@@ -186,8 +195,10 @@ class MapController extends Controller
             abort(403);
         }
 
+        $this->ensureShareToken($map);
+
         return Inertia::render('Maps/Share', [
-            'map' => $map,
+            'map' => $map->fresh(),
         ]);
     }
 
@@ -274,7 +285,7 @@ class MapController extends Controller
 
         return [
             'id' => null,
-            'name' => $seedLayer->name ?? 'Untitled map',
+            'name' => $seedLayer?->name ?: 'Untitled map',
             'description' => '',
             'viewport' => $seedViewport,
             'basemap' => $seedBasemap,
@@ -282,9 +293,18 @@ class MapController extends Controller
         ];
     }
 
+    protected function ensureShareToken(Map $map): void
+    {
+        if ($map->share_token) {
+            return;
+        }
+
+        $map->forceFill(['share_token' => Str::random(32)])->save();
+    }
+
     protected function assertCanViewMap(Map $map): void
     {
-        if (! app(\App\Services\ContentAccessService::class)->canView(
+        if (! app(ContentAccessService::class)->canView(
             Auth::user(),
             'map',
             $map->id,

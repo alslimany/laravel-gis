@@ -207,7 +207,7 @@ export default function Create({
                         <div className="flex gap-3">
                             <GhostLink href="/imports">Cancel</GhostLink>
                             <PrimaryButton type="submit" disabled={feature.processing || feature.data.files.length === 0}>
-                                {feature.processing ? 'Publishing…' : 'Publish layer'}
+                                {feature.processing ? 'Importing…' : 'Import dataset'}
                             </PrimaryButton>
                         </div>
                     </form>

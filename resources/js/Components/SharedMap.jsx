@@ -68,11 +68,15 @@ export default function SharedMap({ map: mapRecord }) {
                 stroke: new Stroke({ color: styleCfg.stroke_color || '#dae2fd', width: Number(styleCfg.stroke_width || 1) }),
             });
             if (layerConfig.type === 'mvt' || layerConfig.mvtUrl) {
+                const numericId = /^\d+$/.test(String(layerConfig.id ?? ''));
+                const mvtUrl = mapRecord.share_token && numericId
+                    ? `/maps/shared/${mapRecord.share_token}/tiles/${layerConfig.id}/{z}/{x}/{y}.mvt`
+                    : (layerConfig.mvtUrl || `/api/layers/${layerConfig.id}/tiles/{z}/{x}/{y}.mvt`);
                 map.addLayer(
                     new VectorTileLayer({
                         source: new VectorTileSource({
                             format: new MVT(),
-                            url: layerConfig.mvtUrl || `/api/layers/${layerConfig.id}/tiles/{z}/{x}/{y}.mvt`,
+                            url: mvtUrl,
                         }),
                         style: vectorStyle,
                         opacity: layerConfig.opacity || 1,
