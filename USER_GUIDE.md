@@ -12,8 +12,10 @@ Complete guide for using the Laravel WebGIS application.
 6. [Spatial Analysis](#spatial-analysis)
 7. [Data Import](#data-import)
 8. [Project Management](#project-management)
-9. [Organization Settings](#organization-settings)
-10. [Tips and Best Practices](#tips-and-best-practices)
+9. [Forms](#forms)
+10. [Dashboards](#dashboards)
+11. [Organization Settings](#organization-settings)
+12. [Tips and Best Practices](#tips-and-best-practices)
 
 ## Getting Started
 
@@ -104,6 +106,10 @@ The dashboard provides:
 - **SRID**: Spatial Reference System (default: 4326)
 - **Published**: Whether layer is published to GeoServer
 
+### Links to maps, forms, and dashboards
+
+A layer can stand on its own. You can also connect it to a map, a form, or a dashboard when that is useful. None of those connections is required: a layer does not need a map, a form, or a dashboard, and those features do not need this layer.
+
 ### Publishing Layers
 
 1. Navigate to layer details
@@ -147,6 +153,8 @@ The dashboard provides:
 - **Top Bar**: Save, share, and export options
 
 ### Adding Layers
+
+A map may include layers. Adding one is optional: you can save a map with no layers, and a layer does not have to sit on a map to exist.
 
 #### WMS Layer (from GeoServer)
 
@@ -367,6 +375,18 @@ View all project activities:
 - Map updates
 - Comments
 - Member changes
+
+## Forms
+
+A form collects structured answers. It may write those answers into a layer, and a layer may supply the fields the form uses. That link is optional. You can use a form with no layer, and you can keep a layer with no form.
+
+## Dashboards
+
+A dashboard here is a saved board for monitoring. It is separate from the console home in [Dashboard Overview](#dashboard-overview).
+
+A dashboard may summarize a layer, and a layer may appear on a dashboard. Either can be used without the other.
+
+A dashboard may embed a saved map. That embed is optional: a dashboard works with no map, and a map works with no dashboard.
 
 ## Organization Settings
 
