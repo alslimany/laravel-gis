@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\GeometryColumnHelper;
+use App\Models\AnalysisResult;
 use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
@@ -15,8 +16,8 @@ class DashboardWidgetData
     /**
      * Aggregate dashboard widgets.
      *
-     * Layer and saved-map links are optional. A text widget, or any widget
-     * left unconfigured, stays on the dashboard without a data source.
+     * Layer, saved-map, and saved-analysis links are optional. A text widget,
+     * or any widget left unconfigured, stays on the dashboard without a data source.
      *
      * @param  array<int, array<string, mixed>>  $widgets
      * @param  array<string, string>  $filters
@@ -102,7 +103,8 @@ class DashboardWidgetData
             'chart_style' => $widget['chart_style'] ?? 'bar',
             'layer_id' => $widget['layer_id'] ?? null,
             'map_id' => isset($widget['map_id']) && (int) $widget['map_id'] ? (int) $widget['map_id'] : null,
-            'source' => $type === 'map' ? $this->mapSource($widget) : null,
+            'analysis_id' => isset($widget['analysis_id']) && (int) $widget['analysis_id'] ? (int) $widget['analysis_id'] : null,
+            'source' => $type === 'map' ? $this->mapSource($widget) : ($this->dataSource($widget, $type) === 'analysis' ? 'analysis' : null),
             'labels' => [],
             'values' => [],
             'rows' => [],
@@ -130,6 +132,10 @@ class DashboardWidgetData
 
         if ($type === 'map' && $this->mapSource($widget) === 'map') {
             return $this->savedMap($organizationId, $widget, $public);
+        }
+
+        if ($this->dataSource($widget, $type) === 'analysis') {
+            return $this->analysisResult($organizationId, $type, $widget, $filters, $categoryFields);
         }
 
         $layerId = $widget['layer_id'] ?? null;
@@ -198,6 +204,26 @@ class DashboardWidgetData
         }
 
         return ! empty($widget['map_id']) ? 'map' : 'layer';
+    }
+
+    /**
+     * Indicator, chart, table, and list widgets may read a saved analysis.
+     * Anything else stays on the layer path, which itself may be unconfigured.
+     *
+     * @param  array<string, mixed>  $widget
+     */
+    public function dataSource(array $widget, string $type): string
+    {
+        if ($type === 'map') {
+            return $this->mapSource($widget);
+        }
+
+        $source = strtolower((string) ($widget['source'] ?? ''));
+        if ($source === 'analysis' && in_array($type, DashboardWidgetDocument::ANALYSIS_TYPES, true)) {
+            return 'analysis';
+        }
+
+        return 'layer';
     }
 
     /**
@@ -328,10 +354,87 @@ class DashboardWidgetData
     }
 
     /**
+     * Aggregate a saved query or analysis over the features it recorded.
+     * The link is optional: a widget with no analysis stays empty.
+     *
      * @param  array<string, mixed>  $widget
+     * @param  array<string, string>  $filters
+     * @param  array<string, string>  $categoryFields
      * @return array<string, mixed>
      */
-    protected function aggregateLayer(Layer $layer, string $type, array $widget, ?string $filterValue, ?string $filterField, bool $public = false, ?string $shareToken = null): array
+    protected function analysisResult(int $organizationId, string $type, array $widget, array $filters, array $categoryFields): array
+    {
+        $analysisId = isset($widget['analysis_id']) ? (int) $widget['analysis_id'] : 0;
+        if ($analysisId === 0) {
+            return $this->empty('Choose a saved analysis when this widget should show a result.');
+        }
+
+        $result = AnalysisResult::query()
+            ->where('id', $analysisId)
+            ->where('organization_id', $organizationId)
+            ->first();
+
+        if (! $result) {
+            return $this->failure('Saved analysis not found.');
+        }
+
+        $ids = collect($result->feature_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $layer = $result->layer_id
+            ? Layer::query()->where('id', $result->layer_id)->where('organization_id', $organizationId)->first()
+            : null;
+
+        $meta = [
+            'source' => 'analysis',
+            'analysis_id' => $result->id,
+            'layer_id' => $layer?->id,
+        ];
+
+        if (! $layer || ! $layer->table_name || ! Schema::hasTable($layer->table_name)) {
+            if ($type === 'indicator' && strtolower((string) ($widget['aggregation'] ?? 'count')) === 'count') {
+                return array_merge($meta, [
+                    'status' => 'ok',
+                    'value' => (int) $result->feature_count,
+                    'error' => null,
+                    'message' => null,
+                ]);
+            }
+
+            return array_merge($meta, $this->failure('Layer or table not found.'));
+        }
+
+        if ($ids === []) {
+            if ($type === 'indicator' && strtolower((string) ($widget['aggregation'] ?? 'count')) === 'count') {
+                return array_merge($meta, [
+                    'status' => 'ok',
+                    'value' => (int) $result->feature_count,
+                    'error' => null,
+                    'message' => null,
+                ]);
+            }
+
+            return array_merge($meta, $this->empty('This analysis has no features.'));
+        }
+
+        $requested = $filters[(string) $layer->id] ?? null;
+        $filterValue = $requested;
+        $filterField = $categoryFields[(string) $layer->id] ?? null;
+        $partial = $this->aggregateLayer($layer, $type, $widget, $filterValue, $filterField, false, null, $ids);
+
+        return array_merge($meta, $partial);
+    }
+
+    /**
+     * @param  array<string, mixed>  $widget
+     * @param  array<int, int>|null  $onlyIds
+     * @return array<string, mixed>
+     */
+    protected function aggregateLayer(Layer $layer, string $type, array $widget, ?string $filterValue, ?string $filterField, bool $public = false, ?string $shareToken = null, ?array $onlyIds = null): array
     {
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
@@ -339,6 +442,12 @@ class DashboardWidgetData
         $groupBy = $this->safeColumn($table, $widget['group_by'] ?? $column);
         $agg = strtolower((string) ($widget['aggregation'] ?? 'count'));
         $query = DB::table($table);
+        if ($onlyIds !== null) {
+            if (! Schema::hasColumn($table, 'id')) {
+                return $this->failure('Layer or table not found.');
+            }
+            $query->whereIn('id', $onlyIds);
+        }
         $filtered = $this->applyCategoryFilter($query, $table, $filterValue, $filterField);
 
         if ($type === 'indicator') {

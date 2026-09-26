@@ -7,9 +7,14 @@ import {
     LinearScale,
     ArcElement,
     PieController,
+    LineController,
+    LineElement,
+    PointElement,
     Tooltip,
     Legend,
+    Filler,
 } from 'chart.js';
+import { themeColors } from './chartTheme';
 
 Chart.register(
     BarController,
@@ -18,54 +23,72 @@ Chart.register(
     LinearScale,
     ArcElement,
     PieController,
+    LineController,
+    LineElement,
+    PointElement,
     Tooltip,
-    Legend
+    Legend,
+    Filler,
 );
 
-const COLORS = [
-    '#0f766e',
-    '#e74c3c',
-    '#2ecc71',
-    '#f39c12',
-    '#9b59b6',
-    '#1abc9c',
-    '#34495e',
-    '#e67e22',
-];
+function chartStyle(widget) {
+    if (widget.type === 'pie') return 'pie';
+    if (widget.type === 'line' || widget.chart_style === 'line') return 'line';
+    if (widget.type === 'bar' || widget.type === 'serial') return 'bar';
+    return null;
+}
 
 function ChartWidget({ widget }) {
     const canvasRef = useRef(null);
     const chartRef = useRef(null);
+    const style = chartStyle(widget);
 
     useEffect(() => {
-        if (!canvasRef.current || !['bar', 'pie'].includes(widget.type) || widget.error) {
+        if (!canvasRef.current || !style || widget.error || widget.status === 'empty') {
             return undefined;
         }
+        const colors = themeColors();
         if (chartRef.current) {
             chartRef.current.destroy();
         }
         chartRef.current = new Chart(canvasRef.current, {
-            type: widget.type === 'pie' ? 'pie' : 'bar',
+            type: style === 'pie' ? 'pie' : style === 'line' ? 'line' : 'bar',
             data: {
                 labels: widget.labels || [],
                 datasets: [
                     {
                         label: widget.title,
                         data: widget.values || [],
-                        backgroundColor: COLORS,
+                        backgroundColor: style === 'line' ? colors.series : colors.palette,
+                        borderColor: colors.series,
+                        borderWidth: style === 'line' ? 2 : 0,
+                        fill: style === 'line',
+                        tension: 0.3,
                     },
                 ],
             },
             options: {
                 responsive: true,
-                plugins: { legend: { display: widget.type === 'pie' } },
+                plugins: {
+                    legend: {
+                        display: style === 'pie',
+                        labels: { color: colors.copy },
+                    },
+                },
+                scales:
+                    style === 'pie'
+                        ? {}
+                        : {
+                              x: { ticks: { color: colors.muted }, grid: { color: colors.line } },
+                              y: { ticks: { color: colors.muted }, grid: { color: colors.line } },
+                          },
             },
         });
         return () => {
             chartRef.current?.destroy();
             chartRef.current = null;
         };
-    }, [widget]);
+    }, [widget, style]);
 
     return <canvas ref={canvasRef} height={180} />;
 }
@@ -123,7 +146,9 @@ export default function DashboardBoard({ dataUrl }) {
                         <div className="card-body">
                             {widget.error ? (
                                 <div className="text-danger small">{widget.error}</div>
-                            ) : widget.type === 'kpi' ? (
+                            ) : widget.status === 'empty' ? (
+                                <div className="text-muted small">{widget.message}</div>
+                            ) : widget.type === 'kpi' || widget.type === 'indicator' ? (
                                 <div className="display-6">{widget.value ?? '—'}</div>
                             ) : widget.type === 'table' ? (
                                 <div className="table-responsive" style={{ maxHeight: 260 }}>

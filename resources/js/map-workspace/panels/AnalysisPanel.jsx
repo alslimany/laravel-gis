@@ -9,6 +9,23 @@ function publishAnalysisResult(payload, setAnalysisResults, onAnalysisComplete) 
     onAnalysisComplete?.(payload);
 }
 
+function featureIds(features) {
+    if (!Array.isArray(features)) {
+        return [];
+    }
+
+    const ids = [];
+    features.forEach((feature) => {
+        const raw = feature?.id ?? feature?.properties?.id;
+        const numeric = Number(raw);
+        if (Number.isInteger(numeric) && numeric > 0) {
+            ids.push(numeric);
+        }
+    });
+
+    return [...new Set(ids)];
+}
+
 function analysisError(data) {
     if (!data) {
         return 'Analysis failed';
@@ -69,6 +86,9 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
         { column: '', operator: '=', value: '' },
     ]);
     const [results, setResults] = useState(null);
+    const [resultKind, setResultKind] = useState('query');
+    const [savedName, setSavedName] = useState('');
+    const [saveState, setSaveState] = useState(null);
 
     const addCondition = () => {
         setQueryConditions((prev) => [...prev, { column: '', operator: '=', value: '' }]);
@@ -151,6 +171,8 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             }
 
             setResults(data);
+            setResultKind('spatial_query');
+            setSaveState(null);
             publishAnalysisResult(
                 {
                     type: 'spatial-query',
@@ -203,6 +225,8 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             }
 
             setResults(data);
+            setResultKind('attribute_query');
+            setSaveState(null);
             publishAnalysisResult(
                 {
                     type: 'attribute-query',
@@ -368,7 +392,47 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
         map.renderSync();
     };
 
+    const saveResult = async () => {
+        const ids = featureIds(results?.features);
+        const name = savedName.trim();
+        if (!selectedLayer || ids.length === 0) {
+            alert('Run a query that returns features on a layer, then save it.');
+            return;
+        }
+        if (!name) {
+            alert('Name this result before saving it.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/analysis/results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    name,
+                    layer_id: selectedLayer.id,
+                    kind: resultKind,
+                    feature_ids: ids.slice(0, 2000),
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                alert(analysisError(data));
+                return;
+            }
+            setSaveState(`Saved "${data.analysis?.name || name}" for dashboards.`);
+        } catch (error) {
+            console.error(error);
+            alert('Could not save this analysis.');
+        }
+    };
+
     const otherLayers = layers.filter((layer) => layer.id !== selectedLayer?.id);
+    const savableIds = featureIds(results?.features);
 
     return (
         <div className="analysis-panel">
@@ -554,6 +618,21 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                             <p>
                                 <strong>Count:</strong> {results.count}
                             </p>
+                            {savableIds.length > 0 && selectedLayer ? (
+                                <div className="mt-2">
+                                    <input
+                                        value={savedName}
+                                        onChange={(event) => setSavedName(event.target.value)}
+                                        className="form-control form-control-sm mb-2"
+                                        placeholder="Name this result"
+                                        aria-label="Saved analysis name"
+                                    />
+                                    <button type="button" onClick={saveResult} className="btn btn-sm btn-secondary w-100">
+                                        Save for dashboards
+                                    </button>
+                                    {saveState ? <p className="text-muted mt-2 mb-0">{saveState}</p> : null}
+                                </div>
+                            ) : null}
                             {results.features && (
                                 <div className="feature-list">
                                     {results.features.slice(0, 5).map((_, index) => (

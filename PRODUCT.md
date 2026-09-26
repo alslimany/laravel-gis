@@ -40,6 +40,7 @@ Confirmed:
   - Form and layer. A form may collect into a layer, and a layer may supply the fields a form uses. A form does not require a layer. A layer does not require a form.
   - Dashboard and layer. A dashboard may summarize a layer, and a layer may appear on a dashboard. Neither requires the other.
   - Dashboard and map. A dashboard may embed a saved map. A dashboard does not require a map. A map does not require a dashboard.
+  - Dashboard and analysis. A dashboard widget may summarize a saved analysis or query result. A dashboard does not require an analysis. An analysis does not require a dashboard.
   - Map and layer. A map may include layers, and a layer may be placed on a map. A map does not require a layer. A layer does not require a map.
 
 ### Public shares

@@ -51,4 +51,5 @@ A public dashboard shows its widgets to guests. A saved map on that dashboard is
 ## Checks that are out of this script
 
 - A form does not need a layer, and a dashboard does not need a layer or a map.
+- A dashboard widget may summarize a saved analysis or query result. That link is optional.
 - 3D, routing, and a basemap marketplace are not part of this path.
