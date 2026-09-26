@@ -42,6 +42,12 @@ Confirmed:
   - Dashboard and map. A dashboard may embed a saved map. A dashboard does not require a map. A map does not require a dashboard.
   - Map and layer. A map may include layers, and a layer may be placed on a map. A map does not require a layer. A layer does not require a map.
 
+### Public shares
+
+A signed-out guest with a public map link sees that map's name, description, and basemap, and the vector layers placed on the map. Those layers load from `/maps/shared/{token}/tiles/{layer}/{z}/{x}/{y}.mvt`. A map with no vector layers still shows its basemap. The link does not include other layers in the organization, and it does not open the signed-in tile API.
+
+A public dashboard shows the widgets on that dashboard. A saved map is included only when the map itself is public, and its tiles use the map share route above. A map widget pointed at a layer uses `/dashboards/shared/{token}/tiles/{layer}/{z}/{x}/{y}.mvt` for that layer only. A private map's title, id, and layer list are left off the public dashboard. Guests do not receive tiles for another organization, a private map, or a layer that is not on the share.
+
 Open:
 
 - The product name is Lumina GIS. The mark is a white corner and dashed diagonal on black. Organization names stay on the organization, not in the product wordmark.

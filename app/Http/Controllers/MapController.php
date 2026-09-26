@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Layer;
 use App\Models\Map;
 use App\Services\ContentAccessService;
+use App\Services\PublicShareMap;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -212,7 +213,7 @@ class MapController extends Controller
             ->firstOrFail();
 
         return Inertia::render('Maps/Shared', [
-            'map' => $map,
+            'map' => app(PublicShareMap::class)->present($map),
         ]);
     }
 

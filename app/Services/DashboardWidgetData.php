@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\GeometryColumnHelper;
+use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
 use Illuminate\Database\Query\Builder;
@@ -21,7 +22,7 @@ class DashboardWidgetData
      * @param  array<string, string>  $filters
      * @return array<int, array<string, mixed>>
      */
-    public function build(int $organizationId, array $widgets, array $filters = [], bool $public = false): array
+    public function build(int $organizationId, array $widgets, array $filters = [], bool $public = false, ?string $shareToken = null): array
     {
         $results = [];
         $categoryFields = $this->categoryFields($widgets);
@@ -36,7 +37,9 @@ class DashboardWidgetData
                     $type,
                     $widget,
                     $filters,
-                    $categoryFields
+                    $categoryFields,
+                    $public,
+                    $shareToken,
                 ));
             } catch (\Throwable $e) {
                 report($e);
@@ -119,14 +122,14 @@ class DashboardWidgetData
      * @param  array<string, string>  $categoryFields
      * @return array<string, mixed>
      */
-    protected function resolve(int $organizationId, string $type, array $widget, array $filters, array $categoryFields): array
+    protected function resolve(int $organizationId, string $type, array $widget, array $filters, array $categoryFields, bool $public = false, ?string $shareToken = null): array
     {
         if ($type === 'text') {
             return ['status' => 'ok'];
         }
 
         if ($type === 'map' && $this->mapSource($widget) === 'map') {
-            return $this->savedMap($organizationId, $widget);
+            return $this->savedMap($organizationId, $widget, $public);
         }
 
         $layerId = $widget['layer_id'] ?? null;
@@ -139,7 +142,15 @@ class DashboardWidgetData
             ->where('organization_id', $organizationId)
             ->first();
 
-        if (! $layer || ! $layer->table_name || ! Schema::hasTable($layer->table_name)) {
+        if (! $layer) {
+            if ($public && $type === 'map') {
+                return $this->hiddenMap();
+            }
+
+            return $this->failure('Layer or table not found.');
+        }
+
+        if (! $layer->table_name || ! Schema::hasTable($layer->table_name)) {
             return $this->failure('Layer or table not found.');
         }
 
@@ -147,7 +158,7 @@ class DashboardWidgetData
         $filterValue = $type === 'category' ? null : $requested;
         $filterField = $categoryFields[(string) $layerId] ?? null;
 
-        $partial = $this->aggregateLayer($layer, $type, $widget, $filterValue, $filterField);
+        $partial = $this->aggregateLayer($layer, $type, $widget, $filterValue, $filterField, $public, $shareToken);
         if ($type === 'category') {
             $partial['value'] = ($requested === null || $requested === '') ? null : (string) $requested;
         }
@@ -190,10 +201,34 @@ class DashboardWidgetData
     }
 
     /**
+     * A public dashboard may serve tiles only for a layer a map widget
+     * points at directly. Saved-map layers use that map's own share route,
+     * and a private map contributes no layers.
+     */
+    public function shareExposesLayer(DashboardBoard $dashboard, Layer $layer): bool
+    {
+        if (! $dashboard->is_public || (int) $dashboard->organization_id !== (int) $layer->organization_id) {
+            return false;
+        }
+
+        $widgets = app(DashboardWidgetDocument::class)->normalize($dashboard->widgets ?? []);
+        foreach ($widgets as $widget) {
+            if (($widget['type'] ?? '') !== 'map' || $this->mapSource($widget) !== 'layer') {
+                continue;
+            }
+            if ((int) ($widget['layer_id'] ?? 0) === (int) $layer->id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param  array<string, mixed>  $widget
      * @return array<string, mixed>
      */
-    protected function savedMap(int $organizationId, array $widget): array
+    protected function savedMap(int $organizationId, array $widget, bool $public = false): array
     {
         $mapId = isset($widget['map_id']) ? (int) $widget['map_id'] : 0;
         if ($mapId === 0) {
@@ -205,8 +240,10 @@ class DashboardWidgetData
             ->where('organization_id', $organizationId)
             ->first();
 
-        if (! $map) {
-            return $this->failure('Saved map not found.');
+        if (! $map || ($public && ! $map->is_public)) {
+            return $public
+                ? $this->hiddenMap()
+                : $this->failure('Saved map not found.');
         }
 
         return [
@@ -215,7 +252,26 @@ class DashboardWidgetData
             'message' => null,
             'source' => 'map',
             'map_id' => $map->id,
-            'map' => $this->presentSavedMap($map),
+            'map' => $public
+                ? app(PublicShareMap::class)->present($map)
+                : $this->presentSavedMap($map),
+        ];
+    }
+
+    /**
+     * Public shares drop a map widget instead of describing a private map.
+     *
+     * @return array<string, mixed>
+     */
+    protected function hiddenMap(): array
+    {
+        return [
+            'status' => 'empty',
+            'message' => null,
+            'error' => null,
+            'map' => null,
+            'map_id' => null,
+            'source' => 'map',
         ];
     }
 
@@ -275,7 +331,7 @@ class DashboardWidgetData
      * @param  array<string, mixed>  $widget
      * @return array<string, mixed>
      */
-    protected function aggregateLayer(Layer $layer, string $type, array $widget, ?string $filterValue, ?string $filterField): array
+    protected function aggregateLayer(Layer $layer, string $type, array $widget, ?string $filterValue, ?string $filterField, bool $public = false, ?string $shareToken = null): array
     {
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
@@ -368,6 +424,9 @@ class DashboardWidgetData
 
         if ($type === 'map') {
             $style = is_array($layer->style_config) ? $layer->style_config : [];
+            $mvtUrl = ($public && $shareToken)
+                ? app(PublicShareMap::class)->dashboardTileUrl($shareToken, $layer->id)
+                : url("/api/layers/{$layer->id}/tiles/{z}/{x}/{y}.mvt");
 
             return [
                 'status' => 'ok',
@@ -382,7 +441,7 @@ class DashboardWidgetData
                         'id' => $layer->id,
                         'name' => $layer->name,
                         'type' => 'mvt',
-                        'mvtUrl' => url("/api/layers/{$layer->id}/tiles/{z}/{x}/{y}.mvt"),
+                        'mvtUrl' => $mvtUrl,
                         'visible' => true,
                         'opacity' => 1,
                         'style_config' => [

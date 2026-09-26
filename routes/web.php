@@ -57,6 +57,9 @@ Route::get('/f/{token}', [FormController::class, 'publicShow'])->name('forms.pub
 Route::post('/f/{token}', [FormController::class, 'publicSubmit'])->name('forms.public.submit');
 Route::get('/dashboards/shared/{token}', [DashboardBoardController::class, 'publicView'])->name('dashboards.public');
 Route::get('/dashboards/shared/{token}/data', [DashboardBoardController::class, 'publicData'])->name('dashboards.public.data');
+Route::get('/dashboards/shared/{token}/tiles/{layer}/{z}/{x}/{y}.mvt', [MvtController::class, 'publicDashboardTile'])
+    ->whereNumber(['layer', 'z', 'x', 'y'])
+    ->name('dashboards.shared.tiles');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

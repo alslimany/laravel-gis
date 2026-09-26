@@ -49,7 +49,7 @@ export default function Inspector({ widget, layers = [], maps = [], onChange, on
                 ) : null}
 
                 {widget.type === 'map' && mapSource === 'map' ? (
-                    <Field label="Saved map" hint="The shared view includes this map when one is selected.">
+                    <Field label="Saved map" hint="On a public dashboard, only a public saved map is shown. A private map stays off that link.">
                         <Select
                             value={widget.map_id || ''}
                             onChange={(event) => patch({ map_id: event.target.value ? Number(event.target.value) : null, source: 'map' })}
@@ -57,7 +57,7 @@ export default function Inspector({ widget, layers = [], maps = [], onChange, on
                             <option value="">No saved map</option>
                             {maps.map((item) => (
                                 <option key={item.id} value={item.id}>
-                                    {item.name}
+                                    {item.name}{item.is_public ? '' : ' · Private'}
                                 </option>
                             ))}
                         </Select>
