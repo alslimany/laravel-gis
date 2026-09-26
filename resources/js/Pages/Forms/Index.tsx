@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { when } from '@/lib/format';
+import { count, when } from '@/lib/format';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
 
 export default function Index({ forms }) {
@@ -28,6 +28,7 @@ export default function Index({ forms }) {
                             <Table.Row>
                                 <Table.Head className={thClass}>Name</Table.Head>
                                 <Table.Head className={`${thClass} hidden md:table-cell`}>Layer</Table.Head>
+                                <Table.Head className={`${thClass} hidden sm:table-cell`}>Submissions</Table.Head>
                                 <Table.Head className={thClass}>Visibility</Table.Head>
                                 <Table.Head className={`${thClass} hidden md:table-cell`}>Created</Table.Head>
                                 <Table.Head className={thClass}>Actions</Table.Head>
@@ -41,7 +42,8 @@ export default function Index({ forms }) {
                                             {form.name}
                                         </Link>
                                     </Table.Cell>
-                                    <Table.Cell className={`${tdClass} hidden md:table-cell`}>{form.layer?.name || '—'}</Table.Cell>
+                                    <Table.Cell className={`${tdClass} hidden md:table-cell`}>{form.layer?.name || 'Standalone'}</Table.Cell>
+                                    <Table.Cell className={`${tdClass} hidden sm:table-cell`}>{count(form.submissions_count)}</Table.Cell>
                                     <Table.Cell className={tdClass}>
                                         <Pill live={form.is_public}>{form.is_public ? 'Public' : 'Private'}</Pill>
                                     </Table.Cell>

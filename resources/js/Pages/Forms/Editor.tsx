@@ -3,16 +3,30 @@ import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, Heading, PageHeader, PrimaryButton, Select, TextArea, TextInput } from '@/components/gis';
 
 const TYPES = ['text', 'textarea', 'number', 'select', 'checkbox', 'date'];
+const NON_SPATIAL = new Set(['', 'none', 'table', 'raster', 'unknown']);
+
+function layerIsSpatial(layer) {
+    if (!layer?.geometry_type) {
+        return false;
+    }
+
+    return !NON_SPATIAL.has(String(layer.geometry_type).toLowerCase());
+}
 
 export default function Editor({ form: record = null, layers = [] }) {
     const editing = Boolean(record);
     const form = useForm({
         name: record?.name || '',
         description: record?.description || '',
-        layer_id: record?.layer_id || '',
+        layer_mode: record?.layer_id ? 'link' : 'none',
+        layer_id: record?.layer_id ? String(record.layer_id) : '',
+        collect_geometry: Boolean(record?.collect_geometry || (record?.layer_id && layerIsSpatial(layers.find((layer) => layer.id === record.layer_id)))),
         is_public: Boolean(record?.is_public),
         schema: record?.schema?.length ? record.schema : [{ name: '', label: '', type: 'text', required: false }],
     });
+
+    const selectedLayer = layers.find((layer) => String(layer.id) === String(form.data.layer_id));
+    const spatialLink = form.data.layer_mode === 'link' && layerIsSpatial(selectedLayer);
 
     function updateField(index, key, value) {
         const schema = form.data.schema.map((field, i) => (i === index ? { ...field, [key]: value } : field));
@@ -21,6 +35,16 @@ export default function Editor({ form: record = null, layers = [] }) {
 
     function submit(event) {
         event.preventDefault();
+        form.transform((data) => ({
+            name: data.name,
+            description: data.description,
+            is_public: data.is_public,
+            layer_mode: data.layer_mode,
+            collect_geometry: spatialLink ? true : data.collect_geometry,
+            create_layer: data.layer_mode === 'create',
+            layer_id: data.layer_mode === 'link' && data.layer_id ? data.layer_id : null,
+            schema: data.schema,
+        }));
         if (editing) form.put(`/forms/${record.id}`);
         else form.post('/forms');
     }
@@ -35,21 +59,72 @@ export default function Editor({ form: record = null, layers = [] }) {
                 <Field label="Description">
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
-                <Field label="Target layer" error={form.errors.layer_id}>
-                    <Select value={form.data.layer_id} required onChange={(event) => form.setData('layer_id', event.target.value)}>
-                        <option value="">Select layer</option>
-                        {layers.map((layer) => (
-                            <option key={layer.id} value={layer.id}>
-                                {layer.name}
-                            </option>
-                        ))}
+                <Field
+                    label="Layer"
+                    error={form.errors.layer_id || form.errors.schema}
+                    hint="A layer is optional. Standalone forms still store every submission. Link a layer, or create one from these fields, when you want submissions on the map."
+                >
+                    <Select
+                        value={form.data.layer_mode}
+                        onChange={(event) => {
+                            const layer_mode = event.target.value;
+                            form.setData({
+                                ...form.data,
+                                layer_mode,
+                                layer_id: layer_mode === 'link' ? form.data.layer_id : '',
+                            });
+                        }}
+                    >
+                        <option value="none">Standalone (no layer)</option>
+                        <option value="link">Link to an existing layer</option>
+                        <option value="create">Create a layer from these fields</option>
                     </Select>
                 </Field>
+                {form.data.layer_mode === 'link' ? (
+                    <Field label="Existing layer" error={form.errors.layer_id}>
+                        <Select
+                            value={form.data.layer_id}
+                            onChange={(event) => {
+                                const layer_id = event.target.value;
+                                const layer = layers.find((item) => String(item.id) === String(layer_id));
+                                form.setData({
+                                    ...form.data,
+                                    layer_id,
+                                    collect_geometry: layerIsSpatial(layer) ? true : form.data.collect_geometry,
+                                });
+                            }}
+                        >
+                            <option value="">Choose a layer</option>
+                            {layers.map((layer) => (
+                                <option key={layer.id} value={layer.id}>
+                                    {layer.name}
+                                    {layer.geometry_type ? ` (${layer.geometry_type})` : ''}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+                ) : null}
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={spatialLink || form.data.collect_geometry}
+                        disabled={spatialLink}
+                        onChange={(event) => form.setData('collect_geometry', event.target.checked)}
+                    />
+                    Collect a location
+                </label>
+                <p className="text-xs text-muted-foreground">
+                    {spatialLink
+                        ? 'This layer stores geometry, so each submission needs a point.'
+                        : form.data.layer_mode === 'create'
+                          ? 'Turn this on to create a point layer. Leave it off for an attribute-only layer.'
+                          : 'Leave this off for a non-spatial form. Submissions can still include a location later.'}
+                </p>
                 <label className="flex items-center gap-2">
                     <input type="checkbox" checked={form.data.is_public} onChange={(event) => form.setData('is_public', event.target.checked)} />
                     Public shareable link
                 </label>
-                <Heading as="h2" >Fields</Heading>
+                <Heading as="h2">Fields</Heading>
                 {form.data.schema.map((field, index) => (
                     <div key={index} className="grid gap-2 border border-border p-3 sm:grid-cols-4">
                         <TextInput placeholder="column" value={field.name || ''} onChange={(event) => updateField(index, 'name', event.target.value)} />
@@ -67,7 +142,7 @@ export default function Editor({ form: record = null, layers = [] }) {
                 ))}
                 <button
                     type="button"
-                    className="font-medium text-link"
+                    className="font-medium text-primary hover:underline"
                     onClick={() => form.setData('schema', [...form.data.schema, { name: '', label: '', type: 'text', required: false }])}
                 >
                     Add field

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\GeoServerService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,8 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(\App\Services\GeoServerService::class, function ($app) {
-            return new \App\Services\GeoServerService;
+        $this->app->singleton(GeoServerService::class, function ($app) {
+            return new GeoServerService;
         });
     }
 
@@ -21,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Pages live in resources/js/Pages. The package default is js/pages,
+        // which does not resolve on case-sensitive filesystems.
+        config([
+            'inertia.pages.paths' => [resource_path('js/Pages')],
+        ]);
     }
 }
