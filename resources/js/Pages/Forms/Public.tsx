@@ -16,6 +16,7 @@ export default function Public({ form, requiresGeometry = false }) {
     });
 
     const showLocation = Boolean(requiresGeometry) || includeLocation;
+    const attributes = formState.data.attributes || {};
 
     function setAttribute(name, value) {
         formState.setData('attributes', { ...formState.data.attributes, [name]: value });
@@ -23,6 +24,16 @@ export default function Public({ form, requiresGeometry = false }) {
 
     function submit(event) {
         event.preventDefault();
+        const visibleAttributes = {};
+        for (const field of fields) {
+            if (!field.name || !isFieldVisible(field, attributes)) {
+                continue;
+            }
+            if (Object.prototype.hasOwnProperty.call(attributes, field.name)) {
+                visibleAttributes[field.name] = attributes[field.name];
+            }
+        }
+        formState.transform((data) => ({ ...data, attributes: visibleAttributes }));
         formState.post(`/f/${form.share_token}`, { forceFormData: true });
     }
 
@@ -33,23 +44,36 @@ export default function Public({ form, requiresGeometry = false }) {
                 <p className="text-muted-foreground">{form.description}</p>
                 <Flash />
                 {fields.map((field) =>
-                    field.name ? (
+                    field.name && isFieldVisible(field, attributes) ? (
                         <Field key={field.name} label={field.label || field.name} error={formState.errors[`attributes.${field.name}`]}>
                             {field.type === 'textarea' ? (
-                                <TextArea required={field.required} onChange={(event) => setAttribute(field.name, event.target.value)} />
+                                <TextArea
+                                    required={field.required}
+                                    value={attributes[field.name] ?? ''}
+                                    onChange={(event) => setAttribute(field.name, event.target.value)}
+                                />
                             ) : field.type === 'select' ? (
-                                <Select required={field.required} onChange={(event) => setAttribute(field.name, event.target.value)}>
+                                <Select
+                                    required={field.required}
+                                    value={attributes[field.name] ?? ''}
+                                    onChange={(event) => setAttribute(field.name, event.target.value)}
+                                >
                                     <option value="">Select</option>
                                     {(field.options || []).map((option) => (
                                         <option key={option}>{option}</option>
                                     ))}
                                 </Select>
                             ) : field.type === 'checkbox' ? (
-                                <input type="checkbox" onChange={(event) => setAttribute(field.name, event.target.checked ? '1' : '0')} />
+                                <input
+                                    type="checkbox"
+                                    checked={attributes[field.name] === '1' || attributes[field.name] === true}
+                                    onChange={(event) => setAttribute(field.name, event.target.checked ? '1' : '0')}
+                                />
                             ) : (
                                 <TextInput
                                     type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
                                     required={field.required}
+                                    value={attributes[field.name] ?? ''}
                                     onChange={(event) => setAttribute(field.name, event.target.value)}
                                 />
                             )}
@@ -135,4 +159,27 @@ export default function Public({ form, requiresGeometry = false }) {
             </form>
         </PublicLayout>
     );
+}
+
+function answerText(value) {
+    if (value === true) {
+        return '1';
+    }
+    if (value === false || value === null || value === undefined) {
+        return '';
+    }
+
+    return String(value).trim();
+}
+
+function isFieldVisible(field, attributes) {
+    const rule = field.visibility;
+    if (!rule?.field || !rule?.operator) {
+        return true;
+    }
+
+    const matches = answerText(attributes?.[rule.field]) === answerText(rule.value);
+    const condition = rule.operator === 'not_equals' ? !matches : matches;
+
+    return rule.action === 'hide' ? !condition : condition;
 }

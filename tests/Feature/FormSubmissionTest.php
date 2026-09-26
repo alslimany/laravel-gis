@@ -655,6 +655,214 @@ class FormSubmissionTest extends TestCase
         $this->assertDatabaseHas('layers', ['id' => $layer->id]);
     }
 
+    public function test_editor_can_save_one_show_when_rule_without_a_layer(): void
+    {
+        $form = $this->storeForm([
+            'name' => 'Branching survey',
+            'schema' => $this->branchingSchema(),
+        ]);
+
+        $this->assertNull($form->layer_id);
+        $this->assertSame('show', $form->schema[1]['visibility']['action']);
+        $this->assertSame('status', $form->schema[1]['visibility']['field']);
+        $this->assertSame('equals', $form->schema[1]['visibility']['operator']);
+        $this->assertSame('yes', $form->schema[1]['visibility']['value']);
+        $this->assertArrayNotHasKey('visibility', $form->schema[0]);
+
+        $this->get(route('forms.public.show', $form->share_token))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Forms/Public')
+                ->where('form.schema.1.visibility.action', 'show')
+                ->where('form.schema.1.visibility.field', 'status')
+                ->where('form.schema.1.visibility.operator', 'equals')
+                ->where('form.schema.1.visibility.value', 'yes'));
+    }
+
+    public function test_visibility_rule_must_reference_another_field(): void
+    {
+        $schema = $this->branchingSchema();
+        $schema[1]['visibility']['field'] = 'details';
+
+        $this->actingAs($this->editor)
+            ->post(route('forms.store'), [
+                'name' => 'Self rule',
+                'is_public' => true,
+                'schema' => $schema,
+            ])
+            ->assertSessionHasErrors('schema.1.visibility.field');
+
+        $schema[1]['visibility']['field'] = 'status';
+        $schema[1]['visibility']['operator'] = 'contains';
+
+        $this->actingAs($this->editor)
+            ->post(route('forms.store'), [
+                'name' => 'Bad operator',
+                'is_public' => true,
+                'schema' => $schema,
+            ])
+            ->assertSessionHasErrors('schema.1.visibility.operator');
+
+        $this->assertDatabaseCount('forms', 0);
+    }
+
+    public function test_public_submit_respects_a_show_when_rule(): void
+    {
+        $form = $this->storeForm([
+            'name' => 'Show when',
+            'schema' => $this->branchingSchema(),
+        ]);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'no', 'details' => 'should not stick'],
+        ])->assertRedirect(route('forms.public.show', $form->share_token));
+
+        $hidden = FormSubmission::query()->first();
+        $this->assertSame('no', $hidden->attributes['status']);
+        $this->assertArrayNotHasKey('details', $hidden->attributes);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'yes'],
+        ])->assertSessionHasErrors('attributes.details');
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'yes', 'details' => 'Follow up'],
+        ])->assertRedirect(route('forms.public.show', $form->share_token));
+
+        $shown = FormSubmission::query()->orderByDesc('id')->first();
+        $this->assertSame('Follow up', $shown->attributes['details']);
+        $this->assertSame(2, FormSubmission::query()->count());
+    }
+
+    public function test_public_submit_respects_a_hide_when_rule(): void
+    {
+        $schema = $this->branchingSchema();
+        $schema[1]['visibility']['action'] = 'hide';
+        $schema[1]['visibility']['operator'] = 'not_equals';
+        $schema[1]['visibility']['value'] = 'no';
+
+        $form = $this->storeForm([
+            'name' => 'Hide unless no',
+            'schema' => $schema,
+        ]);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'yes', 'details' => 'hidden'],
+        ])->assertRedirect(route('forms.public.show', $form->share_token));
+
+        $hidden = FormSubmission::query()->first();
+        $this->assertArrayNotHasKey('details', $hidden->attributes);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'no'],
+        ])->assertSessionHasErrors('attributes.details');
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'no', 'details' => 'Kept'],
+        ])->assertRedirect();
+
+        $shown = FormSubmission::query()->orderByDesc('id')->first();
+        $this->assertSame('Kept', $shown->attributes['details']);
+    }
+
+    public function test_hidden_required_field_does_not_block_a_linked_layer(): void
+    {
+        $form = $this->storeForm([
+            'name' => 'Linked branch',
+            'create_layer' => true,
+            'collect_geometry' => false,
+            'schema' => $this->branchingSchema(),
+        ]);
+
+        $this->post(route('forms.public.submit', $form->share_token), [
+            'attributes' => ['status' => 'no', 'details' => 'should not stick'],
+        ])->assertRedirect(route('forms.public.show', $form->share_token));
+
+        $submission = FormSubmission::query()->first();
+        $this->assertNotNull($submission->feature_id);
+        $this->assertSame('no', $submission->attributes['status']);
+        $this->assertArrayNotHasKey('details', $submission->attributes);
+
+        $layer = Layer::findOrFail($form->layer_id);
+        $row = DB::table($layer->table_name)->where('id', $submission->feature_id)->first();
+        $this->assertSame('no', $row->status);
+        $this->assertNull($row->details);
+    }
+
+    public function test_form_show_filters_submissions_and_summarizes_counts(): void
+    {
+        $form = $this->storeForm([
+            'name' => 'Report',
+            'schema' => [
+                ['name' => 'status', 'label' => 'Status', 'type' => 'select', 'options' => ['open', 'closed']],
+                ['name' => 'notes', 'label' => 'Notes', 'type' => 'text'],
+            ],
+        ]);
+
+        $open = $this->makeSubmission($form, ['status' => 'open', 'notes' => 'North'], [
+            'latitude' => 32.1,
+            'longitude' => 13.2,
+        ]);
+        $open->created_at = '2026-01-15 10:00:00';
+        $open->save();
+
+        $closed = $this->makeSubmission($form, ['status' => 'closed', 'notes' => 'closed-only-note']);
+        $closed->created_at = '2026-02-02 10:00:00';
+        $closed->save();
+
+        $later = $this->makeSubmission($form, ['status' => 'open', 'notes' => 'Later'], [
+            'attachment_name' => 'photo.jpg',
+        ]);
+        $later->created_at = '2026-03-20 10:00:00';
+        $later->save();
+
+        $this->actingAs($this->editor)
+            ->get(route('forms.show', [
+                'form' => $form,
+                'from' => '2026-01-01',
+                'to' => '2026-02-28',
+                'field' => 'status',
+                'value' => 'open',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Forms/Show')
+                ->where('submissionCount', 1)
+                ->where('summary.total', 3)
+                ->where('summary.matching', 1)
+                ->where('summary.with_location', 1)
+                ->where('summary.with_attachment', 0)
+                ->where('summary.field.name', 'status')
+                ->where('summary.field.counts', [
+                    ['value' => 'open', 'count' => 1],
+                    ['value' => 'closed', 'count' => 1],
+                ])
+                ->where('filters.field', 'status')
+                ->where('filters.value', 'open')
+                ->has('submissions.data', 1)
+                ->where('submissions.data.0.attributes.notes', 'North')
+                ->where('links.export_csv', route('forms.export.csv', [
+                    'form' => $form,
+                    'from' => '2026-01-01',
+                    'to' => '2026-02-28',
+                    'field' => 'status',
+                    'value' => 'open',
+                ])));
+
+        $csv = $this->actingAs($this->editor)->get(route('forms.export.csv', [
+            'form' => $form,
+            'field' => 'status',
+            'value' => 'closed',
+        ]));
+        $csv->assertOk();
+        $this->assertStringContainsString('closed-only-note', $csv->getContent());
+        $this->assertStringNotContainsString('North', $csv->getContent());
+
+        $this->actingAs($this->editor)
+            ->get(route('forms.show', ['form' => $form, 'from' => '2026-04-01', 'to' => '2026-03-01']))
+            ->assertSessionHasErrors('to');
+    }
+
     public function test_standalone_submit_dispatches_webhook_without_a_feature(): void
     {
         Http::fake();
@@ -676,6 +884,37 @@ class FormSubmissionTest extends TestCase
                 && $request['payload']['feature'] === null
                 && $request['payload']['layer_id'] === null;
         });
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function branchingSchema(): array
+    {
+        return [
+            ['name' => 'status', 'label' => 'Status', 'type' => 'select', 'options' => ['yes', 'no']],
+            [
+                'name' => 'details',
+                'label' => 'Details',
+                'type' => 'text',
+                'required' => true,
+                'visibility' => [
+                    'action' => 'show',
+                    'field' => 'status',
+                    'operator' => 'equals',
+                    'value' => 'yes',
+                ],
+            ],
+        ];
+    }
+
+    protected function makeSubmission(Form $form, array $attributes, array $overrides = []): FormSubmission
+    {
+        return FormSubmission::create(array_merge([
+            'form_id' => $form->id,
+            'organization_id' => $form->organization_id,
+            'attributes' => $attributes,
+        ], $overrides));
     }
 
     protected function storeForm(array $overrides = []): Form

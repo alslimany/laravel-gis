@@ -8,6 +8,9 @@ use App\Models\FormSubmission;
 use App\Models\Layer;
 use App\Models\LayerField;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -67,16 +70,18 @@ class FormSubmissionService
         ?int $userId
     ): array {
         return DB::transaction(function () use ($form, $attributes, $wkt, $latitude, $longitude, $file, $userId) {
+            $attributes = $this->withoutHiddenAttributes($form, $attributes);
             $layer = $form->layer;
             $feature = null;
             $featureId = null;
 
             if ($layer) {
-                $feature = $this->features->create(
-                    $layer,
-                    $this->onlySchemaAttributes($form, $attributes),
-                    $this->featureWkt($layer, $wkt)
-                );
+                $stored = $this->onlySchemaAttributes($form, $attributes);
+                $featureWkt = $this->featureWkt($layer, $wkt);
+                $hidden = $this->hiddenFieldNames($form, $attributes);
+                $feature = $hidden === []
+                    ? $this->features->create($layer, $stored, $featureWkt)
+                    : $this->features->create($layer, $stored, $featureWkt, null, $hidden);
                 $featureId = $feature['id'] ?? ($feature['properties']['id'] ?? null);
                 $featureId = $featureId !== null ? (int) $featureId : null;
             }
@@ -193,22 +198,260 @@ class FormSubmissionService
                 $type = 'text';
             }
 
-            return [
-                'name' => preg_replace('/[^a-zA-Z0-9_]/', '_', (string) $field['name']),
+            $name = preg_replace('/[^a-zA-Z0-9_]/', '_', (string) $field['name']);
+            $normalized = [
+                'name' => $name,
                 'label' => $field['label'] ?? $field['name'],
                 'type' => $type,
                 'required' => (bool) ($field['required'] ?? false),
                 'options' => array_values(is_array($field['options'] ?? null) ? $field['options'] : []),
             ];
+
+            $visibility = $this->normalizeVisibility($field['visibility'] ?? null);
+            if ($visibility !== null) {
+                $normalized['visibility'] = $visibility;
+            }
+
+            return $normalized;
         }, $schema)));
     }
 
     /**
+     * One show/hide condition: another field equals or does not equal a value.
+     *
+     * @return array{action: string, field: string, operator: string, value: string}|null
+     */
+    public function normalizeVisibility(mixed $visibility): ?array
+    {
+        if (! is_array($visibility)) {
+            return null;
+        }
+
+        $source = preg_replace('/[^a-zA-Z0-9_]/', '_', trim((string) ($visibility['field'] ?? '')));
+        if ($source === '' || $source === null) {
+            return null;
+        }
+
+        $action = $visibility['action'] ?? 'show';
+        if (! in_array($action, ['show', 'hide'], true)) {
+            $action = 'show';
+        }
+
+        $operator = $visibility['operator'] ?? 'equals';
+        if (! in_array($operator, ['equals', 'not_equals'], true)) {
+            $operator = 'equals';
+        }
+
+        $value = $visibility['value'] ?? '';
+
+        return [
+            'action' => $action,
+            'field' => $source,
+            'operator' => $operator,
+            'value' => is_scalar($value) ? trim((string) $value) : '',
+        ];
+    }
+
+    /**
+     * Drop values for fields the current answers hide. The controlling field is read first.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public function withoutHiddenAttributes(Form $form, array $attributes): array
+    {
+        foreach ($form->schema ?? [] as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            $name = $field['name'] ?? null;
+            if (! is_string($name) || $name === '' || $form->fieldIsVisible($field, $attributes)) {
+                continue;
+            }
+
+            unset($attributes[$name]);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return list<string>
+     */
+    protected function hiddenFieldNames(Form $form, array $attributes): array
+    {
+        $names = [];
+        foreach ($form->schema ?? [] as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            $name = $field['name'] ?? null;
+            if (is_string($name) && $name !== '' && ! $form->fieldIsVisible($field, $attributes)) {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
+    }
+
+    public function schemaHasField(Form $form, string $name): bool
+    {
+        foreach ($form->schema ?? [] as $field) {
+            if (is_array($field) && ($field['name'] ?? null) === $name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array{from?: ?string, to?: ?string, field?: ?string, value?: ?string}  $filters
+     * @return HasMany<FormSubmission, Form>
+     */
+    public function filteredSubmissions(Form $form, array $filters = []): HasMany
+    {
+        $query = $form->submissions();
+
+        $from = $filters['from'] ?? null;
+        if (is_string($from) && $from !== '') {
+            $query->where('created_at', '>=', Carbon::parse($from)->startOfDay());
+        }
+
+        $to = $filters['to'] ?? null;
+        if (is_string($to) && $to !== '') {
+            $query->where('created_at', '<=', Carbon::parse($to)->endOfDay());
+        }
+
+        $field = $filters['field'] ?? null;
+        $value = $filters['value'] ?? null;
+        if (is_string($field) && $this->schemaHasField($form, $field) && is_string($value) && $value !== '') {
+            $query->where('attributes->'.$field, $value);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  array{from?: ?string, to?: ?string, field?: ?string, value?: ?string}  $filters
+     * @return array{
+     *     total: int,
+     *     matching: int,
+     *     with_location: int,
+     *     with_attachment: int,
+     *     field: ?array{name: string, label: string, counts: list<array{value: string, count: int}>}
+     * }
+     */
+    public function submissionSummary(Form $form, array $filters = []): array
+    {
+        $matching = $this->filteredSubmissions($form, $filters);
+
+        return [
+            'total' => $form->submissions()->count(),
+            'matching' => (clone $matching)->count(),
+            'with_location' => (clone $matching)->where(function (Builder $query) {
+                $query->whereNotNull('latitude')
+                    ->orWhere(function (Builder $inner) {
+                        $inner->whereNotNull('geometry_wkt')->where('geometry_wkt', '!=', '');
+                    });
+            })->count(),
+            'with_attachment' => (clone $matching)->whereNotNull('attachment_name')->where('attachment_name', '!=', '')->count(),
+            'field' => $this->fieldValueCounts($form, $filters),
+        ];
+    }
+
+    protected function visibilityScalar(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if ($value === null || is_array($value)) {
+            return '';
+        }
+
+        return trim((string) $value);
+    }
+
+    /**
+     * Counts for the filtered field, or the first select/checkbox when no field filter is set.
+     * Date filters still apply. The value filter does not, so the breakdown stays a report of the range.
+     *
+     * @param  array{from?: ?string, to?: ?string, field?: ?string, value?: ?string}  $filters
+     * @return array{name: string, label: string, counts: list<array{value: string, count: int}>}|null
+     */
+    protected function fieldValueCounts(Form $form, array $filters): ?array
+    {
+        $field = $this->summaryField($form, isset($filters['field']) && is_string($filters['field']) ? $filters['field'] : null);
+        if ($field === null) {
+            return null;
+        }
+
+        $name = $field['name'];
+        $rows = $this->filteredSubmissions($form, [
+            'from' => $filters['from'] ?? null,
+            'to' => $filters['to'] ?? null,
+        ])->get(['attributes']);
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $raw = is_array($row->attributes) ? ($row->attributes[$name] ?? '') : '';
+            $key = Form::visibilityScalar($raw);
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+
+        arsort($counts);
+        $items = [];
+        foreach ($counts as $value => $count) {
+            $items[] = ['value' => (string) $value, 'count' => $count];
+        }
+
+        return [
+            'name' => $name,
+            'label' => (string) ($field['label'] ?? $name),
+            'counts' => array_slice($items, 0, 12),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function summaryField(Form $form, ?string $requested): ?array
+    {
+        $fields = [];
+        foreach ($form->schema ?? [] as $field) {
+            if (is_array($field) && ! empty($field['name'])) {
+                $fields[] = $field;
+            }
+        }
+
+        if (is_string($requested) && $requested !== '') {
+            foreach ($fields as $field) {
+                if ($field['name'] === $requested) {
+                    return $field;
+                }
+            }
+        }
+
+        foreach ($fields as $field) {
+            if (in_array($field['type'] ?? '', ['select', 'checkbox'], true)) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array{from?: ?string, to?: ?string, field?: ?string, value?: ?string}  $filters
      * @return array{headers: list<string>, rows: list<array<string, mixed>>}
      */
-    public function submissionTable(Form $form): array
+    public function submissionTable(Form $form, array $filters = []): array
     {
-        $submissions = $form->submissions()->orderBy('id')->get();
+        $submissions = $this->filteredSubmissions($form, $filters)->orderBy('id')->get();
         $fields = [];
         foreach ($form->schema ?? [] as $field) {
             $name = $field['name'] ?? null;

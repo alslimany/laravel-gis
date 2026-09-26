@@ -80,4 +80,38 @@ class Form extends Model
 
         return $type !== '' && ! in_array($type, ['none', 'table', 'raster', 'unknown'], true);
     }
+
+    /**
+     * One condition: another field equals or does not equal a value.
+     *
+     * @param  array<string, mixed>  $field
+     * @param  array<string, mixed>  $attributes
+     */
+    public function fieldIsVisible(array $field, array $attributes): bool
+    {
+        $rule = $field['visibility'] ?? null;
+        if (! is_array($rule) || empty($rule['field']) || empty($rule['operator'])) {
+            return true;
+        }
+
+        $actual = self::visibilityScalar($attributes[$rule['field']] ?? null);
+        $expected = self::visibilityScalar($rule['value'] ?? '');
+        $matches = $actual === $expected;
+        $condition = ($rule['operator'] === 'not_equals') ? ! $matches : $matches;
+
+        return ($rule['action'] ?? 'show') === 'hide' ? ! $condition : $condition;
+    }
+
+    public static function visibilityScalar(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if ($value === null || is_array($value)) {
+            return '';
+        }
+
+        return trim((string) $value);
+    }
 }

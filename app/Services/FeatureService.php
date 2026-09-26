@@ -3,9 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\GeometryColumnHelper;
-use App\Helpers\SpatialHelper;
 use App\Models\Layer;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -109,13 +107,13 @@ class FeatureService
     /**
      * Create a feature from WKT or GeoJSON geometry plus attributes.
      */
-    public function create(Layer $layer, array $attributes, ?string $wkt = null, ?array $geojson = null): array
+    public function create(Layer $layer, array $attributes, ?string $wkt = null, ?array $geojson = null, array $skipRequired = []): array
     {
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
         $columns = $this->attributeColumns($table, $geom);
 
-        $attributes = $this->applyCalculatedFields($layer, $attributes);
+        $attributes = $this->applyCalculatedFields($layer, $attributes, $skipRequired);
 
         $data = [];
         foreach ($columns as $column) {
@@ -125,10 +123,10 @@ class FeatureService
         }
 
         if ($wkt) {
-            $data[$geom] = DB::raw("ST_SetSRID(ST_GeomFromText(".DB::getPdo()->quote($wkt)."), 4326)");
+            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromText('.DB::getPdo()->quote($wkt).'), 4326)');
         } elseif ($geojson) {
             $encoded = json_encode($geojson);
-            $data[$geom] = DB::raw("ST_SetSRID(ST_GeomFromGeoJSON(".DB::getPdo()->quote($encoded)."), 4326)");
+            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromGeoJSON('.DB::getPdo()->quote($encoded).'), 4326)');
         }
 
         $id = DB::table($table)->insertGetId($data);
@@ -161,10 +159,10 @@ class FeatureService
         }
 
         if ($wkt) {
-            $data[$geom] = DB::raw("ST_SetSRID(ST_GeomFromText(".DB::getPdo()->quote($wkt)."), 4326)");
+            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromText('.DB::getPdo()->quote($wkt).'), 4326)');
         } elseif ($geojson) {
             $encoded = json_encode($geojson);
-            $data[$geom] = DB::raw("ST_SetSRID(ST_GeomFromGeoJSON(".DB::getPdo()->quote($encoded)."), 4326)");
+            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromGeoJSON('.DB::getPdo()->quote($encoded).'), 4326)');
         }
 
         if ($data === []) {
@@ -389,9 +387,10 @@ class FeatureService
      * Apply calculated layer field expressions and enforce required fields.
      *
      * @param  array<string, mixed>  $attributes
+     * @param  list<string>  $skipRequired
      * @return array<string, mixed>
      */
-    protected function applyCalculatedFields(Layer $layer, array $attributes): array
+    protected function applyCalculatedFields(Layer $layer, array $attributes, array $skipRequired = []): array
     {
         $fields = $layer->fields()->orderBy('sort_order')->get();
         if ($fields->isEmpty()) {
@@ -401,7 +400,7 @@ class FeatureService
         $evaluator = app(ExpressionEvaluator::class);
 
         foreach ($fields as $field) {
-            if ($field->required) {
+            if ($field->required && ! in_array($field->name, $skipRequired, true)) {
                 $value = $attributes[$field->name] ?? null;
                 if ($value === null || $value === '') {
                     throw new \InvalidArgumentException("Required field missing: {$field->name}");
