@@ -16,7 +16,7 @@ export default function PublicLayout({ title, children }: { title?: string; chil
             <header className="border-b border-border bg-muted/40">
                 <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded-md bg-black text-white">
+                        <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
                             <AppLogoIcon className="size-5" />
                         </div>
                         <span className="text-sm font-medium">{name}</span>

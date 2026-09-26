@@ -447,9 +447,9 @@
     align-items: center;
     gap: 1rem;
     padding: 0.65rem 1rem;
-    background: #0b1220;
-    color: #fff;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card);
+    color: var(--foreground);
+    border-bottom: 1px solid var(--border);
 }
 
 .map-builder-header h3 {
@@ -482,8 +482,8 @@
 .header-actions .btn-secondary,
 .header-actions .btn-outline-secondary {
     background: transparent;
-    border-color: rgba(255, 255, 255, 0.22);
-    color: #fff;
+    border-color: var(--border);
+    color: var(--foreground);
 }
 
 .map-status-overlay {
@@ -760,7 +760,7 @@
     height: 40px;
     border: 1px solid transparent;
     background: var(--card);
-    color: #0b1220;
+    color: var(--foreground);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -775,7 +775,7 @@
 
 .tool-btn.active {
     background: var(--primary);
-    color: #fff;
+    color: var(--primary-foreground);
 }
 
 .tool-icon {

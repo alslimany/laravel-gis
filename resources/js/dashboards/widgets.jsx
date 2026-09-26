@@ -35,13 +35,13 @@ Chart.register(
 function themeColors() {
     const styles = getComputedStyle(document.documentElement);
     const read = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+    const palette = [1, 2, 3, 4, 5].map((index) => read(`--chart-${index}`)).filter(Boolean);
     return {
-        cyan: read('--cyan', '#06b6d4'),
-        muted: read('--muted', '#b7c4d4'),
-        copy: read('--copy', '#e7eefc'),
-        line: read('--line', '#2c3d5c'),
-        panel: read('--panel', '#111a2e'),
-        palette: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9', '#a78bfa', '#34d399'],
+        series: palette[0] || 'oklch(0.55 0.12 210)',
+        muted: read('--muted-foreground', 'oklch(0.48 0.02 255)'),
+        copy: read('--foreground', 'oklch(0.22 0.025 255)'),
+        line: read('--border', 'oklch(0.90 0.01 250)'),
+        palette: palette.length ? palette : ['oklch(0.55 0.12 210)'],
     };
 }
 
@@ -61,8 +61,8 @@ function ChartCanvas({ widget, style = 'bar' }) {
                     {
                         label: widget.title,
                         data: widget.values || [],
-                        backgroundColor: style === 'pie' ? colors.palette : colors.cyan,
-                        borderColor: colors.cyan,
+                        backgroundColor: style === 'pie' ? colors.palette : colors.series,
+                        borderColor: colors.series,
                         borderWidth: style === 'line' ? 2 : 0,
                         fill: style === 'line',
                         tension: 0.3,
