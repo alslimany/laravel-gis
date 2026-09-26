@@ -38,6 +38,8 @@ export function createWidget(type, index = 0) {
         title: TITLES[resolved],
         layout: { x: 0, y: Infinity, w: size.w, h: size.h },
         aggregation: 'count',
+        source: resolved === 'map' ? 'layer' : undefined,
+        map_id: resolved === 'map' ? null : undefined,
         chart_style: resolved === 'serial' ? 'bar' : undefined,
         limit: resolved === 'table' || resolved === 'list' ? 20 : undefined,
         body: resolved === 'text' ? '' : undefined,

@@ -3,6 +3,7 @@ import GridLayout, { useContainerWidth, verticalCompactor } from 'react-grid-lay
 import { GripVertical, Trash2 } from 'lucide-react';
 import { WidgetBody, WidgetFrame, mergeWidgetData } from './widgets';
 import { DEFAULT_SIZE, canonicalType } from './widgetDocument';
+import { writeFiltersToSearch } from './filters';
 import 'react-grid-layout/css/styles.css';
 
 function toLayout(widgets, editable) {
@@ -44,6 +45,7 @@ export default function WidgetBoard({
     const [filters, setFilters] = useState(controlledFilters || {});
     const [liveData, setLiveData] = useState(widgetData);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(null);
 
     useEffect(() => {
         if (controlledFilters) setFilters(controlledFilters);
@@ -67,9 +69,18 @@ export default function WidgetBoard({
         let cancelled = false;
         setLoading(true);
         fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-            .then((response) => response.json())
+            .then(async (response) => {
+                if (!response.ok) throw new Error('refresh failed');
+                return response.json();
+            })
             .then((payload) => {
-                if (!cancelled && payload.widgets) setLiveData(payload.widgets);
+                if (!cancelled && payload.widgets) {
+                    setLiveData(payload.widgets);
+                    setLoadError(null);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setLoadError('The dashboard could not refresh. The last loaded numbers are still on screen.');
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -85,6 +96,7 @@ export default function WidgetBoard({
         else next[layerId] = value;
         setFilters(next);
         onFiltersChange?.(next);
+        if (!editable) writeFiltersToSearch(next);
     }
 
     function handleDrop(nextLayout, item, event) {
@@ -108,9 +120,33 @@ export default function WidgetBoard({
                 event.dataTransfer.dropEffect = 'copy';
             }}
         >
+            {loadError ? (
+                <p className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{loadError}</p>
+            ) : null}
+            {!editable && Object.keys(filters).length ? (
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Filtered</span>
+                    {Object.entries(filters).map(([layerId, value]) => (
+                        <button
+                            key={layerId}
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-foreground"
+                            onClick={() => setFilter(layerId, null)}
+                        >
+                            {value}
+                            <span className="text-muted-foreground">Clear</span>
+                        </button>
+                    ))}
+                </div>
+            ) : null}
             {!merged.length && editable ? (
-                <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center rounded-lg border border-dashed border-line bg-panel px-6 text-center">
-                    <p className="max-w-sm text-muted">Drag a component here, or click one in the library.</p>
+                <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 text-center">
+                    <p className="max-w-sm text-sm text-muted-foreground">Drag a component here, or click one in the library.</p>
+                </div>
+            ) : null}
+            {!merged.length && !editable ? (
+                <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 text-center">
+                    <p className="max-w-sm text-sm text-muted-foreground">This dashboard has no widgets yet.</p>
                 </div>
             ) : null}
             {mounted ? (
@@ -149,7 +185,7 @@ export default function WidgetBoard({
                                     editable ? (
                                         <div className="flex items-center gap-1">
                                             <span
-                                                className="widget-drag-handle inline-flex h-9 w-9 cursor-grab items-center justify-center rounded-md text-muted hover:bg-panel-2 hover:text-copy active:cursor-grabbing"
+                                                className="widget-drag-handle inline-flex h-9 w-9 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
                                                 aria-label="Move widget"
                                                 title="Move"
                                             >
@@ -157,7 +193,7 @@ export default function WidgetBoard({
                                             </span>
                                             <button
                                                 type="button"
-                                                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-danger hover:bg-panel-2"
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-destructive hover:bg-muted"
                                                 aria-label="Remove widget"
                                                 title="Remove"
                                                 onClick={(event) => {

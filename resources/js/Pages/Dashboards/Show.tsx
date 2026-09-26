@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import WidgetBoard from '@/dashboards/WidgetBoard';
-import { DangerButton, GhostLink, PageHeader, destroyResource } from '@/components/gis';
+import { filtersFromSearch } from '@/dashboards/filters';
+import { DangerButton, GhostLink, PageHeader, Pill, destroyResource } from '@/components/gis';
 
 export default function Show({ dashboard, widgetData = [] }) {
-    const [filters, setFilters] = useState({});
+    const [filters, setFilters] = useState(() => filtersFromSearch(typeof window === 'undefined' ? '' : window.location.search));
 
     return (
         <AppLayout title={dashboard.name}>
@@ -14,7 +15,9 @@ export default function Show({ dashboard, widgetData = [] }) {
                     <div className="flex flex-wrap gap-2">
                         {dashboard.is_public && dashboard.share_token ? (
                             <GhostLink href={`/dashboards/shared/${dashboard.share_token}`}>Public link</GhostLink>
-                        ) : null}
+                        ) : (
+                            <Pill>Private</Pill>
+                        )}
                         <a href={`/dashboards/${dashboard.id}/data`} className="inline-flex items-center rounded-md border border-border bg-card px-4">
                             JSON
                         </a>

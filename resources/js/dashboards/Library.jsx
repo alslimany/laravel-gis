@@ -69,14 +69,14 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
     }
 
     return (
-        <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel">
-            <div className="border-b border-line px-4 py-3">
+        <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
                 <p className="font-semibold">Components</p>
                 <TextInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search components" />
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
                 {orderedGroups.length === 0 ? (
-                    <p className="px-1 py-4 text-muted">No components match that search.</p>
+                    <p className="px-1 py-4 text-sm text-muted-foreground">No components match that search.</p>
                 ) : (
                     orderedGroups.map((group) => {
                         const items = groups[group] || [];
@@ -86,12 +86,12 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group)}
-                                    className="flex w-full items-center gap-2 rounded-md px-2 text-left font-semibold text-copy hover:bg-panel-2"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm font-semibold text-foreground hover:bg-muted"
                                     aria-expanded={open}
                                 >
-                                    {open ? <ChevronDown className="h-4 w-4 text-muted" /> : <ChevronRight className="h-4 w-4 text-muted" />}
+                                    {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                     <span className="flex-1 truncate">{group}</span>
-                                    <span className="font-medium text-muted">{items.length}</span>
+                                    <span className="text-xs font-medium text-muted-foreground">{items.length}</span>
                                 </button>
                                 {open ? (
                                     <div className="mt-1 space-y-2 pb-2">
@@ -112,12 +112,12 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
                                                             addFromLibrary(item.type);
                                                         }
                                                     }}
-                                                    className="flex w-full cursor-grab items-start gap-3 rounded-md border border-line bg-canvas px-3 py-3 text-left hover:border-cyan active:cursor-grabbing"
+                                                    className="flex w-full cursor-grab items-start gap-3 rounded-md border border-border bg-background px-3 py-3 text-left hover:border-primary active:cursor-grabbing"
                                                 >
-                                                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-link" strokeWidth={1.75} />
+                                                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
                                                     <span>
-                                                        <span className="block font-medium">{item.label}</span>
-                                                        <span className="block text-muted">{item.description}</span>
+                                                        <span className="block text-sm font-medium">{item.label}</span>
+                                                        <span className="block text-xs text-muted-foreground">{item.description}</span>
                                                     </span>
                                                 </div>
                                             );
