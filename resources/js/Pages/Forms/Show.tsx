@@ -1,8 +1,9 @@
-import { usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { count } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { ActionLink, DataTable, Empty, GhostLink, Heading, PageHeader, Pager, Panel, Pill, Table, tdClass, tdMuted, thClass } from '@/components/gis';
+import { ActionLink, DataTable, Empty, Field, GhostLink, Heading, PageHeader, Pager, Panel, Pill, PrimaryButton, Select, Table, TextInput, tdClass, tdMuted, thClass } from '@/components/gis';
 
 function submittedAt(value) {
     if (!value) {
@@ -44,10 +45,45 @@ function locationValue(submission) {
     return submission.geometry_wkt || '—';
 }
 
-export default function Show({ form, submissions, submissionCount = 0, requiresGeometry = false, links = {}, maps = [] }) {
-    const { abilities } = usePage().props;
+export default function Show({ form, submissions, submissionCount = 0, summary = null, filters = {}, requiresGeometry = false, links = {}, maps = [] }) {
+    const { abilities, errors = {} } = usePage().props;
     const rows = submissions?.data || [];
     const fields = (form.schema || []).filter((field) => field?.name);
+    const [draft, setDraft] = useState({
+        from: filters.from || '',
+        to: filters.to || '',
+        field: filters.field || '',
+        value: filters.value || '',
+    });
+    const matching = summary?.matching ?? submissionCount;
+    const total = summary?.total ?? submissionCount;
+    const filtersActive = Boolean(filters.from || filters.to || filters.field || filters.value);
+
+    function visit(next) {
+        const params = {};
+        if (next.from) params.from = next.from;
+        if (next.to) params.to = next.to;
+        if (next.field) params.field = next.field;
+        if (next.field && next.value) params.value = next.value;
+        router.get(`/forms/${form.id}`, params, { preserveScroll: true });
+    }
+
+    function applyFilters(event) {
+        event.preventDefault();
+        visit(draft);
+    }
+
+    function clearFilters() {
+        const empty = { from: '', to: '', field: '', value: '' };
+        setDraft(empty);
+        visit(empty);
+    }
+
+    function filterByValue(fieldName, value) {
+        const next = { ...draft, field: fieldName, value: value || '' };
+        setDraft(next);
+        visit(next);
+    }
 
     return (
         <AppLayout title={form.name}>
@@ -76,8 +112,33 @@ export default function Show({ form, submissions, submissionCount = 0, requiresG
                         </p>
                     ) : null}
                     <p className="mt-3 text-sm">
-                        <span className="font-medium">{count(submissionCount)}</span> submissions
+                        <span className="font-medium">{count(matching)}</span>
+                        {matching === total ? '' : ` of ${count(total)}`} submissions
                     </p>
+                    {summary ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <Pill>{count(summary.with_location)} with location</Pill>
+                            <Pill>{count(summary.with_attachment)} with attachment</Pill>
+                        </div>
+                    ) : null}
+                    {summary?.field?.counts?.length ? (
+                        <div className="mt-3">
+                            <p className="text-xs text-muted-foreground">{summary.field.label}</p>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                                {summary.field.counts.map((entry) => (
+                                    <Button
+                                        key={`${summary.field.name}-${entry.value}-${entry.count}`}
+                                        type="button"
+                                        size="sm"
+                                        variant={filters.field === summary.field.name && filters.value === entry.value ? 'default' : 'outline'}
+                                        onClick={() => filterByValue(summary.field.name, entry.value)}
+                                    >
+                                        {entry.value || 'Blank'} · {count(entry.count)}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                         <Button asChild variant="outline">
                             <a href={links.export_csv}>Export submissions CSV</a>
@@ -113,9 +174,43 @@ export default function Show({ form, submissions, submissionCount = 0, requiresG
 
                 <Panel>
                     <Heading as="h2">Submissions</Heading>
+                    <form onSubmit={applyFilters} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        <Field label="From" error={errors.from}>
+                            <TextInput type="date" value={draft.from} onChange={(event) => setDraft({ ...draft, from: event.target.value })} />
+                        </Field>
+                        <Field label="To" error={errors.to}>
+                            <TextInput type="date" value={draft.to} onChange={(event) => setDraft({ ...draft, to: event.target.value })} />
+                        </Field>
+                        <Field label="Field">
+                            <Select value={draft.field} onChange={(event) => setDraft({ ...draft, field: event.target.value, value: event.target.value ? draft.value : '' })}>
+                                <option value="">Any field</option>
+                                {fields.map((field) => (
+                                    <option key={field.name} value={field.name}>
+                                        {field.label || field.name}
+                                    </option>
+                                ))}
+                            </Select>
+                        </Field>
+                        <Field label="Value">
+                            <TextInput
+                                value={draft.value}
+                                disabled={!draft.field}
+                                placeholder={draft.field ? 'Equals' : 'Choose a field'}
+                                onChange={(event) => setDraft({ ...draft, value: event.target.value })}
+                            />
+                        </Field>
+                        <div className="flex items-end gap-2">
+                            <PrimaryButton type="submit">Filter</PrimaryButton>
+                            {filtersActive ? (
+                                <Button type="button" variant="outline" onClick={clearFilters}>
+                                    Clear
+                                </Button>
+                            ) : null}
+                        </div>
+                    </form>
                     {rows.length === 0 ? (
                         <div className="mt-4">
-                            <Empty>No submissions yet.</Empty>
+                            <Empty>{total === 0 ? 'No submissions yet.' : 'No submissions match these filters.'}</Empty>
                         </div>
                     ) : (
                         <div className="mt-4 grid gap-3">
@@ -167,9 +262,10 @@ export default function Show({ form, submissions, submissionCount = 0, requiresG
                             {fields.map((field) => (
                                 <li key={field.name} className="flex justify-between gap-3 px-3 py-2 text-sm">
                                     <span>{field.label || field.name}</span>
-                                    <span className="font-mono text-muted-foreground">
+                                    <span className="text-right font-mono text-muted-foreground">
                                         {field.type}
                                         {field.required ? ' · required' : ''}
+                                        {field.visibility?.field ? ` · ${visibilityLabel(field.visibility)}` : ''}
                                     </span>
                                 </li>
                             ))}
@@ -183,4 +279,12 @@ export default function Show({ form, submissions, submissionCount = 0, requiresG
 
 function tdMonoOrMuted(featureId) {
     return featureId ? `${tdClass} font-mono` : tdMuted;
+}
+
+function visibilityLabel(rule) {
+    const action = rule.action === 'hide' ? 'hide' : 'show';
+    const operator = rule.operator === 'not_equals' ? '≠' : '=';
+    const value = rule.value ? rule.value : 'blank';
+
+    return `${action} when ${rule.field} ${operator} ${value}`;
 }

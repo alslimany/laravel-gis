@@ -71,14 +71,16 @@ class FormController extends Controller
     /**
      * Display the specified form.
      */
-    public function show(Form $form)
+    public function show(Request $request, Form $form)
     {
         $this->authorize('view', $form);
 
         $form->load(['layer', 'user', 'organization']);
         $layer = $form->layer;
+        $filters = $this->submissionFilters($request, $form);
+        $exportQuery = $this->exportQuery($filters);
 
-        $submissions = $form->submissions()
+        $submissions = $this->submissions->filteredSubmissions($form, $filters)
             ->latest()
             ->paginate(20)
             ->withQueryString()
@@ -97,12 +99,14 @@ class FormController extends Controller
             'form' => $form,
             'submissions' => $submissions,
             'submissionCount' => $submissions->total(),
+            'summary' => $this->submissions->submissionSummary($form, $filters),
+            'filters' => $filters,
             'requiresGeometry' => $form->requiresGeometry(),
             'links' => [
                 'attributes' => $layer ? route('layers.attributes', $layer) : null,
                 'map' => $layer ? route('maps.builder', ['layer' => $layer->id]) : null,
-                'export_csv' => route('forms.export.csv', $form),
-                'export_excel' => route('forms.export.excel', $form),
+                'export_csv' => route('forms.export.csv', $exportQuery === [] ? $form : ['form' => $form] + $exportQuery),
+                'export_excel' => route('forms.export.excel', $exportQuery === [] ? $form : ['form' => $form] + $exportQuery),
                 'layer_csv' => $layer ? route('forms.export.layer.csv', $form) : null,
                 'layer_excel' => $layer ? route('forms.export.layer.excel', $form) : null,
             ],
@@ -154,11 +158,11 @@ class FormController extends Controller
     /**
      * Download submissions collected by this form.
      */
-    public function exportCsv(Form $form)
+    public function exportCsv(Request $request, Form $form)
     {
         $this->authorize('view', $form);
 
-        $table = $this->submissions->submissionTable($form);
+        $table = $this->submissions->submissionTable($form, $this->submissionFilters($request, $form));
 
         return $this->csvResponse($this->exportFilename($form, 'submissions', 'csv'), $table['headers'], $table['rows']);
     }
@@ -166,11 +170,11 @@ class FormController extends Controller
     /**
      * Download submissions collected by this form.
      */
-    public function exportExcel(Form $form)
+    public function exportExcel(Request $request, Form $form)
     {
         $this->authorize('view', $form);
 
-        $table = $this->submissions->submissionTable($form);
+        $table = $this->submissions->submissionTable($form, $this->submissionFilters($request, $form));
 
         return $this->xlsxResponse(
             $this->exportFilename($form, 'submissions', 'xlsx'),
@@ -258,13 +262,16 @@ class FormController extends Controller
             'attributes' => 'nullable|array',
         ];
 
+        $submittedAttributes = is_array($request->input('attributes')) ? $request->input('attributes') : [];
+
         foreach ($form->schema ?? [] as $field) {
             $name = $field['name'] ?? null;
             if (! $name) {
                 continue;
             }
+            $visible = $form->fieldIsVisible($field, $submittedAttributes);
             $fieldRules = [];
-            if (! empty($field['required'])) {
+            if (! empty($field['required']) && $visible) {
                 $fieldRules[] = 'required';
             } else {
                 $fieldRules[] = 'nullable';
@@ -371,8 +378,15 @@ class FormController extends Controller
             'schema.*.type' => 'nullable|string|in:text,textarea,number,select,checkbox,date',
             'schema.*.required' => 'nullable|boolean',
             'schema.*.options' => 'nullable|array',
+            'schema.*.visibility' => 'nullable|array',
+            'schema.*.visibility.action' => 'nullable|in:show,hide',
+            'schema.*.visibility.field' => 'nullable|string|max:100',
+            'schema.*.visibility.operator' => 'nullable|in:equals,not_equals',
+            'schema.*.visibility.value' => 'nullable|string|max:255',
             'is_public' => 'nullable|boolean',
         ]);
+
+        $this->assertVisibilityTargets($validated['schema'] ?? []);
 
         $schema = $this->submissions->normalizeSchema($validated['schema'] ?? []);
         [$layer, $schema] = $this->resolveLayer($validated, $schema);
@@ -403,6 +417,96 @@ class FormController extends Controller
             'organization_id' => $user->organization_id,
             'user_id' => $user->id,
         ]);
+    }
+
+    /**
+     * A visibility rule may name one other field on this form.
+     *
+     * @param  list<mixed>  $schema
+     */
+    protected function assertVisibilityTargets(array $schema): void
+    {
+        $names = [];
+        foreach ($schema as $field) {
+            if (! is_array($field) || empty($field['name'])) {
+                continue;
+            }
+
+            $names[] = preg_replace('/[^a-zA-Z0-9_]/', '_', (string) $field['name']);
+        }
+
+        $errors = [];
+        foreach ($schema as $index => $field) {
+            if (! is_array($field) || ! is_array($field['visibility'] ?? null)) {
+                continue;
+            }
+
+            $visibility = $field['visibility'];
+            $sourceRaw = trim((string) ($visibility['field'] ?? ''));
+            $action = $visibility['action'] ?? null;
+            if ($sourceRaw === '' && ! in_array($action, ['show', 'hide'], true)) {
+                continue;
+            }
+
+            $source = preg_replace('/[^a-zA-Z0-9_]/', '_', $sourceRaw);
+            $target = preg_replace('/[^a-zA-Z0-9_]/', '_', (string) ($field['name'] ?? ''));
+            if ($source === '' || $source === $target || ! in_array($source, $names, true)) {
+                $errors["schema.{$index}.visibility.field"] = 'Choose another field on this form.';
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * @return array{from: string, to: string, field: string, value: string}
+     */
+    protected function submissionFilters(Request $request, Form $form): array
+    {
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'field' => 'nullable|string|max:100',
+            'value' => 'nullable|string|max:255',
+        ]);
+
+        $from = isset($validated['from']) ? (string) $validated['from'] : '';
+        $to = isset($validated['to']) ? (string) $validated['to'] : '';
+        if ($from !== '' && $to !== '' && $from > $to) {
+            throw ValidationException::withMessages([
+                'to' => 'The end date must be on or after the start date.',
+            ]);
+        }
+
+        $field = isset($validated['field']) ? (string) $validated['field'] : '';
+        if ($field !== '' && ! $this->submissions->schemaHasField($form, $field)) {
+            $field = '';
+        }
+
+        $value = isset($validated['value']) ? trim((string) $validated['value']) : '';
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'field' => $field,
+            'value' => $field === '' ? '' : $value,
+        ];
+    }
+
+    /**
+     * @param  array{from: string, to: string, field: string, value: string}  $filters
+     * @return array<string, string>
+     */
+    protected function exportQuery(array $filters): array
+    {
+        return array_filter([
+            'from' => $filters['from'],
+            'to' => $filters['to'],
+            'field' => $filters['field'],
+            'value' => $filters['value'],
+        ], fn (string $value) => $value !== '');
     }
 
     /**

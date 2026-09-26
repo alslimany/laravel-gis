@@ -33,6 +33,21 @@ export default function Editor({ form: record = null, layers = [] }) {
         form.setData('schema', schema);
     }
 
+    function setVisibility(index, action) {
+        if (action === 'always') {
+            updateField(index, 'visibility', null);
+            return;
+        }
+
+        const current = form.data.schema[index]?.visibility || {};
+        updateField(index, 'visibility', {
+            action,
+            field: current.field || '',
+            operator: current.operator || 'equals',
+            value: current.value || '',
+        });
+    }
+
     function submit(event) {
         event.preventDefault();
         form.transform((data) => ({
@@ -125,21 +140,69 @@ export default function Editor({ form: record = null, layers = [] }) {
                     Public shareable link
                 </label>
                 <Heading as="h2">Fields</Heading>
-                {form.data.schema.map((field, index) => (
-                    <div key={index} className="grid gap-2 border border-border p-3 sm:grid-cols-4">
-                        <TextInput placeholder="column" value={field.name || ''} onChange={(event) => updateField(index, 'name', event.target.value)} />
-                        <TextInput placeholder="Label" value={field.label || ''} onChange={(event) => updateField(index, 'label', event.target.value)} />
-                        <Select value={field.type || 'text'} onChange={(event) => updateField(index, 'type', event.target.value)}>
-                            {TYPES.map((type) => (
-                                <option key={type}>{type}</option>
-                            ))}
-                        </Select>
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" checked={Boolean(field.required)} onChange={(event) => updateField(index, 'required', event.target.checked)} />
-                            Required
-                        </label>
-                    </div>
-                ))}
+                <p className="text-xs text-muted-foreground">Each field can show or hide from one other answer. A layer is still optional.</p>
+                {form.data.schema.map((field, index) => {
+                    const otherFields = form.data.schema.filter((candidate, candidateIndex) => candidateIndex !== index && candidate.name);
+                    const visibility = field.visibility?.action === 'hide' || field.visibility?.action === 'show' ? field.visibility : null;
+
+                    return (
+                        <div key={index} className="grid gap-2 border border-border p-3">
+                            <div className="grid gap-2 sm:grid-cols-4">
+                                <TextInput placeholder="column" value={field.name || ''} onChange={(event) => updateField(index, 'name', event.target.value)} />
+                                <TextInput placeholder="Label" value={field.label || ''} onChange={(event) => updateField(index, 'label', event.target.value)} />
+                                <Select value={field.type || 'text'} onChange={(event) => updateField(index, 'type', event.target.value)}>
+                                    {TYPES.map((type) => (
+                                        <option key={type}>{type}</option>
+                                    ))}
+                                </Select>
+                                <label className="flex items-center gap-2">
+                                    <input type="checkbox" checked={Boolean(field.required)} onChange={(event) => updateField(index, 'required', event.target.checked)} />
+                                    Required
+                                </label>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-4">
+                                <Select value={visibility?.action || 'always'} onChange={(event) => setVisibility(index, event.target.value)} aria-label="Visibility">
+                                    <option value="always">Always visible</option>
+                                    <option value="show">Show when</option>
+                                    <option value="hide">Hide when</option>
+                                </Select>
+                                {visibility ? (
+                                    <>
+                                        <Select
+                                            value={visibility.field || ''}
+                                            aria-label="Condition field"
+                                            onChange={(event) => updateField(index, 'visibility', { ...visibility, field: event.target.value })}
+                                        >
+                                            <option value="">Field</option>
+                                            {otherFields.map((candidate) => (
+                                                <option key={candidate.name} value={candidate.name}>
+                                                    {candidate.label || candidate.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                        <Select
+                                            value={visibility.operator || 'equals'}
+                                            aria-label="Condition"
+                                            onChange={(event) => updateField(index, 'visibility', { ...visibility, operator: event.target.value })}
+                                        >
+                                            <option value="equals">equals</option>
+                                            <option value="not_equals">does not equal</option>
+                                        </Select>
+                                        <TextInput
+                                            placeholder="Value"
+                                            aria-label="Condition value"
+                                            value={visibility.value || ''}
+                                            onChange={(event) => updateField(index, 'visibility', { ...visibility, value: event.target.value })}
+                                        />
+                                    </>
+                                ) : null}
+                            </div>
+                            {form.errors[`schema.${index}.visibility.field`] ? (
+                                <p className="text-xs text-destructive">{form.errors[`schema.${index}.visibility.field`]}</p>
+                            ) : null}
+                        </div>
+                    );
+                })}
                 <button
                     type="button"
                     className="font-medium text-primary hover:underline"
