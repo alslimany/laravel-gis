@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+Server: nginx/1.31.6
+Content-Type: application/geo+json
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/8.4.25
+Cache-Control: no-cache, private
+Date: Sat, 26 Sep 2026 18:52:12 GMT
+Content-Disposition: attachment; filename="smoke_2026-09-26.geojson"
+Vary: X-Inertia
+X-Inertia-Devtools-Id: 01M3FGZ27M8B3S3Y0M41WJDRET
+X-Inertia-Devtools-Parent-Out: 01M3FGZ27M8B3S3Y0M41WJDRET
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+

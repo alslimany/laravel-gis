@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Server: nginx/1.31.6
+Content-Type: text/html; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/8.4.25
+Cache-Control: no-cache, private
+Date: Sat, 26 Sep 2026 18:52:21 GMT
+Vary: X-Inertia
+X-Inertia-Devtools-Id: 01M3FGZBC9CHQ6XH2QS4ANJXN3
+X-Inertia-Devtools-Parent-Out: 01M3FGZBC9CHQ6XH2QS4ANJXN3
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+
