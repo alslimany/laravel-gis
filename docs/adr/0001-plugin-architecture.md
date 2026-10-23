@@ -1,7 +1,7 @@
 # ADR-0001: Plugin host and plugin contract (Lumina GIS)
 
-- Status: Proposed, rev 3, addressing Code Review CHANGES on 24e45de (#53)
-- Inputs: Web Dev #54 prep, Lumina PM decisions 2026-10-23, Code Review of 24e45de
+- Status: Proposed, rev 4, addressing Code Review CHANGES on 8599f66 (rollback by batch, plugin-scoped restore) (#53)
+- Inputs: Web Dev #54 prep, Lumina PM decisions 2026-10-23, Code Review of 24e45de and 8599f66
 - Epic: #52 · Blocks: A2, A3, A4
 - Date: 2026-10-23
 - Sources read: GitHub issues #52, #53, #59; Notion spec "Plugin/Package Architecture + Disaster Early Warning Plugin"; repo `main` files: `bootstrap/app.php`, `bootstrap/providers.php`, `composer.json`, `app/Models/User.php`, `app/Http/Middleware/{CheckRole,EnsureUserHasOrganization,HandleInertiaRequests}.php`, `database/migrations/*create_layers_table.php`, `config/dataimport.php`, `resources/js/Layouts/app/app-sidebar-layout.tsx`, `resources/js/app.tsx`, `routes/web.php`, `app/Policies/UserPolicy.php`, `app/Http/Controllers/{UserController,SolutionPackController}.php`, `app/Jobs/*`, and the repo tree.
@@ -34,9 +34,9 @@
 | D9 | Tables / services | `installed_plugins`, `organization_plugins` (unique `organization_id`+`plugin_key`), `plugin_events`; cached `PluginManager`; gates `plugins.install`, `plugins.toggle`. | Matches Web Dev #54 plan. |
 | D10 | Plugin API version | SemVer starting **1.0.0** (`config('lumina.plugin_api')`). | First public contract. |
 | D11 | Core schema guard | PHPUnit test (`CoreSchemaUntouchedTest`), not CI-only (Actions disabled). It is a **test-time snapshot only** (core columns/indexes before vs after installing every plugin on a test DB); it is not a runtime or DB-permission control. | Runs everywhere; cheap. No separate DB-role restriction is proposed (single app DB user; plugins are first-party and code-reviewed). |
-| D14 | Queue/console tenancy | `App\Tenancy\CurrentOrganization` (scoped singleton) is the single source of the current org for the `BelongsToOrganization` scope, set by middleware for HTTP and by the `SetsOrganizationContext` job middleware for queued jobs from the job's `organization_id`. **Fail closed:** if no org is set, scoped queries throw `MissingOrganizationContext` (no console bypass). Global work must opt out explicitly with `CurrentOrganization::runUnscoped(fn ...)`, logged. | Workers run in console; a "bypass in console" scope would make every queued job unscoped. |
-| D15 | Plugin migrations | Run with `php artisan migrate --path=<plugin migrations> --realpath --force` in their **own batch**, always **after** core `migrate`; `pg_dump` before every install/upgrade; rollback is `migrate:rollback --path=... --realpath --step=<batch>` or restore the dump. | Keeps plugin batches isolated from core rollbacks; restore point for upgrades. |
 | D12 | Early Warning data | `ew_basins` and forecasts global, stored once; orgs subscribe to areas. DEM fetched by script, not committed. | Avoids duplicate data and repo bloat. |
+| D14 | Queue/console tenancy | `App\Tenancy\CurrentOrganization` (scoped singleton) is the single source of the current org for the `BelongsToOrganization` scope. HTTP: the existing `organization` middleware (`EnsureUserHasOrganization`) also sets `CurrentOrganization` from `auth()->user()->organization_id` and runs **before** `plugin:{key}`. Jobs: the `SetsOrganizationContext` job middleware sets it from the job's `organization_id`. **Fail closed:** if no org is set, scoped queries throw `MissingOrganizationContext` (no console bypass). `CurrentOrganization::runUnscoped(fn ...)` (logged) is allowed **only** in jobs marked `GlobalJob` and in callbacks registered in a provider's `schedule()`; an arch test bans it in controllers and in any `OrganizationScopedJob`. Every job class under `packages/*` must implement `OrganizationScopedJob` or the explicit `GlobalJob` marker (arch test). **Scope:** D14 covers plugin models only; core models (e.g. `Layer`) stay unscoped and keep their existing explicit queries and policies. | Workers run in console; a "bypass in console" scope would make every queued job unscoped. |
+| D15 | Plugin migrations | Run with `php artisan migrate --path=<plugin migrations> --realpath --force` in their **own batch**, always **after** core `migrate`; each batch number is appended to `installed_plugins.meta.batches`. Rollback is `php artisan migrate:rollback --batch=<n> --force` for each recorded plugin batch, **newest first** (never `--step`, which counts the latest batches DB-wide). Before install/upgrade a **plugin-only** dump (`pg_dump -t '<prefix>_*'`) is taken; restore on `down()` failure touches only plugin-prefixed tables. The full DB dump is outage-level DR only (§8). | Plugin batches stay isolated from core batches; a failed plugin rollback can never revert other orgs' core writes. |
 
 ## 1b. Web Dev confirmations (2026-10-23)
 
@@ -140,7 +140,7 @@ Rules:
 - **Registry cache:** the parsed manifest list from `vendor/composer/installed.json` is cached under `plugins:registry:{hash}` where `hash` is the file's mtime+size, so it is rebuilt only after `composer install`/deploy; `php artisan plugin:cache` / `plugin:clear` warm and clear it (run in deploy next to `route:cache`).
 - **Jobs/scheduler (D14):** the plugin `schedule()` runs global jobs only when the plugin is installed. Per-org jobs are dispatched once per org from `PluginManager::enabledOrganizations($key)`.
   - Every per-org queued job implements `OrganizationScopedJob`, carries `organization_id`, and uses the `SetsOrganizationContext` job middleware, which sets `CurrentOrganization` before `handle()` and clears it after (also on failure), and re-checks that the plugin is installed and enabled for that org (otherwise the job is released/deleted, not run).
-  - **Fail closed:** the `BelongsToOrganization` scope reads only `CurrentOrganization`; it has **no** console or super-admin bypass. A scoped query with no context throws `MissingOrganizationContext`. Global jobs (e.g. forecast fetch into global `ew_forecasts`) touch only global tables or wrap work in `CurrentOrganization::runUnscoped()`, which is logged.
+  - **Fail closed:** the `BelongsToOrganization` scope reads only `CurrentOrganization`; it has **no** console or super-admin bypass. A scoped query with no context throws `MissingOrganizationContext`. Global jobs (e.g. forecast fetch into global `ew_forecasts`) implement the `GlobalJob` marker and touch only global tables; only they (and `schedule()` callbacks) may wrap work in `CurrentOrganization::runUnscoped()`, which is logged (D14). Every job class in `packages/*` is either `OrganizationScopedJob` or `GlobalJob` (arch test).
   - Required test: a cross-org job test dispatches a job for org A with data in A and B, and asserts it reads/writes only A, and that the same job without an org context throws.
 - **Policies:** plugin permissions (manifest `permissions`) map to org roles. The default is admin = manage, member = view.
 
@@ -159,10 +159,11 @@ Rules:
   - Global reference data has no `organization_id` and is read-only to orgs. For Early Warning, **basins (`ew_basins`) and forecasts are global, stored once**; orgs subscribe to areas via an org-scoped subscription table.
   - Large source data (DEM) is downloaded by a script, never committed.
 - **Layers:** plugin outputs (basins, risk map) are normal `layers` rows with `metadata.plugin = "early-warning"`. They are not new columns on `layers`.
+- **Plugin-created layers after rollback/uninstall/purge:** on rollback or uninstall, `layers` rows with `metadata.plugin = <key>` are kept and marked `metadata.source_missing = true`; the UI shows them with a "source plugin unavailable" badge (core still renders whatever PostGIS table still exists). On reinstall/forward migration the flag is cleared. `plugin:purge` lists these layers in its confirmation and, after the typed-key confirm, deletes them (and their GeoServer publications) before dropping the plugin tables. No dangling rows remain after purge.
 - **Disable:** keeps all data. Plugin layers stay as ordinary layers, which keeps the optional rule: core still renders them.
 - **Uninstall (super admin):**
   - Uninstall flips state only (routes 404, jobs off); tables and `organization_plugins` rows are **kept indefinitely**. No auto-retention.
-  - Purge is a separate super-admin artisan command `plugin:purge {key}`: requires the plugin uninstalled, takes a `pg_dump` of its prefixed tables to storage, needs a typed-key confirmation, then runs `down()` migrations. Audited.
+  - Purge is a separate super-admin artisan command `plugin:purge {key}`: requires the plugin uninstalled, takes a plugin-only `pg_dump -t '<prefix>_*'` to `storage/app/plugin-backups` (§8 Backups), needs a typed-key confirmation, then runs `down()` migrations. Audited.
 
 ## 7. Frontend slots
 D13 is the source; this section only adds the component loading.
@@ -177,12 +178,19 @@ D13 is the source; this section only adds the component loading.
 | Step | Who | What happens |
 |---|---|---|
 | Add code | Dev/ops | `composer require lumina/early-warning:@dev` (path repo), deploy |
-| Install | Super admin | Core `migrate` done first → validate manifest + `core` range → `pg_dump` → `migrate --path=<plugin> --realpath --force` in its own batch (CLI `plugin:install` or queued job, never in-request), batch number stored in `installed_plugins.meta.batches` → `onInstall()` → `installed_plugins.status=installed` |
+| Install | Super admin | Core `migrate` done first → validate manifest + `core` range → plugin gated off → plugin-only `pg_dump` → `migrate --path=<plugin> --realpath --force` in its own batch (CLI `plugin:install` or queued job, never in-request), batch number appended to `installed_plugins.meta.batches` → `onInstall()` → `installed_plugins.status=installed` |
 | Enable | Org admin (or super admin, audited) | `organization_plugins.enabled=true` → `onEnable($org)` → cache bust |
 | Disable | Org admin | `enabled=false` → `onDisable($org)`; routes 404, jobs skip; data kept |
-| Upgrade | Super admin | New code deployed → core `migrate` → registry sees version > installed → plugin gated off (`status=upgrading`) → `pg_dump` (core + plugin tables) → `migrate --path=<plugin> --realpath --force` (new batch) → `installed_plugins.version` updated; failure → `status=failed`, plugin gated off for all |
-| Rollback | Super admin | Redeploy previous plugin code → `migrate:rollback --path=<plugin> --realpath --step=<n>` for the recorded plugin batch(es) only (never touches core batches) → restore `installed_plugins.version`; if `down()` is unsafe or failed, restore the pre-upgrade `pg_dump` |
+| Upgrade | Super admin | New code deployed → core `migrate` → registry sees version > installed → plugin gated off (`status=upgrading`) → plugin-only `pg_dump -t '<prefix>_*'` → `migrate --path=<plugin> --realpath --force` (new batch) → `installed_plugins.version` updated, new batch appended to `meta.batches`; failure → `status=failed`, plugin stays gated off for all |
+| Rollback | Super admin | Plugin gated off for all orgs (`status=upgrading`) → redeploy previous plugin code → for each batch to undo in `installed_plugins.meta.batches`, **newest first**: `php artisan migrate:rollback --batch=<n> --force` (removes only that batch; core batches are never touched even if they ran later) → pop it from `meta.batches` → restore `installed_plugins.version`; plugin layers marked `source_missing` where their tables are gone. If `down()` is unsafe or fails: restore **only the plugin-prefixed tables** from the plugin-only dump (drop `<prefix>_*`, `pg_restore` that dump), never the full DB dump |
 | Uninstall | Super admin | Gate off for all orgs → `status=uninstalled`, `uninstalled_at` set; data kept. Purge only via `plugin:purge` |
+
+**Backups (D15).**
+- **Routine (every install/upgrade/purge):** plugin-only `pg_dump -Fc -t '<prefix>_*'`. This is the only dump used for plugin restore, so restoring never rolls back core or other orgs' writes.
+- **Full DB dump:** outage-level disaster recovery only (taken by the normal ops backup schedule), never restored for a plugin failure. It is not taken per plugin operation because the large `import_*` tables make it slow and big.
+- **Size/time:** plugin-only dumps are proportional to the plugin tables (e.g. `ew_*`, mostly global basins/forecasts); the command logs dump size and duration to `plugin_events` and aborts if free disk space is below 2× the estimated size (`pg_total_relation_size` of the prefixed tables).
+- **Location/retention:** `storage/app/plugin-backups/<key>/<timestamp>-<action>.dump` (local disk, not public); keep the last 5 per plugin and at least 30 days, pruned by `plugin:backups:prune` (scheduled daily in core). Purge dumps are kept 90 days.
+- **Gating during dump + migrate:** the plugin is gated off for all orgs (`status=upgrading`, so `plugin:{key}` returns 404 and `SetsOrganizationContext` releases its jobs) from before the dump until migrate/rollback finishes; it returns to `installed` only on success.
 
 All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, purge, settings change) are written to `plugin_events` (D9).
 
@@ -194,7 +202,7 @@ All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, p
 ## 10. Security risks
 | Risk | Mitigation |
 |---|---|
-| Cross-org data leak in plugin queries/jobs | Fail-closed `BelongsToOrganization` scope on `CurrentOrganization` (D14), job middleware sets context, cross-org HTTP and job tests per plugin |
+| Cross-org data leak in plugin queries/jobs | Fail-closed `BelongsToOrganization` scope on `CurrentOrganization` (D14, plugin models only; core models keep their policies), `organization` middleware / job middleware set context, `runUnscoped()` restricted to `GlobalJob`/`schedule()`, cross-org HTTP and job tests per plugin |
 | Super-admin escalation | Flag only via artisan; not mass-assignable; audit log; never settable by org admin UI |
 | Plugin code is full-trust PHP | First-party/reviewed packages only; no upload-a-zip install; CR gate |
 | Core table tampering | `CoreSchemaUntouchedTest` (test-time snapshot, D11) + code review; no DB-role control is claimed |
@@ -224,9 +232,9 @@ All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, p
 | Gating | `plugin:{key}` returns 404 for not-installed, disabled, other-org; JSON 404 under `api/*`; super admin with no org / other org (§5) | `tests/Feature/Plugins` |
 | Tenancy (HTTP) | Org A user cannot read/write org B plugin rows | per plugin |
 | Tenancy (jobs) | Cross-org job test + missing-context throws (D14) | per plugin + core |
-| Lifecycle | install → enable → disable → uninstall → purge with hello-plugin; own migration batch; rollback touches only plugin batch; every step writes `plugin_events` | `tests/Feature/Plugins` |
+| Lifecycle | install → enable → disable → uninstall → purge with hello-plugin; own migration batch; **rollback-by-batch test where a core batch is migrated after the plugin batch** and `migrate:rollback --batch=<plugin batch>` reverts only plugin tables while the later core batch remains; restore-on-`down()`-failure touches only `<prefix>_*`; purge removes `metadata.plugin` layers, rollback marks them `source_missing`; every step writes `plugin_events` | `tests/Feature/Plugins` |
 | Settings | D7 rules reject invalid settings | per plugin |
-| Arch | No raw HTTP in `packages/*`; no `Schema::table` on core tables in plugin migrations; scheduled tasks only in `schedule()` | `tests/Arch` (PHPUnit, file scan) |
+| Arch | No raw HTTP in `packages/*`; no `Schema::table` on core tables in plugin migrations; scheduled tasks only in `schedule()`; `runUnscoped()` banned in controllers and `OrganizationScopedJob` classes; every `packages/*` job implements `OrganizationScopedJob` or `GlobalJob` | `tests/Arch` (PHPUnit, file scan) |
 | #66 | Cross-org 403/404 on `solution-packs.*`, `users.index`; `organization_id` mass-assignment ignored | `tests/Feature/Security` |
 | Frontend | Sidebar with `plugins: []` equals core nav; failing plugin component is contained by its error boundary | Vitest (or manual QA until set up) |
 
