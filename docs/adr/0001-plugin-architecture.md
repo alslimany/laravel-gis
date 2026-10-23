@@ -1,18 +1,18 @@
 # ADR-0001: Plugin host and plugin contract (Lumina GIS)
 
-- Status: Proposed, for Web Dev + Code Review sign-off (#53)
-- Inputs: Web Dev #54 prep, Lumina PM decisions 2026-10-23
+- Status: Proposed, rev 3, addressing Code Review CHANGES on 24e45de (#53)
+- Inputs: Web Dev #54 prep, Lumina PM decisions 2026-10-23, Code Review of 24e45de
 - Epic: #52 · Blocks: A2, A3, A4
 - Date: 2026-10-23
-- Sources read: GitHub issues #52, #53, #59; Notion spec "Plugin/Package Architecture + Disaster Early Warning Plugin"; repo `main` files: `bootstrap/app.php`, `bootstrap/providers.php`, `composer.json`, `app/Models/User.php`, `app/Http/Middleware/{CheckRole,EnsureUserHasOrganization,HandleInertiaRequests}.php`, `database/migrations/*create_layers_table.php`, `config/dataimport.php`, `resources/js/Layouts/app/app-sidebar-layout.tsx`, and the repo tree.
+- Sources read: GitHub issues #52, #53, #59; Notion spec "Plugin/Package Architecture + Disaster Early Warning Plugin"; repo `main` files: `bootstrap/app.php`, `bootstrap/providers.php`, `composer.json`, `app/Models/User.php`, `app/Http/Middleware/{CheckRole,EnsureUserHasOrganization,HandleInertiaRequests}.php`, `database/migrations/*create_layers_table.php`, `config/dataimport.php`, `resources/js/Layouts/app/app-sidebar-layout.tsx`, `resources/js/app.tsx`, `routes/web.php`, `app/Policies/UserPolicy.php`, `app/Http/Controllers/{UserController,SolutionPackController}.php`, `app/Jobs/*`, and the repo tree.
 
 ## 1. Context
 - Stack (composer.json): Laravel ^13, PHP ^8.3, Inertia ^3.3 + React/TSX (`resources/js/Pages`, `Layouts`), Sanctum, Predis, PHPUnit 12. `extra.laravel.dont-discover` is empty, so package auto-discovery is on. No `packages/` dir and no `repositories` entry yet.
 - Providers: only `App\Providers\AppServiceProvider` is listed in `bootstrap/providers.php`. Routing is the `web`/`api`/`console` files in `bootstrap/app.php`. Middleware aliases: `role` (CheckRole → `User::hasAnyRole`) and `organization` (EnsureUserHasOrganization → `users.organization_id` required).
-- Tenancy: **single org per user** (`users.organization_id`). Core tables (e.g. `layers`) carry `organization_id` FK with cascade delete. There is no global scope and no tenant package; scoping is explicit per query/policy (e.g. `DataImportPolicy`).
+- Tenancy: **single org per user** (`users.organization_id`). Core tables (e.g. `layers`) carry `organization_id` FK with cascade delete. There is no global scope, no `BelongsToOrganization` trait and no tenant package in the repo today (verified: no `addGlobalScope` anywhere in `app/`); scoping is explicit per query/policy (e.g. `DataImportPolicy`). Existing jobs (`app/Jobs/Process*Job`, `PublishLayerToGeoServer`, ...) receive models and do not re-scope by org.
 - Roles: `roles` + `role_user`; `isAdmin()` = role `admin`, which is **org-level**. There is **no platform super-admin** today (#52 confirms).
 - Layers: a `layers` row points to a PostGIS `table_name`, and has GeoServer fields (`geoserver_layer_name`, `published`) and `metadata` JSON. Imports go through ogr2ogr (`config/dataimport.php`, prefix `import_`).
-- Frontend: `HandleInertiaRequests::share()` spreads `ConsoleProps::base()`. The sidebar comes from the `AppSidebar` component. There are no extension slots yet.
+- Frontend: `HandleInertiaRequests::share()` spreads `ConsoleProps::base()`. The sidebar comes from the `AppSidebar` component. `resources/js/app.tsx` resolves pages with an eager `import.meta.glob('./Pages/**/*.{tsx,jsx}')`. There are no extension slots yet.
 - Product rules (#52/#53/Notion):
   - Plugins never modify core tables.
   - Plugins use their own route files.
@@ -24,21 +24,23 @@
 | # | Question | Decision | Rationale |
 |---|---|---|---|
 | D1 | Super admin | `users.is_super_admin` boolean, default false, indexed, **not fillable**, set/revoked only by `php artisan lumina:make-super-admin {email}`. A super admin may also belong to an org. | A role row is too easy to grant via existing role UIs and `admin`/`super-admin` are confusable; artisan-only keeps escalation off the web surface. |
-| D2 | Org admin scoping | Add nullable `role_user.organization_id` FK now (minimal migration, backfilled from `users.organization_id`). "Org admin" = `admin` role row for that org. `isAdmin()` gains an org-aware variant; `UserPolicy` checks same org. | Roles are global today, so an admin of org A may reach org B (`users.*`). Fixing it before plugins add a second admin-gated surface is cheaper than later. |
+| D2 | Org admin scoping | Add nullable `role_user.organization_id` FK now (minimal migration, backfilled from `users.organization_id`). "Org admin" = `admin` role row for that org; `hasRole()`/`CheckRole` gain an org-aware check (`hasRoleInOrg('admin', $org)`). Remove `organization_id` from `User::$fillable`. | `UserPolicy` **already** checks same org on view/update/delete/restore, so `users.edit/update/destroy` are not the gap. The real gaps (verified in code): (a) `role:admin` (`CheckRole` → global `hasAnyRole`) guards routes that have **no policy**, e.g. the `solution-packs.*` group and `users.index`, whose org filter is `->when($user->organization_id, ...)` so an admin with a null org lists every user; (b) `organization_id` is mass-assignable on `User`, so any `fill($request->...)` path can move a user (or an admin) into another org. #66 targets exactly (a) and (b). |
 | D3 | Route gating | Plugin routes **always registered**; `plugin:{key}` middleware gates per request. **404 for both** not-installed and disabled-for-org. | Keeps `route:cache` working; uniform 404 hides which plugins exist (PM decision, overrides prep's 404/403). |
 | D4 | Install / uninstall / purge | Install runs plugin migrations via CLI (`plugin:install`) or a queued job only, never in a web request. Uninstall flips state, keeps data **indefinitely**, no auto-retention. Separate super-admin `plugin:purge {key}` with `pg_dump` backup + typed confirmation. | Avoids web timeouts / wrong DB user; data loss only by explicit, recoverable action. |
 | D5 | Super-admin toggle | Super admin may toggle any org; every toggle by anyone is written to `plugin_events`. Plugins default **off** for new orgs. | Support/ops need it; audit keeps it accountable. |
-| D6 | Manifest | `composer.json` → `extra.lumina` (no separate JSON file). | One source with Composer discovery; read from `installed.json`, cached. |
-| D7 | Settings validation | **Now, minimal:** manifest may declare Laravel validation rules for settings; `PluginManager` validates on save. JSON-Schema/UI generation later. | Cheap now; prevents junk in `settings` jsonb that would be costly to clean later. |
+| D6 | Manifest | `composer.json` → `extra.lumina` (no separate JSON file). | One source with Composer discovery; parsed from `vendor/composer/installed.json` once and cached (see §5 Registry cache). |
+| D7 | Settings validation | **Now, minimal:** manifest declares Laravel validation rules for settings under `extra.lumina.settings.rules`; `PluginManager` validates on save. This is the **only** settings source; there is no JSON Schema file. JSON-Schema/UI generation later. | Cheap now; prevents junk in `settings` jsonb that would be costly to clean later. |
 | D8 | hello-plugin | `require-dev` only; never ships to prod. Used by tests. | Test fixture, not a product. |
 | D9 | Tables / services | `installed_plugins`, `organization_plugins` (unique `organization_id`+`plugin_key`), `plugin_events`; cached `PluginManager`; gates `plugins.install`, `plugins.toggle`. | Matches Web Dev #54 plan. |
 | D10 | Plugin API version | SemVer starting **1.0.0** (`config('lumina.plugin_api')`). | First public contract. |
-| D11 | Core schema guard | PHPUnit test (`CoreSchemaUntouchedTest`), not CI-only (Actions disabled). | Runs everywhere. |
+| D11 | Core schema guard | PHPUnit test (`CoreSchemaUntouchedTest`), not CI-only (Actions disabled). It is a **test-time snapshot only** (core columns/indexes before vs after installing every plugin on a test DB); it is not a runtime or DB-permission control. | Runs everywhere; cheap. No separate DB-role restriction is proposed (single app DB user; plugins are first-party and code-reviewed). |
+| D14 | Queue/console tenancy | `App\Tenancy\CurrentOrganization` (scoped singleton) is the single source of the current org for the `BelongsToOrganization` scope, set by middleware for HTTP and by the `SetsOrganizationContext` job middleware for queued jobs from the job's `organization_id`. **Fail closed:** if no org is set, scoped queries throw `MissingOrganizationContext` (no console bypass). Global work must opt out explicitly with `CurrentOrganization::runUnscoped(fn ...)`, logged. | Workers run in console; a "bypass in console" scope would make every queued job unscoped. |
+| D15 | Plugin migrations | Run with `php artisan migrate --path=<plugin migrations> --realpath --force` in their **own batch**, always **after** core `migrate`; `pg_dump` before every install/upgrade; rollback is `migrate:rollback --path=... --realpath --step=<batch>` or restore the dump. | Keeps plugin batches isolated from core rollbacks; restore point for upgrades. |
 | D12 | Early Warning data | `ew_basins` and forecasts global, stored once; orgs subscribe to areas. DEM fetched by script, not committed. | Avoids duplicate data and repo bloat. |
 
 ## 1b. Web Dev confirmations (2026-10-23)
 
-**D2 sequencing.** The `role_user.organization_id` change ships in **#66** (security fix, first, standalone): nullable column backfilled from `users.organization_id`, indexed; `UserPolicy` same-org check; cross-org 403 test. **#54 depends on #66** and adds only `installed_plugins`, `organization_plugins`, and `users.is_super_admin`. Exactly one migration touches `role_user`.
+**D2 sequencing.** The `role_user.organization_id` change ships in **#66** (security fix, first, standalone): nullable column backfilled from `users.organization_id`, indexed; org-aware `CheckRole`/`hasRoleInOrg` for policy-less `role:admin` routes (`solution-packs.*`, `users.index` with a hard org filter, no `when()`); `organization_id` removed from `User::$fillable`; `UserPolicy` keeps its existing same-org check; cross-org 403/404 tests for those routes and a mass-assignment test. **#54 depends on #66** and adds only `installed_plugins`, `organization_plugins`, and `users.is_super_admin`. Exactly one migration touches `role_user`.
 
 **D13 Frontend slot wiring (#55).**
 - `PluginManager::enabledFor($org)` returns enabled plugin manifests.
@@ -47,20 +49,21 @@
 - `ConsoleProps` gains typed `plugins: PluginSlot[]`.
 - `AppSidebar` renders hard-coded core nav, then plugin items sorted by `order`, each wrapped in an error boundary so a failing plugin can't break the sidebar.
 - No per-org route registration; routes stay always-registered and gated by `plugin:{key}` (D3).
-- Plugin pages resolve via a `resolvePageComponent` glob over `packages/*/resources/js/Pages`.
+- Plugin pages resolve through the **lazy** `<key>::Page/Name` resolver in §7 (this replaces the earlier `packages/*/resources/js/Pages` glob idea; one mechanism only).
 
 ## 2. Decision
 Plugins are **first-party Laravel packages** under `packages/<key>`, loaded by a Composer path repository. Each package declares its manifest under `extra.lumina` in its own `composer.json` and ships a service provider that extends a core `Lumina\Plugins\PluginServiceProvider` base class. The core adds:
 1. A cached `App\Plugins\PluginManager` (singleton) that discovers manifests from `vendor/composer/installed.json` and keeps global install state in `installed_plugins`.
 2. An `organization_plugins` table (unique `organization_id`+`plugin_key`) that holds per-org enablement and settings.
 3. A platform super-admin flag (`users.is_super_admin`, boolean, guarded, artisan-only; not a role).
-4a. Gates `plugins.install` (also uninstall) and `plugins.toggle`.
-4. A gating middleware `plugin:<key>`, plus a scheduler/job guard.
-5. Frontend slots fed by an Inertia shared prop `plugins` and a Vite-registered component map.
+4. Gates `plugins.install` (also uninstall) and `plugins.toggle`.
+5. A gating middleware `plugin:<key>`, plus a scheduler/job guard and the `CurrentOrganization` context (D14).
+6. Frontend slots fed by the Inertia shared prop `plugins` (D13) and lazily loaded plugin bundles (§7).
 
 Code presence (composer) is not the same as **installed** (super admin ran migrations and marked it installed), which is not the same as **enabled for org X** (org admin toggle).
 
 ## 3. Manifest schema (`packages/early-warning/composer.json` → `extra.lumina`)
+D13 (nav) and D7 (settings) are the source for this schema.
 ```json
 {
   "key": "early-warning",
@@ -71,8 +74,9 @@ Code presence (composer) is not the same as **installed** (super admin ran migra
   "description": "Forecast-based flood / heavy-rain decision support (advisory, not official).",
   "permissions": ["early-warning.view", "early-warning.manage"],
   "nav": [
-    { "slot": "sidebar.main", "label": "Early Warning", "icon": "cloud-rain",
-      "route": "early-warning.index", "permission": "early-warning.view" }
+    { "key": "early-warning", "label_en": "Early Warning", "label_ar": "الإنذار المبكر",
+      "route": "early-warning.index", "icon": "cloud-rain", "order": 100,
+      "permission": "early-warning.view" }
   ],
   "frontend": {
     "entry": "resources/js/index.tsx",
@@ -81,13 +85,23 @@ Code presence (composer) is not the same as **installed** (super admin ran migra
       "layer.detail.tab": "RiskTimelineTab"
     }
   },
-  "settings": { "schema": "config/settings.schema.json" },
-  "scheduled": ["FetchForecast:hourly", "ComputeRisk:hourly"],
+  "settings": {
+    "rules": {
+      "rain_threshold_mm": ["required", "numeric", "min:0", "max:500"],
+      "notify_emails": ["nullable", "array"],
+      "notify_emails.*": ["email"]
+    },
+    "defaults": { "rain_threshold_mm": 50 }
+  },
   "outbound_hosts": ["api.open-meteo.com"],
-  "data": { "tables": ["ew_basins", "ew_forecasts", "ew_risk_assessments", "ew_alert_rules", "ew_alert_logs"], "global_tables": ["ew_forecasts"] }
+  "data": { "tables": ["ew_basins", "ew_forecasts", "ew_subscriptions", "ew_risk_assessments", "ew_alert_rules", "ew_alert_logs"], "global_tables": ["ew_basins", "ew_forecasts"] }
 }
 ```
-`key` is kebab-case and immutable. `version` is SemVer. `core` is the SemVer range of the plugin API (separate from the app version; API starts at 1.0.0). The `extra.laravel.providers` entry auto-registers the provider; `extra.lumina.provider` must match it.
+- `key` is kebab-case and immutable. `version` is SemVer. `core` is the SemVer range of the plugin API (separate from the app version; API starts at 1.0.0). The `extra.laravel.providers` entry auto-registers the provider; `extra.lumina.provider` must match it.
+- `nav` items are exactly the D13 shape (`key`, `label_en`, `label_ar`, `route`, `icon`, `order`, optional `permission`) and render in the `sidebar.main` slot after core nav.
+- `settings.rules` are Laravel validation rules (D7), validated by `PluginManager::saveSettings()`; `defaults` fill missing keys.
+- **Scheduled tasks are not declared in the manifest.** The single place is the provider's `schedule(Schedule $s)` (§4).
+- `outbound_hosts` is **advisory documentation only** (reviewed in CR, shown on the super-admin install screen). It is not a runtime allowlist; enforcement is the arch test in §10/§12.
 
 ## 4. Service provider contract
 ```php
@@ -95,7 +109,7 @@ abstract class PluginServiceProvider extends ServiceProvider {
     abstract public function key(): string;            // must equal manifest key
     public function routes(): ?string { return null; } // path to plugin routes file
     public function migrationsPath(): ?string { return null; }
-    public function schedule(Schedule $s): void {}     // wrapped by org/enabled guard
+    public function schedule(Schedule $s): void {}     // ONLY place scheduled tasks are declared; wrapped by installed/enabled guard
     public function onInstall(): void {}               // global seed
     public function onEnable(Organization $o): void {} // e.g. default AlertRules
     public function onDisable(Organization $o): void {}// stop jobs; keep data
@@ -107,7 +121,8 @@ abstract class PluginServiceProvider extends ServiceProvider {
         //   loadRoutesFrom wrapped in
         //   Route::middleware(['web','auth','organization',"plugin:{$key}"])->prefix("x/{$key}")->name("{$key}.")
         //   mergeConfigFrom, register policies/permissions, register scheduler callback (guarded)
-        // Migrations are NOT auto-loaded into `php artisan migrate`; they run only via plugin:install (CLI/queue).
+        // Migrations are NOT auto-loaded into `php artisan migrate`; they run only via plugin:install/upgrade
+        // (CLI/queue) as `migrate --path=<migrationsPath()> --realpath` in their own batch, after core (D15).
     }
 }
 ```
@@ -115,12 +130,18 @@ Rules:
 - No edits to `routes/web.php`.
 - No core-table `Schema::table` calls, enforced by a PHPUnit test (`CoreSchemaUntouchedTest`, core-column snapshot before/after install).
 - Integration happens only through public core services: Layer creation/import, GeoServer publish, Webhook, queue, and Organization/Role.
+- **Optional-only rule:** core has no mandatory links to any plugin, no required core field depends on a plugin, every slot renders nothing when its plugin is off or not installed, and the full core test suite runs with **all plugins off** (§12).
 
 ## 5. Gating
 - **Super admin:** `users.is_super_admin` (migration in core), not in `$fillable`, granted/revoked only by `php artisan lumina:make-super-admin {email} [--revoke]`. A super admin may also belong to an org. Super-admin routes live at `/platform/extensions` behind a `super-admin` middleware (403). The super admin can install, upgrade and uninstall plugins, and can toggle any org (audited).
 - **Org admin:** `role_user.organization_id` scoped `admin` role (see Decision D2) plus `organization`. The admin can enable or disable an installed plugin for **their own** org at `/organization/extensions` and edit its settings. Plugins default **off** for new orgs.
+- **Super admin on plugin routes (`/x/<key>/...`):** gating follows the user's **own** org like everyone else. A super admin whose org has the plugin enabled sees it; a super admin with **no org** is stopped by the `organization` middleware (redirect to org setup, as for any user without an org); a super admin whose org has the plugin disabled gets **404**. A super admin never sees another org's plugin data through plugin routes; cross-org support work happens only from `/platform/extensions` (install state and per-org toggles, audited in `plugin_events`), which never renders org data.
 - **Request:** routes are always registered; the `plugin:<key>` middleware returns **404** both when the plugin is not installed and when it is not enabled for `auth()->user()->organization_id` (JSON 404 for api/*), so existence is not leaked. Lookups go through the cached `PluginManager` (`plugins:installed`, `plugins:org:{id}`), busted by model observers on change.
-- **Jobs/scheduler:** the plugin `schedule()` runs global jobs only when the plugin is installed. Per-org jobs iterate `Plugin::enabledOrganizations($key)`. Per-org jobs use `PluginManager::enabledOrganizations($key)`. Every queued job carries `organization_id` and re-checks enablement in `handle()`.
+- **Registry cache:** the parsed manifest list from `vendor/composer/installed.json` is cached under `plugins:registry:{hash}` where `hash` is the file's mtime+size, so it is rebuilt only after `composer install`/deploy; `php artisan plugin:cache` / `plugin:clear` warm and clear it (run in deploy next to `route:cache`).
+- **Jobs/scheduler (D14):** the plugin `schedule()` runs global jobs only when the plugin is installed. Per-org jobs are dispatched once per org from `PluginManager::enabledOrganizations($key)`.
+  - Every per-org queued job implements `OrganizationScopedJob`, carries `organization_id`, and uses the `SetsOrganizationContext` job middleware, which sets `CurrentOrganization` before `handle()` and clears it after (also on failure), and re-checks that the plugin is installed and enabled for that org (otherwise the job is released/deleted, not run).
+  - **Fail closed:** the `BelongsToOrganization` scope reads only `CurrentOrganization`; it has **no** console or super-admin bypass. A scoped query with no context throws `MissingOrganizationContext`. Global jobs (e.g. forecast fetch into global `ew_forecasts`) touch only global tables or wrap work in `CurrentOrganization::runUnscoped()`, which is logged.
+  - Required test: a cross-org job test dispatches a job for org A with data in A and B, and asserts it reads/writes only A, and that the same job without an org context throws.
 - **Policies:** plugin permissions (manifest `permissions`) map to org roles. The default is admin = manage, member = view.
 
 ## 6. Data ownership
@@ -134,7 +155,7 @@ Rules:
   - They live in the plugin's migrations path and are tracked in the normal `migrations` table.
   - They may FK **to** core (`organization_id`, `layer_id`) with `cascadeOnDelete` for org deletion. Core never FKs to plugin tables.
 - **Org scoping:**
-  - Every org-owned plugin table has `organization_id` plus a `BelongsToOrganization` trait (a global scope from the current user's org, bypassable for super admin and console).
+  - Every org-owned plugin table has `organization_id` plus a new core `BelongsToOrganization` trait (added in #54): a global scope reading `CurrentOrganization` (D14), fail-closed, with no console or super-admin bypass; `creating` fills `organization_id` from the context.
   - Global reference data has no `organization_id` and is read-only to orgs. For Early Warning, **basins (`ew_basins`) and forecasts are global, stored once**; orgs subscribe to areas via an org-scoped subscription table.
   - Large source data (DEM) is downloaded by a script, never committed.
 - **Layers:** plugin outputs (basins, risk map) are normal `layers` rows with `metadata.plugin = "early-warning"`. They are not new columns on `layers`.
@@ -144,25 +165,26 @@ Rules:
   - Purge is a separate super-admin artisan command `plugin:purge {key}`: requires the plugin uninstalled, takes a `pg_dump` of its prefixed tables to storage, needs a typed-key confirmation, then runs `down()` migrations. Audited.
 
 ## 7. Frontend slots
-- *Slot wiring through `ConsoleProps::base()` / `AppSidebar` nav is to be confirmed with Web Dev (#55).*
-- The shared Inertia prop `enabledPlugins: [{key, version, nav[], slots{}}]` contains enabled plugins only, and is added in `HandleInertiaRequests::share`.
-- `resources/js/plugins/registry.ts` uses `import.meta.glob('../../../packages/*/resources/js/index.tsx')` to lazy-load plugin bundles. A plugin's `index.tsx` default-exports a `{ slots: Record<string, React.ComponentType>, pages: Record<string, ...> }`.
-- `<PluginSlot name="sidebar.main" />` and friends render nothing when there are no entries. Initial slots: `sidebar.main`, `mapBuilder.panel`, `mapBuilder.toolbar`, `layer.detail.tab`, `organization.settings.section`, `dashboard.widget`.
-- Plugin pages are Inertia pages resolved with a `<key>::Page/Name` prefix in the `app.tsx` resolver.
-- Each slot is wrapped in an error boundary, so a plugin crash cannot break core pages.
-- Build: a single Vite build (the plugins are first-party). There is no runtime remote JS.
+D13 is the source; this section only adds the component loading.
+- **Prop:** one shared Inertia prop, `plugins` (lazy, cached per org at `plugins:org:{id}`), typed in `ConsoleProps` as `plugins: PluginSlot[]`, where `PluginSlot = { key, version, nav: NavItem[], slots: Record<string, string> }`. Enabled plugins only; empty array when none. No other plugin prop name is used.
+- **Sidebar:** `AppSidebar` renders core nav, then `plugins[].nav` sorted by `order`, each item in an error boundary (D13).
+- **Slots:** `resources/js/plugins/registry.ts` maps each plugin key to `import.meta.glob('../../../packages/*/resources/js/index.tsx')` (**lazy**, not eager). A plugin's `index.tsx` default-exports `{ slots: Record<string, React.ComponentType>, pages: Record<string, () => Promise<...>> }`. `<PluginSlot name="..." />` loads the bundle only for keys present in `plugins` and renders **nothing** when no enabled plugin fills the slot. Initial slots: `sidebar.main`, `mapBuilder.panel`, `mapBuilder.toolbar`, `layer.detail.tab`, `organization.settings.section`, `dashboard.widget`.
+- **Pages (single mechanism):** plugin controllers render `Inertia::render('<key>::Page/Name')`. The `app.tsx` resolver keeps its core `./Pages/**` glob; names containing `::` are routed to the plugin registry, which lazy-imports that plugin's `pages` entry. There is no `packages/*/resources/js/Pages` glob.
+- Each slot and plugin page is wrapped in an error boundary, so a plugin crash cannot break core pages.
+- Build: a single Vite build (the plugins are first-party); plugin code is split into lazy chunks. There is no runtime remote JS.
 
 ## 8. Lifecycle
 | Step | Who | What happens |
 |---|---|---|
 | Add code | Dev/ops | `composer require lumina/early-warning:@dev` (path repo), deploy |
-| Install | Super admin | Validate manifest + `core` range → run plugin migrations (CLI `plugin:install` or queued job, never in-request) → `onInstall()` → `installed_plugins.status=installed` |
+| Install | Super admin | Core `migrate` done first → validate manifest + `core` range → `pg_dump` → `migrate --path=<plugin> --realpath --force` in its own batch (CLI `plugin:install` or queued job, never in-request), batch number stored in `installed_plugins.meta.batches` → `onInstall()` → `installed_plugins.status=installed` |
 | Enable | Org admin (or super admin, audited) | `organization_plugins.enabled=true` → `onEnable($org)` → cache bust |
 | Disable | Org admin | `enabled=false` → `onDisable($org)`; routes 404, jobs skip; data kept |
-| Upgrade | Super admin | New code deployed → registry sees version > installed → maintenance flag for that plugin → migrate (CLI/queue) → `installed_plugins.version` updated; failure → `status=failed`, plugin gated off for all |
+| Upgrade | Super admin | New code deployed → core `migrate` → registry sees version > installed → plugin gated off (`status=upgrading`) → `pg_dump` (core + plugin tables) → `migrate --path=<plugin> --realpath --force` (new batch) → `installed_plugins.version` updated; failure → `status=failed`, plugin gated off for all |
+| Rollback | Super admin | Redeploy previous plugin code → `migrate:rollback --path=<plugin> --realpath --step=<n>` for the recorded plugin batch(es) only (never touches core batches) → restore `installed_plugins.version`; if `down()` is unsafe or failed, restore the pre-upgrade `pg_dump` |
 | Uninstall | Super admin | Gate off for all orgs → `status=uninstalled`, `uninstalled_at` set; data kept. Purge only via `plugin:purge` |
 
-All lifecycle actions are written to an audit log (`plugin_events`, or `ProjectActivity`-style).
+All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, purge, settings change) are written to `plugin_events` (D9).
 
 ## 9. Versioning / compatibility
 - Plugin SemVer. The manifest `core` constraint is checked against `config('lumina.plugin_api')`, starting at `1.0.0`. An incompatible plugin cannot be installed or upgraded, and a running one is gated off with an admin banner.
@@ -172,16 +194,16 @@ All lifecycle actions are written to an audit log (`plugin_events`, or `ProjectA
 ## 10. Security risks
 | Risk | Mitigation |
 |---|---|
-| Cross-org data leak in plugin queries/jobs | `BelongsToOrganization` scope + jobs carry org id + PHPUnit tenancy tests per plugin |
+| Cross-org data leak in plugin queries/jobs | Fail-closed `BelongsToOrganization` scope on `CurrentOrganization` (D14), job middleware sets context, cross-org HTTP and job tests per plugin |
 | Super-admin escalation | Flag only via artisan; not mass-assignable; audit log; never settable by org admin UI |
 | Plugin code is full-trust PHP | First-party/reviewed packages only; no upload-a-zip install; CR gate |
-| Core table tampering | Migration lint test forbidding `Schema::table('<core>')`; DB role review |
-| SSRF / outbound calls (Open-Meteo, NASA) | Manifest `outbound_hosts` allowlist enforced in a shared HTTP client; timeouts |
+| Core table tampering | `CoreSchemaUntouchedTest` (test-time snapshot, D11) + code review; no DB-role control is claimed |
+| SSRF / outbound calls (Open-Meteo, NASA) | `outbound_hosts` is advisory (reviewed in CR). Enforced by an arch test banning raw HTTP (`curl_*`, `file_get_contents('http`, `new GuzzleHttp\\Client`, `fsockopen`) in `packages/*`; plugins must use the `Http` facade with timeouts. No URLs from user input |
 | Public token endpoints (Phase D) | Scoped, revocable, hashed tokens (Sanctum abilities); rate limits |
 | GeoServer SQL views | Parameterised views; no user SQL; org filter in view |
 | Frontend XSS / crash | Error boundaries; no `dangerouslySetInnerHTML`; same CSP |
 | Existence disclosure | 404 for both not-installed and disabled |
-| Cross-org admin reach (global `admin` role on `users.*`) | `role_user.organization_id` scoping + `UserPolicy` same-org check (D2) |
+| Cross-org admin reach (global `admin` role on policy-less `role:admin` routes; mass-assignable `users.organization_id`) | #66: org-scoped `role_user`, org-aware `CheckRole`, `organization_id` not fillable (D2) |
 | Advisory misuse | Mandatory "decision support, not official warning" wording (Notion) |
 
 ## 11. Alternatives considered
@@ -194,7 +216,20 @@ All lifecycle actions are written to an audit log (`plugin_events`, or `ProjectA
 | E. Runtime-uploaded plugins (zip/marketplace) | Self-serve | Remote code execution risk; build pipeline for JS | Rejected |
 | F. Full multi-tenancy package (separate DB/schema per org) | Hard isolation | Large core refactor; out of scope | Rejected |
 
-## 12. Open questions (remaining)
+## 12. Testing strategy
+| Layer | Test | Where |
+|---|---|---|
+| Core, plugins off | Full existing suite runs with **no plugin installed or enabled**; must stay green (optional-only rule) | default `phpunit` run |
+| Schema guard | `CoreSchemaUntouchedTest`: snapshot core columns/indexes, install all plugins (incl. hello-plugin), compare | `tests/Feature/Plugins` |
+| Gating | `plugin:{key}` returns 404 for not-installed, disabled, other-org; JSON 404 under `api/*`; super admin with no org / other org (§5) | `tests/Feature/Plugins` |
+| Tenancy (HTTP) | Org A user cannot read/write org B plugin rows | per plugin |
+| Tenancy (jobs) | Cross-org job test + missing-context throws (D14) | per plugin + core |
+| Lifecycle | install → enable → disable → uninstall → purge with hello-plugin; own migration batch; rollback touches only plugin batch; every step writes `plugin_events` | `tests/Feature/Plugins` |
+| Settings | D7 rules reject invalid settings | per plugin |
+| Arch | No raw HTTP in `packages/*`; no `Schema::table` on core tables in plugin migrations; scheduled tasks only in `schedule()` | `tests/Arch` (PHPUnit, file scan) |
+| #66 | Cross-org 403/404 on `solution-packs.*`, `users.index`; `organization_id` mass-assignment ignored | `tests/Feature/Security` |
+| Frontend | Sidebar with `plugins: []` equals core nav; failing plugin component is contained by its error boundary | Vitest (or manual QA until set up) |
+
+## 13. Open questions (remaining)
 1. Open-Meteo: non-commercial use, free plan OK for #60 (relayed by PM 2026-10-23). Production outbound network access still to confirm.
-2. Pilot basin: **Tripoli wadis** (decided by Abdullah, relayed by PM; #59).
-3. `ConsoleProps` / `AppSidebar` slot wiring: to be confirmed with Web Dev before #55.
+2. Pilot basin: **Tripoli wadis** (decided by Abdullah, relayed by PM; #59). Exact wadis and outlet points still open.
