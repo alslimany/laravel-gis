@@ -7,8 +7,10 @@ import {
     KeyRound,
     Layers,
     LayoutDashboard,
+    LayoutGrid,
     Library,
     Map,
+    Package,
     Upload,
     Users,
     UsersRound,
@@ -38,6 +40,7 @@ import type { NavItem } from '@/types';
 
 const ICONS: Record<string, LucideIcon> = {
     dashboard: LayoutDashboard,
+    apps: LayoutGrid,
     projects: FolderKanban,
     imports: Upload,
     layers: Layers,
@@ -47,6 +50,7 @@ const ICONS: Record<string, LucideIcon> = {
     forms: FormInput,
     groups: UsersRound,
     tokens: KeyRound,
+    packs: Package,
     organization: Building2,
     users: Users,
 };

@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Layer extends Model
 {
@@ -75,9 +77,17 @@ class Layer extends Model
     /**
      * Field registry for this layer.
      */
-    public function fields(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function fields(): HasMany
     {
         return $this->hasMany(LayerField::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Relationships where this layer is the parent.
+     */
+    public function relationships(): HasMany
+    {
+        return $this->hasMany(LayerRelationship::class);
     }
 
     /**
@@ -117,8 +127,8 @@ class Layer extends Model
     /**
      * Scope a query to only include published layers.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePublished($query)
     {
@@ -128,9 +138,9 @@ class Layer extends Model
     /**
      * Scope a query to only include layers for a given organization.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder  $query
      * @param  int  $organizationId
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function scopeForOrganization($query, $organizationId)
     {

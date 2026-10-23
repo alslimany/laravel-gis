@@ -135,7 +135,7 @@ class FormSubmissionService
         ];
 
         foreach ($schema as $field) {
-            $columns[] = $this->quoteIdent($field['name']).' TEXT NULL';
+            $columns[] = $this->quoteIdent($field['name']).' '.$this->columnType((string) ($field['type'] ?? 'text'), $driver).' NULL';
         }
 
         if ($collectGeometry) {
@@ -168,7 +168,7 @@ class FormSubmissionService
                 'name' => $field['name'],
                 'alias' => $field['label'] ?? $field['name'],
                 'type' => match ($field['type'] ?? 'text') {
-                    'number' => 'number',
+                    'number' => 'float',
                     'checkbox' => 'boolean',
                     'date' => 'date',
                     default => 'string',
@@ -804,6 +804,27 @@ class FormSubmissionService
     protected function quoteIdent(string $identifier): string
     {
         return '"'.str_replace('"', '', $identifier).'"';
+    }
+
+    /**
+     * Column type for a form field type, so form-created layers get typed columns.
+     */
+    protected function columnType(string $type, string $driver): string
+    {
+        if ($driver === 'pgsql') {
+            return match ($type) {
+                'number' => 'DOUBLE PRECISION',
+                'checkbox' => 'BOOLEAN',
+                'date' => 'DATE',
+                default => 'TEXT',
+            };
+        }
+
+        return match ($type) {
+            'number' => 'NUMERIC',
+            'checkbox' => 'BOOLEAN',
+            default => 'TEXT',
+        };
     }
 
     protected function csvValue(mixed $value): string

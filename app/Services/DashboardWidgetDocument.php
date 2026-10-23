@@ -139,6 +139,13 @@ class DashboardWidgetDocument
             }
         }
 
+        if ($type === 'map') {
+            $viewport = $this->normalizeViewport($raw['viewport'] ?? null);
+            if ($viewport !== null) {
+                $widget['viewport'] = $viewport;
+            }
+        }
+
         if (isset($raw['limit'])) {
             $widget['limit'] = max(1, min(100, (int) $raw['limit']));
         }
@@ -157,6 +164,62 @@ class DashboardWidgetDocument
         }
 
         return $widget;
+    }
+
+    /**
+     * The view a map widget opens on, kept as posted: center/zoom/rotation or
+     * a bounds rectangle. Anything unusable is dropped rather than guessed at.
+     *
+     * @return array{center?: array{0: float, 1: float}, zoom?: float, rotation?: float, bounds?: array{0: float, 1: float, 2: float, 3: float}}|null
+     */
+    protected function normalizeViewport(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $viewport = [];
+
+        $center = $value['center'] ?? null;
+        if (is_array($center) && count($center) === 2 && is_numeric($center[0]) && is_numeric($center[1])) {
+            $lon = (float) $center[0];
+            $lat = (float) $center[1];
+            if ($lon >= -180 && $lon <= 180 && $lat >= -90 && $lat <= 90) {
+                $viewport['center'] = [$lon, $lat];
+            }
+        }
+
+        if (isset($value['zoom']) && is_numeric($value['zoom'])) {
+            $zoom = (float) $value['zoom'];
+            if ($zoom >= 0 && $zoom <= 24) {
+                $viewport['zoom'] = round($zoom, 2);
+            }
+        }
+
+        if (isset($value['rotation']) && is_numeric($value['rotation'])) {
+            $rotation = (float) $value['rotation'];
+            if (abs($rotation) <= M_PI) {
+                $viewport['rotation'] = round($rotation, 4);
+            }
+        }
+
+        $bounds = LayerExtent::coerceBounds($value['bounds'] ?? null);
+        if ($bounds !== null) {
+            $viewport['bounds'] = $bounds;
+        }
+
+        if ($viewport === []) {
+            return null;
+        }
+
+        // A rectangle alone is a complete description of the view.
+        if ($bounds !== null) {
+            $fitted = LayerExtent::toViewport($bounds);
+            $viewport['center'] ??= $fitted['center'];
+            $viewport['zoom'] ??= $fitted['zoom'];
+        }
+
+        return $viewport;
     }
 
     public function canonicalType(string $type): string

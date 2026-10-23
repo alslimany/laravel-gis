@@ -89,8 +89,11 @@ class ConsoleProps
         ];
 
         if ($user->organization_id) {
-            // Editor loop first: import → publish → map; projects sit beside the loop.
+            // Apps portal first, then the editor loop: import → publish → map; projects sit beside the loop.
             $items = array_merge($items, array_filter([
+                Route::has('apps.index')
+                    ? self::navItem('Apps', route('apps.index'), 'apps', 'workspace', '/apps')
+                    : null,
                 self::navItem('Data imports', route('imports.index'), 'imports', 'workspace'),
                 self::navItem('Layers', route('layers.index'), 'layers', 'workspace'),
                 self::navItem('Maps', route('maps.index'), 'maps', 'workspace', '/maps'),
@@ -109,6 +112,9 @@ class ConsoleProps
                     : null,
                 Route::has('api-tokens.index')
                     ? self::navItem('API tokens', route('api-tokens.index'), 'tokens', 'organize')
+                    : null,
+                $user->isAdmin() && Route::has('solution-packs.index')
+                    ? self::navItem('Solution packs', route('solution-packs.index'), 'packs', 'organize', '/solution-packs')
                     : null,
                 self::navItem('Organization', route('organization.settings'), 'organization', 'organize'),
             ]));
@@ -161,6 +167,8 @@ class ConsoleProps
             'maps' => Route::has('maps.index') ? route('maps.index') : null,
             'mapShow' => Route::has('maps.show') ? url('/maps/__ID__') : null,
             'mapBuilder' => Route::has('maps.builder') ? route('maps.builder') : null,
+            'apps' => Route::has('apps.index') ? route('apps.index') : null,
+            'solutionPacks' => Route::has('solution-packs.index') ? route('solution-packs.index') : null,
             'catalog' => Route::has('catalog.index') ? route('catalog.index') : null,
             'forms' => Route::has('forms.index') ? route('forms.index') : null,
             'organization' => Route::has('organization.settings') ? route('organization.settings') : null,

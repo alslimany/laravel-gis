@@ -278,10 +278,82 @@ class DashboardWidgetData
             'message' => null,
             'source' => 'map',
             'map_id' => $map->id,
-            'map' => $public
-                ? app(PublicShareMap::class)->present($map)
-                : $this->presentSavedMap($map),
+            'map' => $this->mapViewport($map, $public, $widget),
         ];
+    }
+
+    /**
+     * The saved-map payload, with the widget author's viewport applied when set.
+     *
+     * @param  array<string, mixed>  $widget
+     * @return array<string, mixed>
+     */
+    protected function mapViewport(Map $map, bool $public, array $widget): array
+    {
+        $payload = $public
+            ? app(PublicShareMap::class)->present($map)
+            : $this->presentSavedMap($map);
+
+        $configured = $this->configuredViewport($widget);
+        if ($configured !== null) {
+            $payload['viewport'] = $configured;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * The view a map widget opens on: what the author configured, otherwise
+     * the layer's own extent, otherwise the world.
+     *
+     * @param  array<string, mixed>  $widget
+     * @return array{center: array{0: float, 1: float}, zoom: float|int, rotation: float|int, bounds?: array{0: float, 1: float, 2: float, 3: float}}
+     */
+    protected function initialViewport(array $widget, Layer $layer): array
+    {
+        $configured = $this->configuredViewport($widget);
+        if ($configured !== null) {
+            return $configured;
+        }
+
+        $extent = app(LayerExtent::class)->for($layer);
+
+        return $extent
+            ? LayerExtent::toViewport($extent)
+            : ['center' => [0, 20], 'zoom' => 2, 'rotation' => 0];
+    }
+
+    /**
+     * A viewport saved on the widget itself, normalized, or null when unset.
+     *
+     * @param  array<string, mixed>  $widget
+     * @return array{center: array{0: float, 1: float}, zoom: float|int, rotation: float|int, bounds?: array{0: float, 1: float, 2: float, 3: float}}|null
+     */
+    protected function configuredViewport(array $widget): ?array
+    {
+        $viewport = $widget['viewport'] ?? null;
+        if (! is_array($viewport)) {
+            return null;
+        }
+
+        $bounds = LayerExtent::coerceBounds($viewport['bounds'] ?? null);
+        $center = $viewport['center'] ?? null;
+
+        if ($bounds === null && ! (is_array($center) && count($center) === 2 && is_numeric($center[0]) && is_numeric($center[1]))) {
+            return null;
+        }
+
+        if ($bounds !== null) {
+            return LayerExtent::toViewport($bounds);
+        }
+
+        $resolved = [
+            'center' => [(float) $center[0], (float) $center[1]],
+            'zoom' => is_numeric($viewport['zoom'] ?? null) ? (float) $viewport['zoom'] : 12,
+            'rotation' => is_numeric($viewport['rotation'] ?? null) ? (float) $viewport['rotation'] : 0,
+        ];
+
+        return $resolved;
     }
 
     /**
@@ -316,15 +388,28 @@ class DashboardWidgetData
 
         $viewport = is_array($map->viewport) ? $map->viewport : [];
 
+        if (! isset($viewport['center']) || ! isset($viewport['zoom'])) {
+            // Maps saved before viewports were recorded open on their own layers.
+            $extent = app(LayerExtent::class)->forMap($map);
+            if ($extent !== null) {
+                $viewport = LayerExtent::toViewport($extent);
+            }
+        }
+
+        $presented = [
+            'center' => $viewport['center'] ?? [0, 20],
+            'zoom' => $viewport['zoom'] ?? 2,
+            'rotation' => $viewport['rotation'] ?? 0,
+        ];
+        if (isset($viewport['bounds'])) {
+            $presented['bounds'] = $viewport['bounds'];
+        }
+
         return [
             'id' => $map->id,
             'name' => $map->name,
             'basemap' => $map->basemap ?: 'osm',
-            'viewport' => [
-                'center' => $viewport['center'] ?? [0, 20],
-                'zoom' => $viewport['zoom'] ?? 2,
-                'rotation' => $viewport['rotation'] ?? 0,
-            ],
+            'viewport' => $presented,
             'layers' => $layers,
         ];
     }
@@ -545,7 +630,7 @@ class DashboardWidgetData
                 'filtered' => $filtered,
                 'map' => [
                     'basemap' => $widget['basemap'] ?? 'osm',
-                    'viewport' => ['center' => [0, 20], 'zoom' => 2],
+                    'viewport' => $this->initialViewport($widget, $layer),
                     'layers' => [[
                         'id' => $layer->id,
                         'name' => $layer->name,

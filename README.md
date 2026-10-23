@@ -48,6 +48,7 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for production deployment and [TE
 - ✅ **Drawing Tools**: Point, line, and polygon drawing
 - ✅ **Spatial Analysis**: Buffer analysis, spatial queries (within, contains, intersects)
 - ✅ **Attribute Queries**: Advanced query builder with multiple conditions
+- ✅ **Save analysis as layer**: materialize a query result into a real layer (own table, copied fields, geometry + GIST index on PostGIS, back-references, optional GeoServer publish)
 - ✅ **Export Tools**: GeoJSON, CSV, JSON, and PNG export
 - ✅ **Analysis API**: 6 endpoints for spatial operations
 - ✅ **Export API**: 5 endpoints for data export
@@ -55,6 +56,18 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for production deployment and [TE
 - ✅ **Comprehensive Tests**: 29 tests covering all features
 
 See [GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md) for detailed documentation and [GIS_TOOLS_QUICK_REFERENCE.md](GIS_TOOLS_QUICK_REFERENCE.md) for quick start guide.
+
+### Solution Packs ✨ NEW
+- ✅ **Built-in AEC pilot pack**: Parcels, buildings, utilities, inspections with domains, relationships, sample features, starter map, public form, and dashboard
+- ✅ **One-click install**: Organization settings (web) or `solution:pack:install` (CLI), idempotent and organization-scoped
+- ✅ **GeoServer publish step**: publish pack layers on demand (settings button or `--publish` flag) with per-layer failure handling
+- ✅ **UI pack builder**: admins define layers, fields, styles, relationships, map, form, and dashboard — or duplicate a built-in pack to customize it
+- ✅ **App Gallery** (`/apps`): installed workspaces, shared links, and recent content in one place — reachable from the sidenav **Apps** item (admins also get **Solution packs** in the Organize group)
+- ✅ **Workflow runbook**: packs can declare an ordered collect → notify → monitor → review → report sequence, resolved against real content and editable in the builder
+- ✅ **Dashboard map viewports**: the map widget remembers the author's pan/zoom (or opens on the layer extent when untouched) instead of always resetting to a world view
+- ✅ **322 tests**: installer, builder CRUD, isolation, publishing, gallery, workflow, save-as-layer, map viewports, public-form end-to-end
+
+See [SOLUTION_PACKS.md](SOLUTION_PACKS.md) for the full walkthrough.
 
 ### Authentication & Authorization
 - ✅ User registration and login with Laravel UI

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\SchemaValidationException;
 use App\Models\Layer;
 use App\Services\FeatureService;
 use App\Services\WebhookDispatcher;
@@ -74,6 +75,8 @@ class FeatureController extends Controller
             ]);
 
             return response()->json(['success' => true, 'feature' => $feature], 201);
+        } catch (SchemaValidationException $e) {
+            return response()->json(['error' => $e->getMessage(), 'errors' => $e->errors], 422);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -108,6 +111,8 @@ class FeatureController extends Controller
             ]);
 
             return response()->json(['success' => true, 'feature' => $feature]);
+        } catch (SchemaValidationException $e) {
+            return response()->json(['error' => $e->getMessage(), 'errors' => $e->errors], 422);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -138,7 +143,12 @@ class FeatureController extends Controller
             'attributes' => 'required|array',
         ]);
 
-        $feature = $this->features->update($layer, $featureId, $validated['attributes']);
+        try {
+            $feature = $this->features->update($layer, $featureId, $validated['attributes']);
+        } catch (SchemaValidationException $e) {
+            return back()->withErrors($e->errors);
+        }
+
         if (! $feature) {
             return back()->withErrors(['feature' => 'Feature not found.']);
         }

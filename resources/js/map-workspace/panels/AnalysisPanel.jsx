@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, FileSpreadsheet, Image, Map, Plus, Search, X } from 'lucide-react';
 import { useMapStore } from '../store/mapStore';
 import { getCsrfToken } from '../utils/csrf';
@@ -89,6 +89,14 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
     const [resultKind, setResultKind] = useState('query');
     const [savedName, setSavedName] = useState('');
     const [saveState, setSaveState] = useState(null);
+    const [savedAnalysisId, setSavedAnalysisId] = useState(null);
+    const [savedLayer, setSavedLayer] = useState(null);
+
+    useEffect(() => {
+        setSavedAnalysisId(null);
+        setSavedLayer(null);
+        setSaveState(null);
+    }, [results]);
 
     const addCondition = () => {
         setQueryConditions((prev) => [...prev, { column: '', operator: '=', value: '' }]);
@@ -393,15 +401,26 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
     };
 
     const saveResult = async () => {
+        const analysisId = await persistResult();
+        if (analysisId) {
+            setSaveState(`Saved "${savedName.trim()}" for dashboards.`);
+        }
+    };
+
+    const persistResult = async () => {
+        if (savedAnalysisId) {
+            return savedAnalysisId;
+        }
+
         const ids = featureIds(results?.features);
         const name = savedName.trim();
         if (!selectedLayer || ids.length === 0) {
             alert('Run a query that returns features on a layer, then save it.');
-            return;
+            return null;
         }
         if (!name) {
             alert('Name this result before saving it.');
-            return;
+            return null;
         }
 
         try {
@@ -422,12 +441,43 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             const data = await response.json();
             if (!response.ok || !data.success) {
                 alert(analysisError(data));
-                return;
+                return null;
             }
-            setSaveState(`Saved "${data.analysis?.name || name}" for dashboards.`);
+            setSavedAnalysisId(data.analysis?.id ?? null);
+            return data.analysis?.id ?? null;
         } catch (error) {
             console.error(error);
             alert('Could not save this analysis.');
+            return null;
+        }
+    };
+
+    const saveAsLayer = async () => {
+        const analysisId = await persistResult();
+        if (!analysisId) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/analysis/results/${analysisId}/save-as-layer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({ name: savedName.trim() }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                alert(analysisError(data));
+                return;
+            }
+            setSavedLayer(data.layer ?? null);
+            setSaveState(`Layer "${data.layer?.name}" created from this result.`);
+        } catch (error) {
+            console.error(error);
+            alert('Could not save this analysis as a layer.');
         }
     };
 
@@ -630,6 +680,14 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                     <button type="button" onClick={saveResult} className="btn btn-sm btn-secondary w-100">
                                         Save for dashboards
                                     </button>
+                                    <button type="button" onClick={saveAsLayer} className="btn btn-sm btn-primary w-100 mt-2">
+                                        Save as layer
+                                    </button>
+                                    {savedLayer ? (
+                                        <p className="text-muted mt-2 mb-0">
+                                            <a href={`/layers/${savedLayer.id}`}>{savedLayer.name}</a>
+                                        </p>
+                                    ) : null}
                                     {saveState ? <p className="text-muted mt-2 mb-0">{saveState}</p> : null}
                                 </div>
                             ) : null}

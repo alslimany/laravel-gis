@@ -7,6 +7,8 @@ use App\Helpers\QueryBuilder;
 use App\Helpers\SpatialHelper;
 use App\Models\AnalysisResult;
 use App\Models\Layer;
+use App\Services\AnalysisLayerSaver;
+use App\Services\GeoServerPublisher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -262,6 +264,85 @@ class AnalysisController extends Controller
                 'feature_count' => $result->feature_count,
             ],
         ]);
+    }
+
+    /**
+     * Turn a saved analysis result into a standalone layer.
+     *
+     * The copied features keep their source ids and carry an
+     * analysis_result_id back-reference, so the insight becomes an
+     * operational layer that can be styled, shared, and published.
+     */
+    public function saveResultAsLayer(Request $request, AnalysisResult $analysis)
+    {
+        $user = auth()->user();
+        if (! $user || (int) $analysis->organization_id !== (int) $user->organization_id) {
+            abort(404);
+        }
+
+        if (! $user->can('create', Layer::class)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'nullable|string|max:255',
+            'publish' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        if ($analysis->layer_id === null) {
+            return response()->json(['error' => 'This analysis has no source layer.'], 422);
+        }
+
+        $ids = collect($analysis->feature_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json(['error' => 'This analysis has no features to save as a layer.'], 422);
+        }
+
+        $source = Layer::query()->find($analysis->layer_id);
+        if (! $source || (int) $source->organization_id !== (int) $analysis->organization_id) {
+            return response()->json(['error' => 'Source layer not found.'], 422);
+        }
+
+        if (! $source->table_name || ! Schema::hasTable($source->table_name) || ! Schema::hasColumn($source->table_name, 'id')) {
+            return response()->json(['error' => 'Layer or table not found.'], 422);
+        }
+
+        $layer = app(AnalysisLayerSaver::class)->save(
+            $analysis,
+            $source,
+            $user,
+            $request->filled('name') ? (string) $request->input('name') : null
+        );
+
+        if (! $layer) {
+            return response()->json(['error' => 'None of this analysis\'s features were found in the source layer.'], 422);
+        }
+
+        if ($request->boolean('publish')) {
+            app(GeoServerPublisher::class)->publish($source->organization, [$layer]);
+            $layer->refresh();
+        }
+
+        return response()->json([
+            'success' => true,
+            'layer' => [
+                'id' => $layer->id,
+                'name' => $layer->name,
+                'table_name' => $layer->table_name,
+                'feature_count' => $layer->feature_count,
+                'published' => $layer->published,
+                'href' => route('layers.show', $layer),
+            ],
+        ], 201);
     }
 
     /**

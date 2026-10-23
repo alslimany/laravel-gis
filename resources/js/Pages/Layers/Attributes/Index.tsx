@@ -261,6 +261,7 @@ export default function Index({
     features,
     columns = [],
     columnLabels = {},
+    columnDomains = {},
     shapes = [],
     filters = {},
     canEdit = false,
@@ -269,6 +270,7 @@ export default function Index({
     features?: { data?: FeatureRow[] };
     columns?: string[];
     columnLabels?: Record<string, string>;
+    columnDomains?: Record<string, string[] | null>;
     shapes?: ShapeCount[];
     filters?: { search?: string | null; shape?: string | null };
     canEdit?: boolean;
@@ -310,7 +312,23 @@ export default function Index({
     }
 
     function saveEdit(featureId: number | string) {
-        router.put(`/layers/${layer.id}/features/${featureId}`, { attributes: draft }, { preserveScroll: true, onSuccess: () => setEditingId(null) });
+        const original = rows.find((feature) => feature.id === featureId);
+        if (!original) {
+            return;
+        }
+        // Send only edited columns so untouched legacy values are never re-validated.
+        const changed: Record<string, string> = {};
+        Object.entries(draft).forEach(([column, value]) => {
+            const before = original[column] == null ? '' : String(original[column]);
+            if (value !== before) {
+                changed[column] = value;
+            }
+        });
+        if (Object.keys(changed).length === 0) {
+            setEditingId(null);
+            return;
+        }
+        router.put(`/layers/${layer.id}/features/${featureId}`, { attributes: changed }, { preserveScroll: true, onSuccess: () => setEditingId(null) });
     }
 
     function removeFeature(featureId: number | string) {
@@ -430,18 +448,55 @@ export default function Index({
                                                 />
                                             </Table.Cell>
                                         ) : null}
-                                        {columns.map((column) => (
-                                            <Table.Cell key={column} className={`${tdMono} max-w-xs`}>
-                                                {editing && editable.includes(column) ? (
-                                                    <TextInput
-                                                        value={draft[column] ?? ''}
-                                                        onChange={(event) => setDraft((current) => ({ ...current, [column]: event.target.value }))}
-                                                    />
-                                                ) : (
-                                                    <span className="block truncate">{feature[column] == null || feature[column] === '' ? '—' : String(feature[column])}</span>
-                                                )}
-                                            </Table.Cell>
-                                        ))}
+                                        {columns.map((column) => {
+                                            const domain = columnDomains[column];
+                                            const current = draft[column] ?? '';
+                                            const options =
+                                                domain && current !== '' && !domain.includes(current)
+                                                    ? [current, ...domain]
+                                                    : domain;
+                                            return (
+                                                <Table.Cell key={column} className={`${tdMono} max-w-xs`}>
+                                                    {editing && editable.includes(column) ? (
+                                                        options && options.length > 0 ? (
+                                                            <Select
+                                                                value={current}
+                                                                aria-label={column}
+                                                                onChange={(event) =>
+                                                                    setDraft((state) => ({
+                                                                        ...state,
+                                                                        [column]: event.target.value,
+                                                                    }))
+                                                                }
+                                                            >
+                                                                <option value="">—</option>
+                                                                {options.map((option) => (
+                                                                    <option key={option} value={option}>
+                                                                        {option}
+                                                                    </option>
+                                                                ))}
+                                                            </Select>
+                                                        ) : (
+                                                            <TextInput
+                                                                value={current}
+                                                                onChange={(event) =>
+                                                                    setDraft((state) => ({
+                                                                        ...state,
+                                                                        [column]: event.target.value,
+                                                                    }))
+                                                                }
+                                                            />
+                                                        )
+                                                    ) : (
+                                                        <span className="block truncate">
+                                                            {feature[column] == null || feature[column] === ''
+                                                                ? '—'
+                                                                : String(feature[column])}
+                                                        </span>
+                                                    )}
+                                                </Table.Cell>
+                                            );
+                                        })}
                                         {canEdit ? (
                                             <Table.Cell className={tdClass}>
                                                 {editing ? (

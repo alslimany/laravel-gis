@@ -158,10 +158,36 @@ class OrganizationDataIsolationTest extends TestCase
         $nav = collect($response->viewData('page')['props']['nav']);
 
         $this->assertSame(
-            ['Dashboard', 'Projects', 'Data imports', 'Layers', 'Maps'],
+            ['Dashboard', 'Apps', 'Data imports', 'Layers', 'Maps', 'Projects'],
             $nav->where('group', 'workspace')->pluck('label')->all()
         );
         $this->assertTrue($nav->where('group', 'organize')->pluck('label')->contains('Organization'));
         $this->assertFalse($nav->where('group', 'workspace')->pluck('label')->contains('Catalog'));
+        // Solution packs is admin-only; a non-admin never sees it in the nav.
+        $this->assertFalse($nav->pluck('label')->contains('Solution packs'));
+    }
+
+    public function test_admin_console_nav_includes_solution_packs(): void
+    {
+        $organization = Organization::factory()->create();
+        $admin = User::factory()->create(['organization_id' => $organization->id]);
+        $admin->roles()->attach(Role::where('name', 'admin')->first());
+
+        $response = $this->actingAs($admin)->get('/dashboard');
+
+        $response->assertOk();
+        $nav = collect($response->viewData('page')['props']['nav']);
+
+        $this->assertSame(
+            ['Dashboard', 'Apps', 'Data imports', 'Layers', 'Maps', 'Projects'],
+            $nav->where('group', 'workspace')->pluck('label')->all()
+        );
+        $this->assertSame(
+            ['Catalog', 'Dashboards', 'Forms', 'Groups', 'API tokens', 'Solution packs', 'Organization', 'Users'],
+            $nav->where('group', 'organize')->pluck('label')->all()
+        );
+        $packs = $nav->firstWhere('label', 'Solution packs');
+        $this->assertSame('packs', $packs['icon']);
+        $this->assertSame(route('solution-packs.index'), $packs['href']);
     }
 }

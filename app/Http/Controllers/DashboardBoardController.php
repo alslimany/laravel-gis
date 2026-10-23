@@ -258,6 +258,7 @@ class DashboardBoardController extends Controller
                 'layer_id' => $result->layer_id,
                 'layer_name' => $result->layer?->name,
                 'feature_count' => $result->feature_count,
+                'resulting_layer_id' => $result->summary['resulting_layer_id'] ?? null,
             ])
             ->values()
             ->all();

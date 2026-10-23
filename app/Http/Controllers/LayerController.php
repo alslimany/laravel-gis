@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\DeleteLayerFromGeoServer;
 use App\Jobs\PublishLayerToGeoServer;
+use App\Models\AnalysisResult;
 use App\Models\Layer;
 use App\Models\Project;
 use App\Services\ContentAccessService;
@@ -143,7 +144,39 @@ class LayerController extends Controller
         return Inertia::render('Layers/Show', [
             'layer' => $layer,
             'shapes' => $shapes,
+            'origin' => $this->origin($layer),
         ]);
+    }
+
+    /**
+     * Where a layer came from: an import, or a saved analysis result.
+     *
+     * @return array{kind: string, label: string, href: string|null}|null
+     */
+    protected function origin(Layer $layer): ?array
+    {
+        $metadata = is_array($layer->metadata) ? $layer->metadata : [];
+
+        if (! empty($metadata['analysis_result_id'])) {
+            $result = AnalysisResult::find($metadata['analysis_result_id']);
+            $source = ! empty($metadata['source_layer_id']) ? Layer::find($metadata['source_layer_id']) : null;
+
+            return [
+                'kind' => 'analysis',
+                'label' => $result?->name ?: 'Saved analysis',
+                'href' => $source ? '/layers/'.$source->id : null,
+            ];
+        }
+
+        if (! empty($metadata['import_id'])) {
+            return [
+                'kind' => 'import',
+                'label' => 'Import',
+                'href' => '/imports/'.$metadata['import_id'],
+            ];
+        }
+
+        return null;
     }
 
     /**

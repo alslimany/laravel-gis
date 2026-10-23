@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Field, PageHeader, PrimaryButton, TextArea, TextInput } from '@/components/gis';
 import { clearTileCache, tileCacheCount } from '@/map-workspace/cache/tileCache';
 
-export default function Settings({ organization }) {
+export default function Settings({ organization, solutionPacks = [], canInstallPacks = false }) {
     const [tileCount, setTileCount] = useState(null);
     const [clearing, setClearing] = useState(false);
+    const [installing, setInstalling] = useState(null);
 
     useEffect(() => {
         tileCacheCount().then(setTileCount).catch(() => setTileCount(0));
@@ -65,6 +66,70 @@ export default function Settings({ organization }) {
                 <PrimaryButton type="button" onClick={emptyMapCache} disabled={clearing}>
                     {clearing ? 'Emptying cache…' : 'Empty map cache'}
                 </PrimaryButton>
+            </section>
+            <section className="mt-8 max-w-xl space-y-3 border-t border-border pt-6">
+                <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold">Solution packs</h2>
+                    {canInstallPacks ? (
+                        <div className="flex items-center gap-4">
+                            <a href="/solution-packs" className="text-sm font-medium text-primary hover:underline">
+                                Build a pack →
+                            </a>
+                            <a href="/apps" className="text-sm font-medium text-primary hover:underline">
+                                Open app gallery →
+                            </a>
+                        </div>
+                    ) : null}
+                </div>
+                <p className="text-sm text-base-600">
+                    Pre-built layers, fields, relationships, and sample features for a sector. Installing a pack adds
+                    content to this organization only; it never touches other organizations.
+                </p>
+                <div className="space-y-3">
+                    {solutionPacks.map((pack) => (
+                        <div key={pack.slug} className="flex items-start justify-between gap-4 border border-border rounded-lg p-4">
+                            <div>
+                                <p className="font-medium">
+                                    {pack.name}
+                                    <span className="ml-2 align-middle text-xs font-normal text-base-500">
+                                        {pack.custom ? 'Custom' : 'Built-in'}
+                                    </span>
+                                </p>
+                                <p className="text-sm text-base-600">{pack.description}</p>
+                                {pack.contents ? <p className="text-xs text-base-500 mt-0.5">{pack.contents}</p> : null}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                {pack.installed && pack.unpublished > 0 && canInstallPacks ? (
+                                    <PrimaryButton
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={installing === pack.slug}
+                                        onClick={() => {
+                                            setInstalling(pack.slug);
+                                            router.post(`/organization/solution-packs/${pack.slug}/publish`, {}, { onFinish: () => setInstalling(null) });
+                                        }}
+                                    >
+                                        {installing === pack.slug ? 'Publishing…' : `Publish ${pack.unpublished}`}
+                                    </PrimaryButton>
+                                ) : null}
+                                {pack.installed ? (
+                                    <span className="text-sm font-medium text-emerald-600">Installed</span>
+                                ) : canInstallPacks ? (
+                                    <PrimaryButton
+                                        type="button"
+                                        disabled={installing === pack.slug}
+                                        onClick={() => {
+                                            setInstalling(pack.slug);
+                                            router.post(`/organization/solution-packs/${pack.slug}`, {}, { onFinish: () => setInstalling(null) });
+                                        }}
+                                    >
+                                        {installing === pack.slug ? 'Installing…' : 'Install'}
+                                    </PrimaryButton>
+                                ) : null}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </section>
         </AppLayout>
     );

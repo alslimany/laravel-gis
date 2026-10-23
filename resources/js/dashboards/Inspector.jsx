@@ -3,7 +3,7 @@ import { Field, Select, TextArea, TextInput } from '@/components/gis';
 
 const ANALYSIS_TYPES = ['indicator', 'serial', 'pie', 'table', 'list'];
 
-export default function Inspector({ widget, layers = [], maps = [], analyses = [], onChange, onClose }) {
+export default function Inspector({ widget, layers = [], maps = [], analyses = [], liveView = null, onChange, onClose }) {
     if (!widget) {
         return (
             <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
@@ -27,6 +27,49 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
     function patch(partial) {
         onChange({ ...widget, ...partial });
     }
+
+    function viewportSummary(viewport) {
+        if (!viewport) return 'Automatic — opens on the layer or saved map view.';
+        if (viewport.bounds) {
+            return `Bounds ${viewport.bounds.map((n) => Number(n).toFixed(4)).join(', ')} · zoom ${Math.round(viewport.zoom ?? 0)}`;
+        }
+        if (viewport.center) {
+            return `zoom ${Math.round(viewport.zoom ?? 0)} at ${Number(viewport.center[0]).toFixed(5)}, ${Number(viewport.center[1]).toFixed(5)}`;
+        }
+        return 'Automatic — opens on the layer or saved map view.';
+    }
+
+    function captureView() {
+        if (!liveView || liveView.widgetId !== widget.id || !liveView.center) return;
+        patch({
+            viewport: {
+                center: [
+                    Number(Number(liveView.center[0]).toFixed(6)),
+                    Number(Number(liveView.center[1]).toFixed(6)),
+                ],
+                zoom: Number(Number(liveView.zoom ?? 12).toFixed(2)),
+                rotation: Number(Number(liveView.rotation ?? 0).toFixed(4)),
+            },
+        });
+    }
+
+    function patchViewportNumber(key, raw) {
+        if (raw === '') return;
+        const value = Number(raw);
+        if (!Number.isFinite(value)) return;
+
+        // Typing a view replaces any bounds: one saved rectangle or one point of view.
+        const { bounds, ...rest } = widget.viewport || {};
+        if (key === 'zoom') {
+            patch({ viewport: { ...rest, zoom: Math.max(0, Math.min(22, value)) } });
+            return;
+        }
+        const center = Array.isArray(rest.center) ? [...rest.center] : [0, 0];
+        center[key === 'lon' ? 0 : 1] = value;
+        patch({ viewport: { ...rest, center } });
+    }
+
+    const canCapture = Boolean(liveView && liveView.widgetId === widget.id && liveView.center);
 
     return (
         <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
@@ -76,6 +119,14 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 </option>
                             ))}
                         </Select>
+                        {analysis?.resulting_layer_id ? (
+                            <a
+                                href={`/layers/${analysis.resulting_layer_id}`}
+                                className="mt-1 inline-block text-xs font-medium text-primary hover:underline"
+                            >
+                                Open resulting layer →
+                            </a>
+                        ) : null}
                     </Field>
                 ) : null}
 
@@ -266,6 +317,73 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                             />
                         </Field>
                     </>
+                ) : null}
+
+                {widget.type === 'map' ? (
+                    <Field
+                        label="Initial view"
+                        hint="Saved with the dashboard, so viewers open on this area and zoom instead of the whole world."
+                    >
+                        <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">{viewportSummary(widget.viewport)}</p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={!canCapture}
+                                    onClick={captureView}
+                                    className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Use current view
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!widget.viewport}
+                                    onClick={() => patch({ viewport: null })}
+                                    className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Back to auto
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <label className="grid gap-1 text-xs text-muted-foreground">
+                                    Zoom
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="22"
+                                        step="1"
+                                        className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                                        value={widget.viewport?.zoom ?? ''}
+                                        onChange={(event) => patchViewportNumber('zoom', event.target.value)}
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-xs text-muted-foreground">
+                                    Longitude
+                                    <input
+                                        type="number"
+                                        min="-180"
+                                        max="180"
+                                        step="any"
+                                        className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                                        value={widget.viewport?.center?.[0] ?? ''}
+                                        onChange={(event) => patchViewportNumber('lon', event.target.value)}
+                                    />
+                                </label>
+                                <label className="grid gap-1 text-xs text-muted-foreground">
+                                    Latitude
+                                    <input
+                                        type="number"
+                                        min="-90"
+                                        max="90"
+                                        step="any"
+                                        className="h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                                        value={widget.viewport?.center?.[1] ?? ''}
+                                        onChange={(event) => patchViewportNumber('lat', event.target.value)}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    </Field>
                 ) : null}
 
                 {widget.type === 'map' && mapSource === 'layer' ? (

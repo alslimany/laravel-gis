@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\AppGalleryController;
 use App\Http\Controllers\AttributeTableController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContentAccessController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\MvtController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\PrintController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RelationshipController;
+use App\Http\Controllers\SolutionPackController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -74,6 +77,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/layers/{layer}/style', [LayerController::class, 'updateStyle'])->name('layers.style.update');
 
     Route::get('/layers/{layer}/attributes', [AttributeTableController::class, 'index'])->name('layers.attributes');
+    Route::get('/layers/{layer}/fields', [LayerFieldController::class, 'page'])->name('layers.fields');
+    Route::get('/layers/{layer}/relationships', [RelationshipController::class, 'page'])->name('layers.relationships');
     Route::put('/layers/{layer}/features/{featureId}', [FeatureController::class, 'updateFromTable'])->name('layers.features.update');
     Route::delete('/layers/{layer}/features/{featureId}', [FeatureController::class, 'destroyFromTable'])->name('layers.features.destroy');
     Route::post('/layers/{layer}/features/bulk-destroy', [FeatureController::class, 'destroyMany'])->name('layers.features.bulk-destroy');
@@ -101,8 +106,22 @@ Route::middleware('auth')->group(function () {
     Route::resource('projects', ProjectController::class);
 
     Route::middleware('organization')->group(function () {
+        Route::get('/apps', [AppGalleryController::class, 'index'])->name('apps.index');
         Route::get('/organization/settings', [OrganizationController::class, 'settings'])->name('organization.settings');
         Route::put('/organization', [OrganizationController::class, 'update'])->name('organization.update');
+        Route::get('/relationships', [RelationshipController::class, 'builder'])->name('relationships.builder');
+        Route::post('/organization/solution-packs/{slug}', [OrganizationController::class, 'installSolutionPack'])->name('organization.solution-packs.install');
+        Route::post('/organization/solution-packs/{slug}/publish', [OrganizationController::class, 'publishSolutionPack'])->name('organization.solution-packs.publish');
+
+        Route::middleware('role:admin')->group(function () {
+            Route::get('solution-packs', [SolutionPackController::class, 'index'])->name('solution-packs.index');
+            Route::get('solution-packs/create', [SolutionPackController::class, 'create'])->name('solution-packs.create');
+            Route::post('solution-packs', [SolutionPackController::class, 'store'])->name('solution-packs.store');
+            Route::post('solution-packs/{slug}/duplicate', [SolutionPackController::class, 'duplicate'])->name('solution-packs.duplicate');
+            Route::get('solution-packs/{solutionPack}/edit', [SolutionPackController::class, 'edit'])->name('solution-packs.edit');
+            Route::put('solution-packs/{solutionPack}', [SolutionPackController::class, 'update'])->name('solution-packs.update');
+            Route::delete('solution-packs/{solutionPack}', [SolutionPackController::class, 'destroy'])->name('solution-packs.destroy');
+        });
 
         Route::get('forms/{form}/submissions/export.csv', [FormController::class, 'exportCsv'])->name('forms.export.csv');
         Route::get('forms/{form}/submissions/export.xlsx', [FormController::class, 'exportExcel'])->name('forms.export.excel');
@@ -161,6 +180,11 @@ Route::middleware('auth')->group(function () {
             Route::put('/fields/{field}', [LayerFieldController::class, 'update'])->name('api.layers.fields.update');
             Route::delete('/fields/{field}', [LayerFieldController::class, 'destroy'])->name('api.layers.fields.destroy');
 
+            Route::get('/relationships', [RelationshipController::class, 'index'])->name('api.layers.relationships.index');
+            Route::post('/relationships', [RelationshipController::class, 'store'])->name('api.layers.relationships.store');
+            Route::get('/relationships/{relationship}/features', [RelationshipController::class, 'features'])->name('api.layers.relationships.features');
+            Route::delete('/relationships/{relationship}', [RelationshipController::class, 'destroy'])->name('api.layers.relationships.destroy');
+
             Route::get('/features/{featureId}/attachments', [FeatureAttachmentController::class, 'index'])->name('api.layers.attachments.index');
             Route::post('/features/{featureId}/attachments', [FeatureAttachmentController::class, 'store'])->name('api.layers.attachments.store');
             Route::get('/features/{featureId}/attachments/{attachment}', [FeatureAttachmentController::class, 'show'])->name('api.layers.attachments.show');
@@ -174,6 +198,7 @@ Route::middleware('auth')->group(function () {
 
         Route::prefix('analysis')->group(function () {
             Route::post('/results', [AnalysisController::class, 'storeResult'])->name('api.analysis.results.store');
+            Route::post('/results/{analysis}/save-as-layer', [AnalysisController::class, 'saveResultAsLayer'])->name('api.analysis.results.save-as-layer');
             Route::post('/buffer', [AnalysisController::class, 'buffer'])->name('api.analysis.buffer');
             Route::post('/spatial-query', [AnalysisController::class, 'spatialQuery'])->name('api.analysis.spatial-query');
             Route::post('/attribute-query', [AnalysisController::class, 'attributeQuery'])->name('api.analysis.attribute-query');

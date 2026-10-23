@@ -33,17 +33,30 @@ class PublicShareMap
 
         $viewport = is_array($map->viewport) ? $map->viewport : [];
 
+        if (! isset($viewport['center']) || ! isset($viewport['zoom'])) {
+            // Maps saved before viewports were recorded open on their own layers.
+            $extent = app(LayerExtent::class)->forMap($map);
+            if ($extent !== null) {
+                $viewport = LayerExtent::toViewport($extent);
+            }
+        }
+
+        $presented = [
+            'center' => $viewport['center'] ?? [0, 20],
+            'zoom' => $viewport['zoom'] ?? 2,
+            'rotation' => $viewport['rotation'] ?? 0,
+        ];
+        if (isset($viewport['bounds'])) {
+            $presented['bounds'] = $viewport['bounds'];
+        }
+
         return [
             'id' => $map->id,
             'name' => $map->name,
             'description' => $map->description,
             'basemap' => $map->basemap ?: 'osm',
             'share_token' => $map->share_token,
-            'viewport' => [
-                'center' => $viewport['center'] ?? [0, 20],
-                'zoom' => $viewport['zoom'] ?? 2,
-                'rotation' => $viewport['rotation'] ?? 0,
-            ],
+            'viewport' => $presented,
             'layers' => $layers,
         ];
     }

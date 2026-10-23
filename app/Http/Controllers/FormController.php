@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\SchemaValidationException;
 use App\Models\Form;
 use App\Models\FormSubmission;
 use App\Models\Layer;
@@ -321,6 +322,12 @@ class FormController extends Controller
             );
         } catch (ValidationException $e) {
             throw $e;
+        } catch (SchemaValidationException $e) {
+            throw ValidationException::withMessages(
+                collect($e->errors)
+                    ->mapWithKeys(fn ($message, string $field) => ["attributes.{$field}" => $message])
+                    ->all()
+            );
         } catch (\Throwable $e) {
             Log::warning('Form submission failed', [
                 'form_id' => $form->id,

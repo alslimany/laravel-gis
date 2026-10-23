@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Layer;
 use App\Models\Map;
 use App\Services\ContentAccessService;
+use App\Services\LayerExtent;
 use App\Services\PublicShareMap;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -81,6 +82,12 @@ class MapController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'viewport' => 'nullable|array',
+            'viewport.center' => 'nullable|array|min:2|max:2',
+            'viewport.center.*' => 'numeric|min:-180|max:180',
+            'viewport.zoom' => 'nullable|numeric|min:0|max:24',
+            'viewport.rotation' => 'nullable|numeric|min:-6.2832|max:6.2832',
+            'viewport.bounds' => 'nullable|array|min:4|max:4',
+            'viewport.bounds.*' => 'numeric',
             'basemap' => 'nullable|string',
             'layers' => 'nullable|array',
             'is_public' => 'boolean',
@@ -146,6 +153,12 @@ class MapController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'viewport' => 'nullable|array',
+            'viewport.center' => 'nullable|array|min:2|max:2',
+            'viewport.center.*' => 'numeric|min:-180|max:180',
+            'viewport.zoom' => 'nullable|numeric|min:0|max:24',
+            'viewport.rotation' => 'nullable|numeric|min:-6.2832|max:6.2832',
+            'viewport.bounds' => 'nullable|array|min:4|max:4',
+            'viewport.bounds.*' => 'numeric',
             'basemap' => 'nullable|string',
             'layers' => 'nullable|array',
             'is_public' => 'boolean',
@@ -262,6 +275,10 @@ class MapController extends Controller
                     'style_config' => $seedLayer->style_config ?: ['renderer' => 'simple'],
                     'geometry_type' => $seedLayer->geometry_type,
                 ];
+                $extent = app(LayerExtent::class)->for($seedLayer);
+                if ($extent !== null) {
+                    $seedViewport = LayerExtent::toViewport($extent);
+                }
             }
         }
 
@@ -274,11 +291,18 @@ class MapController extends Controller
         }
 
         if ($map) {
+            $viewport = is_array($map->viewport) && $map->viewport !== [] ? $map->viewport : null;
+            if ($viewport === null) {
+                // Maps saved before viewports were recorded open on their own layers.
+                $extent = app(LayerExtent::class)->forMap($map);
+                $viewport = $extent !== null ? LayerExtent::toViewport($extent) : null;
+            }
+
             return [
                 'id' => $map->id,
                 'name' => $map->name,
                 'description' => $map->description ?? '',
-                'viewport' => $map->viewport,
+                'viewport' => $viewport,
                 'basemap' => $map->basemap,
                 'layers' => $initialLayers,
             ];

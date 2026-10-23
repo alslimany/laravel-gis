@@ -21,7 +21,12 @@ export default function Index({ layers }: { layers?: { data?: LayerRow[]; links?
         <AppLayout title="Layers">
             <PageHeader
                 title="Layers"
-                action={abilities?.edit ? <PrimaryLink href="/layers/create">New layer</PrimaryLink> : null}
+                action={
+                    <div className="flex flex-wrap items-center gap-4">
+                        <ActionLink href="/relationships">Relationship builder</ActionLink>
+                        {abilities?.edit ? <PrimaryLink href="/layers/create">New layer</PrimaryLink> : null}
+                    </div>
+                }
             />
             <Panel>
                 {rows.length === 0 ? (

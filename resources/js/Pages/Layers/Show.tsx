@@ -13,6 +13,8 @@ type LayerField = {
 
 type ShapeCount = { type: string; count: number };
 
+type Origin = { kind: string; label: string; href?: string | null };
+
 type LayerRecord = {
     id: number;
     name: string;
@@ -43,7 +45,7 @@ function Fact({ label, value }: { label: string; value: string }) {
     );
 }
 
-export default function Show({ layer, shapes = [] }: { layer: LayerRecord; shapes?: ShapeCount[] }) {
+export default function Show({ layer, shapes = [], origin = null }: { layer: LayerRecord; shapes?: ShapeCount[]; origin?: Origin | null }) {
     const { abilities } = usePage().props as { abilities?: { edit?: boolean } };
     const fields = layer.fields || [];
     const style = layer.style_config;
@@ -84,6 +86,22 @@ export default function Show({ layer, shapes = [] }: { layer: LayerRecord; shape
                 <p className="mt-4 max-w-prose text-sm text-muted-foreground">
                     {layer.description || 'No description yet.'}
                 </p>
+
+                {origin ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                        Created from{' '}
+                        {origin.kind === 'analysis' ? 'saved analysis' : origin.kind === 'import' ? 'an import' : origin.kind}{' '}
+                        <span className="font-medium text-foreground">{origin.label}</span>
+                        {origin.href ? (
+                            <>
+                                {' · '}
+                                <a href={origin.href} className="font-medium text-primary hover:underline">
+                                    {origin.kind === 'analysis' ? 'Open source layer' : 'Open import'}
+                                </a>
+                            </>
+                        ) : null}
+                    </p>
+                ) : null}
 
                 <section className="mt-6">
                     <h2 className="text-sm font-medium">Data</h2>
@@ -138,6 +156,8 @@ export default function Show({ layer, shapes = [] }: { layer: LayerRecord; shape
                 </section>
 
                 <div className="mt-6 flex flex-wrap gap-2 border-t pt-4">
+                    <GhostLink href={`/layers/${layer.id}/fields`}>Fields</GhostLink>
+                    <GhostLink href={`/layers/${layer.id}/relationships`}>Relationships</GhostLink>
                     <GhostLink href={`/layers/${layer.id}/attributes`}>Attributes</GhostLink>
                     {importId ? <GhostLink href={`/imports/${importId}`}>Import</GhostLink> : null}
                     <Button asChild variant="outline">

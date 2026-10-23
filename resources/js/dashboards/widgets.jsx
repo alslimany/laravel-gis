@@ -193,7 +193,7 @@ export function ListView({ widget }) {
     );
 }
 
-export function MapView({ widget }) {
+export function MapView({ widget, onViewChange = null }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
     if (!widget.map) {
         return <Note>{widget.message || 'Choose a layer or a saved map when this widget should show a map.'}</Note>;
@@ -204,7 +204,10 @@ export function MapView({ widget }) {
                 <p className="truncate text-sm text-muted-foreground">{widget.map.name}</p>
             ) : null}
             <div className="min-h-[200px] flex-1 overflow-hidden rounded-md border border-border">
-                <SharedMap map={widget.map} />
+                <SharedMap
+                    map={widget.map}
+                    onViewChange={onViewChange ? (view) => onViewChange(widget.id, view) : undefined}
+                />
             </div>
         </div>
     );
@@ -249,7 +252,7 @@ export function CategoryView({ widget, value, onChange, interactive = false }) {
     );
 }
 
-export function WidgetBody({ widget, filters, onFilterChange, interactiveFilters = false }) {
+export function WidgetBody({ widget, filters, onFilterChange, interactiveFilters = false, onMapViewChange = null }) {
     const type = widget.type === 'kpi' ? 'indicator' : widget.type === 'bar' || widget.type === 'line' ? 'serial' : widget.type;
 
     if (type === 'indicator') return <IndicatorView widget={widget} />;
@@ -257,7 +260,7 @@ export function WidgetBody({ widget, filters, onFilterChange, interactiveFilters
     if (type === 'pie') return <PieView widget={widget} />;
     if (type === 'table') return <TableView widget={widget} />;
     if (type === 'list') return <ListView widget={widget} />;
-    if (type === 'map') return <MapView widget={widget} />;
+    if (type === 'map') return <MapView widget={widget} onViewChange={onMapViewChange} />;
     if (type === 'text') return <TextView widget={widget} />;
     if (type === 'category') {
         const layerKey = String(widget.layer_id ?? '');

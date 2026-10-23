@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\SchemaValidationException;
 use App\Helpers\GeometryColumnHelper;
 use App\Models\Layer;
 use App\Services\FeatureService;
@@ -54,8 +55,10 @@ class AttributeTableController extends Controller
         $columns = $result['columns'];
         $fields = $layer->fields()->orderBy('sort_order')->get()->keyBy('name');
         $columnLabels = [];
+        $columnDomains = [];
         foreach ($columns as $column) {
             $columnLabels[$column] = $fields->get($column)?->alias ?: $column;
+            $columnDomains[$column] = $this->domainOptions($fields->get($column)?->domain_values);
         }
 
         if (($request->expectsJson() || $request->is('api/*')) && ! $request->header('X-Inertia')) {
@@ -71,6 +74,7 @@ class AttributeTableController extends Controller
             'features' => $features,
             'columns' => $columns,
             'columnLabels' => $columnLabels,
+            'columnDomains' => $columnDomains,
             'shapes' => $result['shapes'] ?? [],
             'filters' => [
                 'search' => $search,
@@ -105,6 +109,8 @@ class AttributeTableController extends Controller
             ]);
 
             return response()->json(['success' => true]);
+        } catch (SchemaValidationException $e) {
+            return response()->json(['error' => $e->getMessage(), 'errors' => $e->errors], 422);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -126,5 +132,28 @@ class AttributeTableController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Flatten stored domain_values into a list of plain option strings.
+     *
+     * @return list<string>|null
+     */
+    protected function domainOptions(mixed $domain): ?array
+    {
+        if (! is_array($domain) || $domain === []) {
+            return null;
+        }
+
+        $options = [];
+        foreach ($domain as $entry) {
+            $value = is_array($entry) ? ($entry['value'] ?? null) : $entry;
+            if ($value === null || is_array($value) || is_object($value)) {
+                continue;
+            }
+            $options[] = (string) $value;
+        }
+
+        return $options === [] ? null : array_values(array_unique($options));
     }
 }

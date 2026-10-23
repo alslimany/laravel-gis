@@ -11,7 +11,7 @@ import VectorTileSource from 'ol/source/VectorTile';
 import VectorSource from 'ol/source/Vector';
 import MVT from 'ol/format/MVT';
 import GeoJSON from 'ol/format/GeoJSON';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
 import { Fill, Stroke, Style } from 'ol/style';
 import 'ol/ol.css';
 import { attachTileCache } from '../map-workspace/cache/tileCache';
@@ -38,25 +38,63 @@ function basemapSource(id) {
     return attachTileCache(new OSM(), id || 'osm');
 }
 
-export default function SharedMap({ map: mapRecord }) {
+function toBoundsArray(value) {
+    if (!Array.isArray(value) || value.length !== 4) return null;
+    const bounds = value.map(Number);
+    if (bounds.some((n) => !Number.isFinite(n))) return null;
+    if (bounds[0] > bounds[2] || bounds[1] > bounds[3]) return null;
+    return bounds;
+}
+
+export default function SharedMap({ map: mapRecord, onViewChange = null }) {
     const target = useRef(null);
+    const report = useRef(onViewChange);
+    report.current = onViewChange;
 
     useEffect(() => {
         if (!target.current) {
             return undefined;
         }
 
-        const center = mapRecord.viewport?.center;
+        const viewport = mapRecord.viewport || {};
+        const bounds = toBoundsArray(viewport.bounds);
+        const center = viewport.center;
         const viewCenter = Array.isArray(center) && Math.abs(center[0]) <= 180 ? fromLonLat(center) : center || fromLonLat([0, 20]);
         const map = new Map({
             target: target.current,
             layers: [new TileLayer({ source: basemapSource(mapRecord.basemap) })],
             view: new View({
-                center: viewCenter,
-                zoom: mapRecord.viewport?.zoom || 2,
-                rotation: mapRecord.viewport?.rotation || 0,
+                center: bounds ? fromLonLat([(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2]) : viewCenter,
+                zoom: viewport.zoom || 2,
+                rotation: viewport.rotation || 0,
             }),
         });
+
+        if (bounds) {
+            const extent = transformExtent(bounds, 'EPSG:4326', 'EPSG:3857');
+            const fit = () => {
+                try {
+                    map.updateSize();
+                    map.getView().fit(extent, { padding: [16, 16, 16, 16], duration: 0 });
+                } catch {
+                    // A zero-sized container cannot fit an extent; the center above stands.
+                }
+            };
+            map.once('rendercomplete', fit);
+            window.requestAnimationFrame(fit);
+        }
+
+        const view = map.getView();
+        const emit = () => {
+            const current = view.getCenter();
+            report.current?.({
+                center: current ? toLonLat(current) : null,
+                zoom: view.getZoom() ?? null,
+                rotation: view.getRotation() ?? 0,
+            });
+        };
+        view.on('moveend', emit);
+        map.once('rendercomplete', emit);
 
         (mapRecord.layers || []).forEach((layerConfig) => {
             if (layerConfig.visible === false) {

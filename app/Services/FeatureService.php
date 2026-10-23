@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\SchemaValidationException;
 use App\Helpers\GeometryColumnHelper;
+use App\Helpers\SpatialHelper;
 use App\Models\Layer;
+use App\Models\LayerField;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,18 +21,22 @@ class FeatureService
         $geom = GeometryColumnHelper::resolve($table);
         $columns = $this->attributeColumns($table, $geom);
         $quotedGeom = $this->quoteIdent($geom);
+        $spatial = DB::connection()->getDriverName() === 'pgsql';
 
-        $query = DB::table($table)->select(array_merge(['id'], $columns))
-            ->selectRaw("replace(ST_GeometryType({$quotedGeom}), 'ST_', '') as shape");
+        $query = DB::table($table)->select(array_merge(['id'], $columns));
+        if ($spatial) {
+            $query->selectRaw("replace(ST_GeometryType({$quotedGeom}), 'ST_', '') as shape");
 
-        if ($geometryType) {
-            $query->whereRaw("ST_GeometryType({$quotedGeom}) = ?", [$this->normalizeGeometryType($geometryType)]);
+            if ($geometryType) {
+                $query->whereRaw("ST_GeometryType({$quotedGeom}) = ?", [$this->normalizeGeometryType($geometryType)]);
+            }
         }
 
         if ($search) {
-            $query->where(function ($q) use ($search, $columns) {
+            $operator = $spatial ? 'ILIKE' : 'LIKE';
+            $query->where(function ($q) use ($search, $columns, $operator) {
                 foreach ($columns as $column) {
-                    $q->orWhere($column, 'ILIKE', "%{$search}%");
+                    $q->orWhere($column, $operator, "%{$search}%");
                 }
             });
         }
@@ -37,9 +44,9 @@ class FeatureService
         $paginator = $query->paginate($perPage)->withQueryString();
 
         return [
-            'columns' => array_merge(['id', 'shape'], $columns),
+            'columns' => $spatial ? array_merge(['id', 'shape'], $columns) : array_merge(['id'], $columns),
             'features' => $paginator,
-            'shapes' => $this->shapeCounts($table, $geom),
+            'shapes' => $spatial ? $this->shapeCounts($table, $geom) : [],
         ];
     }
 
@@ -113,7 +120,8 @@ class FeatureService
         $geom = GeometryColumnHelper::resolve($table);
         $columns = $this->attributeColumns($table, $geom);
 
-        $attributes = $this->applyCalculatedFields($layer, $attributes, $skipRequired);
+        $attributes = $this->validateAttributes($layer, $attributes, $skipRequired);
+        $attributes = $this->applyCalculatedFields($layer, $attributes);
 
         $data = [];
         foreach ($columns as $column) {
@@ -123,10 +131,9 @@ class FeatureService
         }
 
         if ($wkt) {
-            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromText('.DB::getPdo()->quote($wkt).'), 4326)');
+            $data[$geom] = $this->geometryWrite($wkt, null);
         } elseif ($geojson) {
-            $encoded = json_encode($geojson);
-            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromGeoJSON('.DB::getPdo()->quote($encoded).'), 4326)');
+            $data[$geom] = $this->geometryWrite(null, $geojson);
         }
 
         $id = DB::table($table)->insertGetId($data);
@@ -145,6 +152,10 @@ class FeatureService
         $columns = $this->attributeColumns($table, $geom);
 
         if ($attributes !== []) {
+            // Only incoming keys are schema-validated; legacy stored values may
+            // not satisfy the current schema and must not block unrelated edits.
+            $attributes = $this->validateAttributes($layer, $attributes, [], true);
+
             $existing = DB::table($table)->where('id', $featureId)->first();
             $merged = array_merge($existing ? (array) $existing : [], $attributes);
             unset($merged[$geom], $merged['id']);
@@ -159,10 +170,9 @@ class FeatureService
         }
 
         if ($wkt) {
-            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromText('.DB::getPdo()->quote($wkt).'), 4326)');
+            $data[$geom] = $this->geometryWrite($wkt, null);
         } elseif ($geojson) {
-            $encoded = json_encode($geojson);
-            $data[$geom] = DB::raw('ST_SetSRID(ST_GeomFromGeoJSON('.DB::getPdo()->quote($encoded).'), 4326)');
+            $data[$geom] = $this->geometryWrite(null, $geojson);
         }
 
         if ($data === []) {
@@ -367,9 +377,13 @@ class FeatureService
     protected function rowToFeature(array $row, string $geom): array
     {
         $geometry = null;
-        if (isset($row[$geom])) {
-            $geo = DB::selectOne('SELECT ST_AsGeoJSON(?) as geojson', [$row[$geom]]);
-            $geometry = json_decode($geo->geojson ?? 'null', true);
+        if (isset($row[$geom]) && $row[$geom] !== null) {
+            if (DB::getDriverName() === 'pgsql') {
+                $geo = DB::selectOne('SELECT ST_AsGeoJSON(?) as geojson', [$row[$geom]]);
+                $geometry = json_decode($geo->geojson ?? 'null', true);
+            } else {
+                $geometry = SpatialHelper::wktToGeoJson((string) $row[$geom]);
+            }
         }
 
         $properties = $row;
@@ -384,13 +398,32 @@ class FeatureService
     }
 
     /**
-     * Apply calculated layer field expressions and enforce required fields.
+     * Build the geometry column value for a WKT or GeoJSON payload.
+     *
+     * PostGIS stores EWKB through SQL casts; other drivers store WKT text.
+     */
+    protected function geometryWrite(?string $wkt, ?array $geojson): mixed
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return $wkt !== null ? $wkt : SpatialHelper::geoJsonToWkt($geojson ?? []);
+        }
+
+        if ($wkt !== null) {
+            return DB::raw('ST_SetSRID(ST_GeomFromText('.DB::getPdo()->quote($wkt).'), 4326)');
+        }
+
+        $encoded = json_encode($geojson);
+
+        return DB::raw('ST_SetSRID(ST_GeomFromGeoJSON('.DB::getPdo()->quote($encoded).'), 4326)');
+    }
+
+    /**
+     * Apply calculated layer field expressions.
      *
      * @param  array<string, mixed>  $attributes
-     * @param  list<string>  $skipRequired
      * @return array<string, mixed>
      */
-    protected function applyCalculatedFields(Layer $layer, array $attributes, array $skipRequired = []): array
+    protected function applyCalculatedFields(Layer $layer, array $attributes): array
     {
         $fields = $layer->fields()->orderBy('sort_order')->get();
         if ($fields->isEmpty()) {
@@ -400,13 +433,6 @@ class FeatureService
         $evaluator = app(ExpressionEvaluator::class);
 
         foreach ($fields as $field) {
-            if ($field->required && ! in_array($field->name, $skipRequired, true)) {
-                $value = $attributes[$field->name] ?? null;
-                if ($value === null || $value === '') {
-                    throw new \InvalidArgumentException("Required field missing: {$field->name}");
-                }
-            }
-
             if ($field->calculated_expression) {
                 $attributes[$field->name] = $evaluator->evaluate(
                     $field->calculated_expression,
@@ -416,5 +442,258 @@ class FeatureService
         }
 
         return $attributes;
+    }
+
+    /**
+     * Validate and coerce attributes against the layer field schema.
+     *
+     * Throws a SchemaValidationException with a field => message map when any
+     * value violates required, type, or domain rules. Calculated fields are
+     * skipped: they are computed afterwards and their inputs ignored.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  list<string>  $skipRequired  Field names exempt from the required check (form hidden fields).
+     * @param  bool  $partial  Only validate keys present in $attributes (updates never re-validate stored legacy values).
+     * @return array<string, mixed> Coerced attributes.
+     *
+     * @throws SchemaValidationException
+     */
+    protected function validateAttributes(Layer $layer, array $attributes, array $skipRequired = [], bool $partial = false): array
+    {
+        $fields = $layer->fields()->orderBy('sort_order')->get();
+        if ($fields->isEmpty()) {
+            return $attributes;
+        }
+
+        $errors = [];
+
+        foreach ($fields as $field) {
+            $name = $field->name;
+            $label = $field->alias ?: $name;
+            $calculated = (bool) $field->calculated_expression;
+            $present = array_key_exists($name, $attributes);
+
+            if ($calculated || ($partial && ! $present)) {
+                continue;
+            }
+
+            $value = $present ? $attributes[$name] : null;
+
+            if ($field->required && ! in_array($name, $skipRequired, true) && ($value === null || $value === '')) {
+                $errors[$name] = "The {$label} field is required.";
+
+                continue;
+            }
+
+            if ($value === null) {
+                continue;
+            }
+
+            $type = $this->normalizeFieldType($field->type);
+
+            if ($value === '') {
+                // Empty means "no value" for typed fields; strings keep ''.
+                if ($type !== 'string') {
+                    $attributes[$name] = null;
+                }
+
+                continue;
+            }
+
+            [$coerced, $error] = $this->coerceFieldValue($label, $type, $value);
+            if ($error !== null) {
+                $errors[$name] = $error;
+
+                continue;
+            }
+
+            $attributes[$name] = $coerced;
+
+            $domainError = $this->validateDomain($field, $label, $type, $coerced);
+            if ($domainError !== null) {
+                $errors[$name] = $domainError;
+            }
+        }
+
+        if ($errors !== []) {
+            throw new SchemaValidationException(reset($errors), $errors);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Map a stored/written field type onto one of the coercion groups.
+     */
+    protected function normalizeFieldType(?string $type): string
+    {
+        return match (strtolower((string) $type)) {
+            'string', 'text', 'textarea', 'select', 'varchar' => 'string',
+            'integer', 'int' => 'integer',
+            'float', 'number', 'double', 'decimal', 'real', 'numeric' => 'float',
+            'boolean', 'bool', 'checkbox' => 'boolean',
+            'date' => 'date',
+            'datetime', 'timestamp' => 'datetime',
+            default => 'mixed',
+        };
+    }
+
+    /**
+     * Coerce a value to its field type, returning [value, errorMessage].
+     *
+     * @return array{0: mixed, 1: ?string}
+     */
+    protected function coerceFieldValue(string $label, string $type, mixed $value): array
+    {
+        if (is_array($value) || is_object($value)) {
+            return [null, "The {$label} field must be a single value."];
+        }
+
+        switch ($type) {
+            case 'string':
+                return [is_scalar($value) ? (string) $value : $value, null];
+
+            case 'integer':
+                if (is_bool($value)) {
+                    return [$value ? 1 : 0, null];
+                }
+                if (is_int($value)) {
+                    return [$value, null];
+                }
+                if (is_float($value)) {
+                    return is_finite($value) && floor($value) === $value
+                        ? [(int) $value, null]
+                        : [null, "The {$label} field must be a whole number."];
+                }
+                $trimmed = trim((string) $value);
+                if (preg_match('/^[+-]?\d+$/', $trimmed)) {
+                    return [(int) $trimmed, null];
+                }
+
+                return [null, "The {$label} field must be a whole number."];
+
+            case 'float':
+                if (is_bool($value)) {
+                    return [$value ? 1.0 : 0.0, null];
+                }
+                if (is_int($value)) {
+                    return [$value, null];
+                }
+                if (is_float($value)) {
+                    return is_finite($value) ? [$value, null] : [null, "The {$label} field must be a number."];
+                }
+                $trimmed = trim((string) $value);
+                if (preg_match('/^[+-]?\d+$/', $trimmed)) {
+                    return [(int) $trimmed, null];
+                }
+                if (is_numeric($trimmed)) {
+                    return [(float) $trimmed, null];
+                }
+
+                return [null, "The {$label} field must be a number."];
+
+            case 'boolean':
+                if (is_bool($value)) {
+                    return [$value ? '1' : '0', null];
+                }
+                if (is_int($value) && ($value === 0 || $value === 1)) {
+                    return [$value === 1 ? '1' : '0', null];
+                }
+                $token = $this->booleanToken($value);
+                if ($token !== null) {
+                    return [$token, null];
+                }
+
+                return [null, "The {$label} field must be a yes/no value."];
+
+            case 'date':
+                $timestamp = strtotime(trim((string) $value));
+                if ($timestamp === false) {
+                    return [null, "The {$label} field must be a valid date."];
+                }
+
+                return [date('Y-m-d', $timestamp), null];
+
+            case 'datetime':
+                $timestamp = strtotime(trim((string) $value));
+                if ($timestamp === false) {
+                    return [null, "The {$label} field must be a valid date and time."];
+                }
+
+                return [date('Y-m-d H:i:s', $timestamp), null];
+
+            default:
+                return [$value, null];
+        }
+    }
+
+    /**
+     * Normalize a value to the canonical '1'/'0' boolean token, or null when invalid.
+     */
+    protected function booleanToken(mixed $value): ?string
+    {
+        if (is_int($value) || is_float($value)) {
+            if ($value == 1) {
+                return '1';
+            }
+            if ($value == 0) {
+                return '0';
+            }
+
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+            return '1';
+        }
+        if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+            return '0';
+        }
+
+        return null;
+    }
+
+    /**
+     * Enforce domain_values when the field defines an allowed set.
+     */
+    protected function validateDomain(LayerField $field, string $label, string $type, mixed $value): ?string
+    {
+        $domain = $field->domain_values;
+        if (empty($domain) || ! is_array($domain)) {
+            return null;
+        }
+
+        $entries = [];
+        foreach ($domain as $entry) {
+            if (is_array($entry)) {
+                $entry = $entry['value'] ?? null;
+            }
+            if ($entry === null || is_array($entry) || is_object($entry)) {
+                continue;
+            }
+            $entries[] = $entry;
+        }
+
+        if ($entries === []) {
+            return null;
+        }
+
+        $allowed = $type === 'boolean'
+            ? array_map(fn ($entry) => $this->booleanToken($entry), $entries)
+            : array_map(fn ($entry) => is_scalar($entry) ? (string) $entry : '', $entries);
+        $allowed = array_values(array_unique(array_filter($allowed)));
+
+        $current = $type === 'boolean'
+            ? $this->booleanToken($value)
+            : (string) $value;
+
+        if ($allowed === [] || ! in_array($current, $allowed, true)) {
+            $display = implode(', ', array_map(fn ($entry) => is_bool($entry) ? ($entry ? 'yes' : 'no') : (string) $entry, $entries));
+
+            return "The {$label} field must be one of: {$display}.";
+        }
+
+        return null;
     }
 }

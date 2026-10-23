@@ -40,6 +40,7 @@ export default function WidgetBoard({
     draggingType = null,
     filters: controlledFilters = null,
     onFiltersChange = null,
+    onMapViewChange = null,
 }) {
     const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
     const [filters, setFilters] = useState(controlledFilters || {});
@@ -212,6 +213,7 @@ export default function WidgetBoard({
                                     filters={filters}
                                     onFilterChange={setFilter}
                                     interactiveFilters={!editable}
+                                    onMapViewChange={onMapViewChange}
                                 />
                             </WidgetFrame>
                         </div>

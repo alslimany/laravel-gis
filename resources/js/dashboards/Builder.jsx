@@ -36,8 +36,14 @@ export default function Builder({ dashboard = null, layers = [], maps = [], anal
     const [errors, setErrors] = useState({});
 
     const [draggingType, setDraggingType] = useState(null);
+    const [liveView, setLiveView] = useState(null); // { widgetId, center, zoom, rotation }
 
     const selected = useMemo(() => widgets.find((widget) => widget.id === selectedId) || null, [widgets, selectedId]);
+
+    const captureMapView = useCallback((widgetId, view) => {
+        if (!view?.center) return;
+        setLiveView({ widgetId, ...view });
+    }, []);
 
     const refreshPreview = useCallback(
         async (nextWidgets) => {
@@ -195,9 +201,18 @@ export default function Builder({ dashboard = null, layers = [], maps = [], anal
                         onRemove={removeWidget}
                         onDropWidget={dropWidget}
                         onLayoutChange={(layout) => updateWidgetsFrom((current) => applyGridLayout(current, layout))}
+                        onMapViewChange={captureMapView}
                     />
                 </main>
-                <Inspector widget={selected} layers={layers} maps={maps} analyses={analyses} onChange={patchWidget} onClose={() => setSelectedId(null)} />
+                <Inspector
+                    widget={selected}
+                    layers={layers}
+                    maps={maps}
+                    analyses={analyses}
+                    liveView={liveView}
+                    onChange={patchWidget}
+                    onClose={() => setSelectedId(null)}
+                />
             </div>
         </div>
     );

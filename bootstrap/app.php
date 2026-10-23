@@ -1,5 +1,9 @@
 <?php
 
+use App\Exceptions\SchemaValidationException;
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureUserHasOrganization;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,12 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
-            'organization' => \App\Http\Middleware\EnsureUserHasOrganization::class,
+            'role' => CheckRole::class,
+            'organization' => EnsureUserHasOrganization::class,
         ]);
 
         $middleware->statefulApi();
@@ -28,4 +32,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Layer schema violations: structured 422 for APIs, session errors for web/Inertia.
+        $exceptions->render(function (SchemaValidationException $e, Request $request) {
+            if (! $request->is('api/*') && ! $request->expectsJson() && $request->hasSession()) {
+                return back()->withInput()->withErrors($e->errors);
+            }
+
+            return response()->json([
+                'error' => $e->getMessage(),
+                'errors' => $e->errors,
+            ], 422);
+        });
     })->create();

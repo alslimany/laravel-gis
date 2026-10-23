@@ -19,10 +19,109 @@ export default function FeatureDock({
     const [uploading, setUploading] = useState(false);
     const [detail, setDetail] = useState(null);
     const [error, setError] = useState(null);
+    const [fieldDefs, setFieldDefs] = useState({});
+    const [relationships, setRelationships] = useState([]);
+    const [related, setRelated] = useState([]);
 
     const isIdentify = mode === 'identify';
     const isEdit = mode === 'edit';
     const isCreate = mode === 'create';
+
+    useEffect(() => {
+        if (!layer?.id) {
+            setFieldDefs({});
+            return undefined;
+        }
+
+        let cancelled = false;
+        fetch(`/api/layers/${layer.id}/fields`, { headers: jsonHeaders() })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (cancelled) {
+                    return;
+                }
+                const map = {};
+                (data?.fields || []).forEach((field) => {
+                    map[field.name] = field;
+                });
+                setFieldDefs(map);
+            })
+            .catch(() => {});
+
+        return () => {
+            cancelled = true;
+        };
+    }, [layer?.id]);
+
+    function domainOptions(key) {
+        const domain = fieldDefs[key]?.domain_values;
+        if (!Array.isArray(domain)) {
+            return [];
+        }
+        return domain
+            .map((entry) => (entry && typeof entry === 'object' ? String(entry.value ?? '') : String(entry)))
+            .filter((value) => value !== '');
+    }
+
+    useEffect(() => {
+        if (!layer?.id) {
+            setRelationships([]);
+            return undefined;
+        }
+
+        let cancelled = false;
+        fetch(`/api/layers/${layer.id}/relationships`, { headers: jsonHeaders() })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (!cancelled) {
+                    setRelationships(data?.relationships || []);
+                }
+            })
+            .catch(() => {});
+
+        return () => {
+            cancelled = true;
+        };
+    }, [layer?.id]);
+
+    useEffect(() => {
+        if (!layer?.id || !featureId || (!isIdentify && !isEdit) || relationships.length === 0) {
+            setRelated([]);
+            return undefined;
+        }
+
+        let cancelled = false;
+        Promise.all(
+            relationships.map(async (relationship) => {
+                try {
+                    const res = await fetch(
+                        `/api/layers/${layer.id}/relationships/${relationship.id}/features?parent_id=${featureId}`,
+                        { headers: jsonHeaders() },
+                    );
+                    if (!res.ok) {
+                        return null;
+                    }
+                    const data = await res.json();
+                    return {
+                        relationship,
+                        columns: data.columns || [],
+                        features: data.features || [],
+                    };
+                } catch {
+                    return null;
+                }
+            }),
+        ).then((results) => {
+            if (!cancelled) {
+                setRelated(results.filter(Boolean));
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [layer?.id, featureId, mode, relationships]);
 
     useEffect(() => {
         if (!layer?.id || !featureId || (!isIdentify && !isEdit)) {
@@ -102,7 +201,8 @@ export default function FeatureDock({
             });
             const data = await response.json();
             if (!response.ok || data.error) {
-                throw new Error(data.error || 'Failed to save feature');
+                const details = data.errors ? Object.values(data.errors).join(' ') : null;
+                throw new Error(details || data.error || 'Failed to save feature');
             }
             onSaved?.(data.feature || data.data || data);
         } catch (err) {
@@ -175,7 +275,7 @@ export default function FeatureDock({
                         <dl className="mb-0">
                             {Object.entries(displayProps).map(([key, value]) => (
                                 <div key={key} className="mb-2">
-                                    <dt className="text-muted small mb-0">{key}</dt>
+                                    <dt className="text-muted small mb-0">{fieldDefs[key]?.alias || key}</dt>
                                     <dd className="mb-0">{String(value ?? '')}</dd>
                                 </div>
                             ))}
@@ -186,22 +286,50 @@ export default function FeatureDock({
                     </div>
                 ) : (
                     Object.keys(displayProps).length > 0
-                        ? Object.keys(displayProps).map((key) => (
-                              <div className="mb-3" key={key}>
-                                  <label className="form-label">{key}</label>
-                                  <input
-                                      value={displayProps[key] ?? ''}
-                                      onChange={(event) =>
-                                          onPropertiesChange?.({
-                                              ...displayProps,
-                                              [key]: event.target.value,
-                                          })
-                                      }
-                                      type="text"
-                                      className="form-control"
-                                  />
-                              </div>
-                          ))
+                        ? Object.keys(displayProps).map((key) => {
+                              const domain = domainOptions(key);
+                              const current = displayProps[key] ?? '';
+                              const options =
+                                  current !== '' && !domain.includes(String(current))
+                                      ? [String(current), ...domain]
+                                      : domain;
+                              return (
+                                  <div className="mb-3" key={key}>
+                                      <label className="form-label">{fieldDefs[key]?.alias || key}</label>
+                                      {domain.length > 0 ? (
+                                          <select
+                                              className="form-control"
+                                              value={String(current)}
+                                              onChange={(event) =>
+                                                  onPropertiesChange?.({
+                                                      ...displayProps,
+                                                      [key]: event.target.value,
+                                                  })
+                                              }
+                                          >
+                                              <option value="">—</option>
+                                              {options.map((option) => (
+                                                  <option key={option} value={option}>
+                                                      {option}
+                                                  </option>
+                                              ))}
+                                          </select>
+                                      ) : (
+                                          <input
+                                              value={displayProps[key] ?? ''}
+                                              onChange={(event) =>
+                                                  onPropertiesChange?.({
+                                                      ...displayProps,
+                                                      [key]: event.target.value,
+                                                  })
+                                              }
+                                              type="text"
+                                              className="form-control"
+                                          />
+                                      )}
+                                  </div>
+                              );
+                          })
                         : ['name', 'description', 'type', 'notes'].map((key) => (
                               <div className="mb-3" key={key}>
                                   <label className="form-label">
@@ -235,6 +363,46 @@ export default function FeatureDock({
                               </div>
                           ))
                 )}
+
+                {(isIdentify || isEdit) && featureId && layer?.id && related.length > 0 ? (
+                    <div className="mb-3">
+                        <h6 className="mb-2">Related records</h6>
+                        {related.map(({ relationship, columns, features }) => (
+                            <div key={relationship.id} className="mb-3">
+                                <div className="small text-muted mb-1">
+                                    {relationship.name}
+                                    {relationship.related_layer?.name
+                                        ? ` · ${relationship.related_layer.name}`
+                                        : ''}
+                                </div>
+                                {features.length === 0 ? (
+                                    <p className="text-muted small mb-0">No related records.</p>
+                                ) : (
+                                    <div className="table-responsive">
+                                        <table className="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    {columns.map((column) => (
+                                                        <th key={column}>{column}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {features.map((row, index) => (
+                                                    <tr key={row.id ?? index}>
+                                                        {columns.map((column) => (
+                                                            <td key={column}>{row[column] ?? ''}</td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
 
                 {(isIdentify || isEdit) && featureId && layer?.id ? (
                     <div className="mb-3">

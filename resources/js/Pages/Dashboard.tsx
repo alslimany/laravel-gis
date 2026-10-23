@@ -167,7 +167,10 @@ export default function Dashboard({ stats, projects }) {
                         </Link>
                     </p>
                 </div>
-                {routes.catalog ? <GhostLink href={routes.catalog}>Browse catalog</GhostLink> : null}
+                <div className="flex items-center gap-3">
+                    {routes.apps ? <GhostLink href={routes.apps}>Browse apps</GhostLink> : null}
+                    {routes.catalog ? <GhostLink href={routes.catalog}>Browse catalog</GhostLink> : null}
+                </div>
             </div>
 
             <section

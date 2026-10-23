@@ -6,6 +6,7 @@ use App\Helpers\SpatialHelper;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Contracts\Database\Query\expression;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -16,6 +17,10 @@ class SpatialDatabaseTest extends TestCase
 
     public function test_postgis_extension_is_enabled(): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('PostGIS is only available on the pgsql connection');
+        }
+
         $result = DB::selectOne('SELECT PostGIS_Version()');
         $this->assertNotNull($result);
     }
@@ -23,19 +28,14 @@ class SpatialDatabaseTest extends TestCase
     public function test_user_can_be_created_with_location(): void
     {
         $user = User::factory()->create([
-            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
+            'location' => $this->rawPoint(-122.4194, 37.7749),
         ]);
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
         ]);
 
-        $result = DB::selectOne(
-            'SELECT ST_AsText(location) as location FROM users WHERE id = ?',
-            [$user->id]
-        );
-
-        $this->assertEquals('POINT(-122.4194 37.7749)', $result->location);
+        $this->assertEquals('POINT(-122.4194 37.7749)', $user->fresh()->location_wkt);
     }
 
     public function test_organization_belongs_to_user(): void
@@ -56,20 +56,19 @@ class SpatialDatabaseTest extends TestCase
 
     public function test_project_can_be_created_with_bounding_box(): void
     {
+        $wkt = 'POLYGON((-122.5 37.7, -122.3 37.7, -122.3 37.8, -122.5 37.8, -122.5 37.7))';
+
         $project = Project::factory()->create([
-            'bounding_box' => DB::raw("ST_GeomFromText('POLYGON((-122.5 37.7, -122.3 37.7, -122.3 37.8, -122.5 37.8, -122.5 37.7))', 4326)"),
+            'bounding_box' => DB::connection()->getDriverName() === 'pgsql'
+                ? DB::raw("ST_GeomFromText('{$wkt}', 4326)")
+                : $wkt,
         ]);
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
         ]);
 
-        $result = DB::selectOne(
-            'SELECT ST_AsText(bounding_box) as bbox FROM projects WHERE id = ?',
-            [$project->id]
-        );
-
-        $this->assertStringContainsString('POLYGON', $result->bbox);
+        $this->assertStringContainsString('POLYGON', $project->fresh()->bounding_box_wkt);
     }
 
     public function test_spatial_helper_converts_wkt_to_geojson(): void
@@ -105,11 +104,11 @@ class SpatialDatabaseTest extends TestCase
     public function test_user_within_distance_scope(): void
     {
         User::factory()->create([
-            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
+            'location' => $this->rawPoint(-122.4194, 37.7749),
         ]);
 
         User::factory()->create([
-            'location' => DB::raw('ST_MakePoint(0, 0)::geography'),
+            'location' => $this->rawPoint(0, 0),
         ]);
 
         $users = User::withinDistance('location', 37.7749, -122.4194, 10000)->get();
@@ -121,17 +120,29 @@ class SpatialDatabaseTest extends TestCase
     {
         User::factory()->create([
             'name' => 'Close User',
-            'location' => DB::raw('ST_MakePoint(-122.4194, 37.7749)::geography'),
+            'location' => $this->rawPoint(-122.4194, 37.7749),
         ]);
 
         User::factory()->create([
             'name' => 'Far User',
-            'location' => DB::raw('ST_MakePoint(0, 0)::geography'),
+            'location' => $this->rawPoint(0, 0),
         ]);
 
         $users = User::near('location', 37.7749, -122.4194)->get();
 
         $this->assertEquals('Close User', $users->first()->name);
         $this->assertLessThan($users->last()->distance, $users->first()->distance);
+    }
+
+    /**
+     * Store a point the way the active driver expects it.
+     *
+     * @return expression|string
+     */
+    protected function rawPoint(float $longitude, float $latitude)
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? DB::raw("ST_MakePoint({$longitude}, {$latitude})::geography")
+            : "POINT({$longitude} {$latitude})";
     }
 }
