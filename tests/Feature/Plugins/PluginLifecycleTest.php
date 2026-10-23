@@ -481,6 +481,20 @@ class PluginLifecycleTest extends TestCase
                 return ['file' => "/tmp/fake-{$key}-{$action}.dump", 'skipped' => null];
             }
 
+            public array $sqlFor = [];
+
+            public function dumpTables(string $file): array
+            {
+                return ['hello_items', 'hello_notes'];
+            }
+
+            public function restoreSql(string $file): string
+            {
+                $this->restored[] = $file;
+
+                return '';
+            }
+
             public function restore(?string $file): bool
             {
                 $this->restored[] = $file;
@@ -587,7 +601,7 @@ class PluginLifecycleTest extends TestCase
         $this->artisan('plugin:rollback', ['key' => 'hello'])
             ->expectsOutputToContain('orphan plugin migration rows')->assertFailed();
 
-        $this->artisan('plugin:rollback', ['key' => 'hello', '--prune-orphans' => true])->assertSuccessful();
+        $this->artisan('plugin:rollback', ['key' => 'hello', '--prune-migration-rows' => true])->assertSuccessful();
         $this->assertFalse(DB::table('migrations')->where('batch', 999)->exists());
         $this->assertNull($this->row());
     }
@@ -596,5 +610,58 @@ class PluginLifecycleTest extends TestCase
     {
         $errors = PluginManager::validateManifest(['key' => 'core', 'data' => ['prefix' => 'core_', 'tables' => []]]);
         $this->assertStringContainsString('reserved', $errors[0]);
+    }
+
+    public function test_down_failure_drops_new_prefix_tables_not_in_dump(): void
+    {
+        $fake = $this->fakeBackup();
+        $this->lifecycle()->install('hello');
+        $installBatches = $this->row()->meta['batches'];
+
+        $this->setHelloVersion('2.0.0');
+        $this->writeHelloMigration('2026_02_01_000000_create_hello_extra',
+            "Illuminate\\Support\\Facades\\Schema::create('hello_extra', fn (\$t) => \$t->id());",
+            "throw new RuntimeException('extra down failed');");
+        $this->writeHelloMigration('2026_09_09_000000_boom', "throw new RuntimeException('boom');");
+        try {
+            $this->lifecycle()->upgrade('hello');
+        } catch (\RuntimeException) {
+        }
+        @unlink($this->helloMigrations.'/2026_09_09_000000_boom.php');
+        $this->assertTrue(Schema::hasTable('hello_extra'));
+
+        $this->lifecycle()->rollback('hello');
+
+        $this->assertFalse(Schema::hasTable('hello_extra'), 'table not in dump is dropped');
+        $this->assertTrue(Schema::hasTable('hello_items'), 'tables in dump are kept/restored');
+        $this->assertSame(['/tmp/fake-hello-upgrade.dump'], $fake->restored);
+        $this->assertSame($installBatches, $this->row()->meta['batches']);
+        $this->assertSame(InstalledPlugin::STATUS_INSTALLED, $this->row()->status);
+    }
+
+    public function test_first_install_failure_without_backup_drops_prefix_tables(): void
+    {
+        $this->writeHelloMigration('2026_02_01_000000_create_hello_extra',
+            "Illuminate\\Support\\Facades\\Schema::create('hello_extra', fn (\$t) => \$t->id());",
+            "throw new RuntimeException('extra down failed');");
+        HelloServiceProvider::$failOnInstall = true;
+        try {
+            $this->lifecycle()->install('hello');
+        } catch (\RuntimeException) {
+        }
+        $this->assertTrue(Schema::hasTable('hello_extra'));
+
+        $this->lifecycle()->rollback('hello');
+
+        $this->assertFalse(Schema::hasTable('hello_extra'));
+        $this->assertFalse(Schema::hasTable('hello_items'));
+        $this->assertNull($this->row());
+        $this->assertFalse(DB::table('migrations')->where('migration', 'like', '%hello%')->exists());
+    }
+
+    public function test_pg_restore_table_list_is_parsed(): void
+    {
+        $toc = ";\n; Archive created\n215; 1259 16390 TABLE public ew_basins postgres\n216; 1259 16391 SEQUENCE public ew_basins_id_seq postgres\n3300; 0 16390 TABLE DATA public ew_basins postgres\n";
+        $this->assertSame(['ew_basins'], PluginBackup::parseTableList($toc));
     }
 }

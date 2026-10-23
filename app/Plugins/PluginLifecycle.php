@@ -287,12 +287,12 @@ class PluginLifecycle
      *
      * @return array<string, mixed> summary
      */
-    public function rollback(string $key, ?User $actor = null, bool $pruneOrphans = false): array
+    public function rollback(string $key, ?User $actor = null, bool $pruneMigrationRows = false): array
     {
-        return $this->locked(fn () => $this->doRollback($key, $actor, $pruneOrphans));
+        return $this->locked(fn () => $this->doRollback($key, $actor, $pruneMigrationRows));
     }
 
-    protected function doRollback(string $key, ?User $actor, bool $pruneOrphans = false): array
+    protected function doRollback(string $key, ?User $actor, bool $pruneMigrationRows = false): array
     {
         $manifest = $this->manifestOrFail($key);
         $row = $this->installedOrFail($key, [
@@ -320,13 +320,17 @@ class PluginLifecycle
                 try {
                     $this->rollbackBatch($manifest, (int) $batch);
                 } catch (Throwable $e) {
-                    if ($backupFile === null) {
+                    $firstInstall = ($pending['prior_status'] ?? null) === null;
+                    if ($backupFile === null && ! $firstInstall) {
                         throw $e;
                     }
-                    // A down() failed: restore the pre-operation dump, then forget the
-                    // migration rows of the batches we could not roll back.
+                    // A down() failed: drop the plugin tables the dump doesn't
+                    // contain and restore the pre-operation dump in one
+                    // transaction (first install without a dump: drop all
+                    // <prefix>_* tables), then forget the migration rows of the
+                    // batches we could not roll back.
                     $failedBatches = array_slice($batches, $i);
-                    $this->backup->restore($backupFile);
+                    $this->restoreReplacingPluginTables($manifest, $backupFile);
                     DB::table('migrations')->whereIn('batch', $failedBatches)
                         ->whereIn('migration', $this->pluginMigrations($manifest))->delete();
                     $restoredAfterFailure = true;
@@ -344,16 +348,22 @@ class PluginLifecycle
             // Orphan check (reported before any restore): plugin migration rows
             // outside the prior batches.
             $orphanRows = $this->orphanRows($manifest, $prior);
-            if ($orphanRows !== [] && ! $pruneOrphans) {
+            if ($orphanRows !== [] && ! $pruneMigrationRows) {
                 throw new PluginLifecycleException("{$key} has orphan plugin migration rows: "
                     .collect($orphanRows)->map(fn ($r) => "{$r['migration']} (batch {$r['batch']})")->implode(', ')
-                    .'. Re-run with --prune-orphans to delete them.');
+                    .'. Re-run with --prune-migration-rows to delete them.');
             }
             if ($orphanRows !== []) {
                 DB::table('migrations')->whereIn('id', array_column($orphanRows, 'id'))->delete();
             }
 
             $restored = $restoredAfterFailure || $this->backup->restore($backupFile);
+
+            // First install with no dump: nothing to restore, so remove any
+            // <prefix>_* tables it left behind.
+            if (! $restoredAfterFailure && $backupFile === null && ($pending['prior_status'] ?? null) === null) {
+                $this->dropPluginTables($manifest, []);
+            }
         } catch (Throwable $e) {
             $meta['batches'] = $this->recordedBatches($manifest);
             $row->forceFill(['meta' => $meta])->save();
@@ -499,6 +509,48 @@ class PluginLifecycle
             ->when($prior !== [], fn ($q) => $q->whereNotIn('batch', $prior))
             ->orderBy('id')->get(['id', 'migration', 'batch'])
             ->map(fn ($r) => ['id' => (int) $r->id, 'migration' => $r->migration, 'batch' => (int) $r->batch])->all();
+    }
+
+    /**
+     * Drop <prefix>_* tables not in the dump, then replay the dump's SQL, all
+     * in one DB transaction (pgsql DDL is transactional, so a core FK conflict
+     * makes the whole restore fail atomically).
+     */
+    protected function restoreReplacingPluginTables(array $manifest, ?string $file): void
+    {
+        $keep = $file === null ? [] : $this->backup->dumpTables($file);
+        $sql = $file === null ? '' : $this->backup->restoreSql($file);
+
+        DB::transaction(function () use ($manifest, $keep, $sql) {
+            $this->dropPluginTables($manifest, $keep);
+            if (trim($sql) !== '') {
+                DB::unprepared($sql);
+            }
+        });
+    }
+
+    /**
+     * @param  list<string>  $keep
+     * @return list<string> dropped
+     */
+    protected function dropPluginTables(array $manifest, array $keep): array
+    {
+        $prefix = $this->prefix($manifest);
+        if ($prefix === '') {
+            return [];
+        }
+
+        $dropped = [];
+        $tables = collect(Schema::getTables())
+            ->filter(fn ($t) => ! isset($t['schema']) || DB::getDriverName() !== 'pgsql' || $t['schema'] === (DB::getConfig('search_path') ?: 'public'))
+            ->pluck('name')->unique()
+            ->filter(fn ($name) => str_starts_with((string) $name, $prefix) && ! in_array($name, $keep, true));
+        foreach ($tables as $table) {
+            Schema::drop($table);
+            $dropped[] = $table;
+        }
+
+        return $dropped;
     }
 
     protected function assertNoPending(InstalledPlugin $row, bool $force): void

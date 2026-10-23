@@ -12,14 +12,14 @@ use Illuminate\Console\Command;
 class PluginRollback extends Command
 {
     protected $signature = 'plugin:rollback {key} {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}
-        {--prune-orphans : Delete orphan plugin migration rows reported by the orphan check}';
+        {--prune-migration-rows : Delete orphan plugin migration rows reported by the orphan check}';
 
     protected $description = 'Roll back a failed plugin install/upgrade: undo its batches, restore the backup (audited)';
 
     public function handle(PluginLifecycle $lifecycle): int
     {
         try {
-            $row = $lifecycle->rollback($this->argument('key'), PluginLifecycle::actorFromEmail($this->option('actor')), (bool) $this->option('prune-orphans'));
+            $row = $lifecycle->rollback($this->argument('key'), PluginLifecycle::actorFromEmail($this->option('actor')), (bool) $this->option('prune-migration-rows'));
         } catch (PluginLifecycleException $e) {
             $this->error($e->getMessage());
 

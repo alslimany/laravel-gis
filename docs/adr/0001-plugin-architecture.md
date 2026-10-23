@@ -197,7 +197,7 @@ All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, p
 
 **Restore implementation notes (CR on d776e76):**
 - **Naming rule:** every database object a plugin creates (tables, sequences, enum types, functions, views, indexes) must use the `<prefix>_` name, so `pg_dump -t '<prefix>_*'` captures it. Plugin enum types and functions are also listed in the manifest and dumped explicitly (`-t` for each, or a dedicated schema with `-n`); an arch/migration test fails on any unprefixed object.
-- **Restoring with core FKs:** run `pg_restore --single-transaction --exit-on-error`. Before re-adding FKs to core tables (`organizations`, `layers`), detect orphaned rows whose core parent was deleted after the dump; by default abort and report them in `plugin_events`, with an explicit `--prune-orphans` flag to delete them first.
+- **Restoring with core FKs:** the restore fails atomically on core FK conflicts: on `down()` failure, `plugin:rollback` drops the `<prefix>_*` tables the dump does not contain (from `pg_restore -l`) and replays the dump SQL (`pg_restore -f -`) in **one transaction**; otherwise `pg_restore --single-transaction --exit-on-error`. A data-row orphan pre-check (rows whose core parent was deleted after the dump) is deferred to the plugin-ops follow-up. `plugin:rollback --prune-migration-rows` only deletes orphaned plugin rows in `migrations`.
 - **Reconcile state:** after a restore, rewrite the plugin's rows in `migrations` and `installed_plugins.meta.batches` to match the restored schema version, and record the result in `plugin_events`.
 
 ## 9. Versioning / compatibility

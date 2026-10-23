@@ -78,6 +78,50 @@ class PluginBackup
     }
 
     /**
+     * Table names contained in a dump (`pg_restore -l`).
+     *
+     * @return list<string>
+     */
+    public function dumpTables(string $file): array
+    {
+        $result = Process::timeout((int) config('plugins.backup_timeout', 1800))->run(['pg_restore', '-l', $file]);
+        if (! $result->successful()) {
+            throw new PluginLifecycleException('pg_restore -l failed: '.trim($result->errorOutput()));
+        }
+
+        return self::parseTableList($result->output());
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function parseTableList(string $toc): array
+    {
+        // e.g. "215; 1259 16390 TABLE public ew_basins postgres"
+        preg_match_all('/^\d+;\s+\d+\s+\d+\s+TABLE\s+(?!DATA\s)\S+\s+(\S+)/m', $toc, $m);
+
+        return array_values(array_unique($m[1]));
+    }
+
+    /**
+     * The dump as plain SQL (`pg_restore --clean --if-exists -f -`), so the
+     * caller can run it inside its own transaction.
+     */
+    public function restoreSql(string $file): string
+    {
+        if (! is_file($file)) {
+            throw new PluginLifecycleException("Backup {$file} is missing; cannot restore.");
+        }
+        $result = Process::timeout((int) config('plugins.backup_timeout', 1800))
+            ->run(['pg_restore', '--clean', '--if-exists', '--no-owner', '-f', '-', $file]);
+        if (! $result->successful()) {
+            throw new PluginLifecycleException('pg_restore -f - failed: '.trim($result->errorOutput()));
+        }
+
+        return $result->output();
+    }
+
+    /**
      * Run a pg_* client with the connection's host/port/user, sslmode and
      * socket support (a host starting with "/" is a Unix socket directory;
      * an empty host lets libpq use its default socket).
