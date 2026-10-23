@@ -127,13 +127,20 @@ class UserController extends Controller
         }
 
         // Lock all of this org's admin grants, the target's included (no-op on
-        // SQLite), then count the remaining admins from the locked rows.
+        // SQLite), then count the remaining admins from the locked rows. Rows
+        // are locked in user_id order so concurrent updates can't deadlock.
+        //
+        // Known leftover: duplicate null-org admin grants can still exist,
+        // since MySQL/Postgres unique indexes treat NULLs as distinct. They
+        // are inert (null-org grants confer no access via hasRoleInOrg) and
+        // their cleanup is tracked as a follow-up.
         $otherAdmins = DB::table('role_user')
             ->where('role_id', $adminRoleId)
             ->where('organization_id', $user->organization_id)
             ->whereIn('user_id', User::query()
                 ->select('id')
                 ->where('organization_id', $user->organization_id))
+            ->orderBy('user_id')
             ->lockForUpdate()
             ->pluck('user_id')
             ->contains(fn ($id) => (int) $id !== (int) $user->getKey());
