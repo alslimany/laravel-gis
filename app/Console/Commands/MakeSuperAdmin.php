@@ -27,9 +27,15 @@ class MakeSuperAdmin extends Command
         }
 
         $grant = ! $this->option('revoke');
-        $actor = $this->option('actor')
-            ? User::query()->where('email', $this->option('actor'))->first()
-            : null;
+        $actor = null;
+        if ($this->option('actor')) {
+            $actor = User::query()->where('email', $this->option('actor'))->first();
+            if (! $actor || ! $actor->isSuperAdmin()) {
+                $this->error('--actor must be the email of an existing super admin.');
+
+                return self::FAILURE;
+            }
+        }
 
         if (! $grant && $user->isSuperAdmin()
             && User::query()->where('is_super_admin', true)->count() <= 1) {

@@ -70,6 +70,7 @@ class PluginArchitectureTest extends TestCase
                 $this->assertNotEmpty($manifest[$field] ?? null, "{$dir}: manifest.{$field}");
             }
             $this->assertMatchesRegularExpression('/^[a-z][a-z0-9-]*$/', $manifest['key']);
+            $this->assertNotSame(PluginManager::RESERVED_KEY, $manifest['key'], "{$dir}: key 'core' is reserved");
             $this->assertTrue(is_subclass_of($manifest['provider'], PluginServiceProvider::class), "{$dir}: provider must extend core PluginServiceProvider");
             $this->assertSame($manifest['key'], (new $manifest['provider']($this->app))->key(), "{$dir}: provider key");
             $this->assertStringStartsWith('Lumina\\', $manifest['provider']);
@@ -87,6 +88,9 @@ class PluginArchitectureTest extends TestCase
                 continue;
             }
             foreach ($this->phpFiles($dir.'/database/migrations') as $file) {
+                // Known bypass (ADR-0001 rev 4 §12): only literal Schema::create/table/
+                // drop/rename names are checked. DB::statement / raw SQL (or a
+                // variable table name) can touch core tables unseen; CR must review it.
                 preg_match_all("/Schema::(?:create|table|drop|dropIfExists|rename)\\(\\s*'([^']+)'/", $file->getContents(), $m);
                 $this->assertNotEmpty($m[1], $file->getFilename().': no literal table name found');
                 foreach ($m[1] as $table) {

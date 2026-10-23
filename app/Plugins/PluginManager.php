@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\Cache;
  */
 class PluginManager
 {
+    /** Reserved: plugin_events rows for core actions (e.g. super-admin grants). */
+    public const RESERVED_KEY = 'core';
+
     public function __construct(protected ?string $installedJsonPath = null)
     {
         $this->installedJsonPath ??= base_path('vendor/composer/installed.json');
@@ -224,6 +227,9 @@ class PluginManager
     public static function validateManifest(array $manifest): array
     {
         $errors = [];
+        if (($manifest['key'] ?? null) === self::RESERVED_KEY) {
+            $errors[] = 'key "core" is reserved for core audit rows.';
+        }
         $prefix = $manifest['data']['prefix'] ?? null;
         if (! is_string($prefix) || ! preg_match('/^[a-z][a-z0-9]*_$/', $prefix)) {
             $errors[] = 'data.prefix is required and must look like "abc_".';

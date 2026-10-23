@@ -11,14 +11,15 @@ use Illuminate\Console\Command;
  */
 class PluginInstall extends Command
 {
-    protected $signature = 'plugin:install {key} {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}';
+    protected $signature = 'plugin:install {key} {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}
+        {--force : Run even though a failed operation is pending (keeps the original pending record)}';
 
     protected $description = 'Install a plugin (super admin; audited in plugin_events)';
 
     public function handle(PluginLifecycle $lifecycle): int
     {
         try {
-            $row = $lifecycle->install($this->argument('key'), PluginLifecycle::actorFromEmail($this->option('actor')));
+            $row = $lifecycle->install($this->argument('key'), PluginLifecycle::actorFromEmail($this->option('actor')), (bool) $this->option('force'));
         } catch (PluginLifecycleException $e) {
             $this->error($e->getMessage());
 

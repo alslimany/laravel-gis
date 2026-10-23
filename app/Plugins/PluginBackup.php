@@ -77,15 +77,33 @@ class PluginBackup
         return true;
     }
 
+    /**
+     * Run a pg_* client with the connection's host/port/user, sslmode and
+     * socket support (a host starting with "/" is a Unix socket directory;
+     * an empty host lets libpq use its default socket).
+     */
     protected function pg(array $config, array $command)
     {
         $command[] = '--dbname='.(string) $config['database'];
-        array_splice($command, 1, 0, [
-            '-h', (string) ($config['host'] ?? '127.0.0.1'),
+        $args = [];
+        $host = (string) ($config['host'] ?? '');
+        if ($host !== '') {
+            $args = ['-h', $host];
+        }
+        $args = array_merge($args, [
             '-p', (string) ($config['port'] ?? 5432),
             '-U', (string) ($config['username'] ?? ''),
         ]);
+        array_splice($command, 1, 0, $args);
 
-        return Process::env(['PGPASSWORD' => (string) ($config['password'] ?? '')])->timeout(1800)->run($command);
+        $env = array_filter([
+            'PGPASSWORD' => (string) ($config['password'] ?? ''),
+            'PGSSLMODE' => (string) ($config['sslmode'] ?? ''),
+            'PGSSLROOTCERT' => (string) ($config['sslrootcert'] ?? ''),
+            'PGSSLCERT' => (string) ($config['sslcert'] ?? ''),
+            'PGSSLKEY' => (string) ($config['sslkey'] ?? ''),
+        ], fn ($v) => $v !== '');
+
+        return Process::env($env)->timeout((int) config('plugins.backup_timeout', 1800))->run($command);
     }
 }

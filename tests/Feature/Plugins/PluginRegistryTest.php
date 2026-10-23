@@ -254,6 +254,11 @@ class PluginRegistryTest extends TestCase
         $this->assertSame($user->id, $events[1]->actor_id);
 
         $this->artisan('lumina:make-super-admin', ['email' => 'nobody@example.com'])->assertFailed();
+
+        // --actor must be an existing super admin.
+        $this->artisan('lumina:make-super-admin', ['email' => $user->email, '--actor' => 'nobody@example.com'])
+            ->expectsOutputToContain('existing super admin')->assertFailed();
+        $this->artisan('lumina:make-super-admin', ['email' => $user->email, '--actor' => $user->email])->assertFailed();
     }
 
     public function test_is_super_admin_is_not_mass_assignable_or_settable_over_http(): void

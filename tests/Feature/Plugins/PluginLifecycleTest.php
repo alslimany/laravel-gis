@@ -7,6 +7,7 @@ use App\Models\Layer;
 use App\Models\Organization;
 use App\Models\PluginEvent;
 use App\Models\User;
+use App\Plugins\PluginBackup;
 use App\Plugins\PluginLifecycle;
 use App\Plugins\PluginLifecycleException;
 use App\Plugins\PluginManager;
@@ -449,5 +450,151 @@ class PluginLifecycleTest extends TestCase
         Layer::factory()->create(['organization_id' => $this->org->id, 'user_id' => $this->super->id, 'metadata' => null]);
 
         $this->assertSame([$mine->id], $this->lifecycle()->pluginLayers('hello')->pluck('id')->all());
+    }
+
+    protected function writeHelloMigration(string $name, string $up, string $down = ''): void
+    {
+        file_put_contents($this->helloMigrations."/{$name}.php", "<?php\nuse Illuminate\\Database\\Migrations\\Migration;\nreturn new class extends Migration { public function up(): void { {$up} } public function down(): void { {$down} } };\n");
+    }
+
+    protected function failUpgrade(): void
+    {
+        $this->addHelloV2Migration();
+        $this->setHelloVersion('2.0.0');
+        $this->writeHelloMigration('2026_09_09_000000_boom', "throw new RuntimeException('boom');");
+        try {
+            $this->lifecycle()->upgrade('hello');
+            $this->fail('upgrade should throw');
+        } catch (\RuntimeException) {
+        }
+        @unlink($this->helloMigrations.'/2026_09_09_000000_boom.php');
+    }
+
+    protected function fakeBackup(): object
+    {
+        $fake = new class extends PluginBackup
+        {
+            public array $restored = [];
+
+            public function dump(string $key, string $prefix, string $action): array
+            {
+                return ['file' => "/tmp/fake-{$key}-{$action}.dump", 'skipped' => null];
+            }
+
+            public function restore(?string $file): bool
+            {
+                $this->restored[] = $file;
+
+                return $file !== null;
+            }
+        };
+        $this->app->instance(PluginBackup::class, $fake);
+
+        return $fake;
+    }
+
+    public function test_install_and_upgrade_refuse_while_pending_unless_forced(): void
+    {
+        $this->lifecycle()->install('hello');
+        $this->failUpgrade();
+        $pending = $this->row()->meta['pending'];
+
+        try {
+            $this->lifecycle()->upgrade('hello');
+            $this->fail('should refuse');
+        } catch (PluginLifecycleException $e) {
+            $this->assertStringContainsString('run plugin:rollback first', $e->getMessage());
+        }
+        $this->artisan('plugin:upgrade', ['key' => 'hello'])->expectsOutputToContain('run plugin:rollback first')->assertFailed();
+
+        $this->lifecycle()->uninstall('hello');
+        $this->expectException(PluginLifecycleException::class);
+        try {
+            $this->lifecycle()->install('hello');
+        } finally {
+            $this->assertSame($pending, $this->row()->meta['pending']);
+        }
+    }
+
+    public function test_forced_upgrade_keeps_original_pending_record(): void
+    {
+        $this->lifecycle()->install('hello');
+        $this->failUpgrade();
+        $pending = $this->row()->meta['pending'];
+
+        $this->writeHelloMigration('2026_09_10_000000_boom2', "throw new RuntimeException('boom2');");
+        try {
+            $this->artisan('plugin:upgrade', ['key' => 'hello', '--force' => true]);
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame($pending['prior_batches'], $this->row()->meta['pending']['prior_batches']);
+        $this->assertSame($pending['prior_version'], $this->row()->meta['pending']['prior_version']);
+        $this->assertSame($pending['backup'], $this->row()->meta['pending']['backup']);
+    }
+
+    public function test_rollback_restores_backup_when_a_plugin_down_throws(): void
+    {
+        $fake = $this->fakeBackup();
+        $this->lifecycle()->install('hello');
+        $installBatches = $this->row()->meta['batches'];
+
+        $this->addHelloV2Migration();
+        $this->setHelloVersion('2.0.0');
+        $this->writeHelloMigration('2026_01_02_500000_bad_down', '', "throw new RuntimeException('down failed');");
+        $this->writeHelloMigration('2026_09_09_000000_boom', "throw new RuntimeException('boom');");
+        try {
+            $this->lifecycle()->upgrade('hello');
+        } catch (\RuntimeException) {
+        }
+        @unlink($this->helloMigrations.'/2026_09_09_000000_boom.php');
+        $upgradeBatch = array_values(array_diff($this->row()->meta['batches'], $installBatches));
+        $this->assertCount(1, $upgradeBatch);
+
+        $summary = $this->lifecycle()->rollback('hello');
+
+        $this->assertSame(['/tmp/fake-hello-upgrade.dump'], $fake->restored);
+        $this->assertSame($upgradeBatch, $summary['failed_batches']);
+        $this->assertFalse(DB::table('migrations')->whereIn('batch', $upgradeBatch)->exists());
+        $row = $this->row();
+        $this->assertSame(InstalledPlugin::STATUS_INSTALLED, $row->status);
+        $this->assertSame('1.0.0', $row->version);
+        $this->assertSame($installBatches, $row->meta['batches']);
+        $this->assertSame(['restored', 'ok'], $this->events(PluginEvent::ROLLBACK)->pluck('outcome')->all());
+    }
+
+    public function test_rollback_reports_orphans_and_prunes_with_flag(): void
+    {
+        HelloServiceProvider::$failOnInstall = true;
+        try {
+            $this->lifecycle()->install('hello');
+        } catch (\RuntimeException) {
+        }
+        // Orphan: a plugin migration row that a batch rollback leaves behind
+        // (simulated by a lifecycle whose rollback skips batch 999).
+        $this->writeHelloMigration('2026_01_03_000000_hello_extra', '');
+        DB::table('migrations')->insert(['migration' => '2026_01_03_000000_hello_extra', 'batch' => 999]);
+        $this->app->bind(PluginLifecycle::class, fn ($app) => new class($app->make(PluginManager::class), $app->make(PluginBackup::class)) extends PluginLifecycle
+        {
+            protected function rollbackBatch(array $manifest, int $batch): void
+            {
+                if ($batch !== 999) {
+                    parent::rollbackBatch($manifest, $batch);
+                }
+            }
+        });
+
+        $this->artisan('plugin:rollback', ['key' => 'hello'])
+            ->expectsOutputToContain('orphan plugin migration rows')->assertFailed();
+
+        $this->artisan('plugin:rollback', ['key' => 'hello', '--prune-orphans' => true])->assertSuccessful();
+        $this->assertFalse(DB::table('migrations')->where('batch', 999)->exists());
+        $this->assertNull($this->row());
+    }
+
+    public function test_core_key_is_reserved(): void
+    {
+        $errors = PluginManager::validateManifest(['key' => 'core', 'data' => ['prefix' => 'core_', 'tables' => []]]);
+        $this->assertStringContainsString('reserved', $errors[0]);
     }
 }
