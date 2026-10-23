@@ -512,21 +512,19 @@ class PluginLifecycle
     }
 
     /**
-     * Drop <prefix>_* tables not in the dump, then replay the dump's SQL, all
-     * in one DB transaction (pgsql DDL is transactional, so a core FK conflict
-     * makes the whole restore fail atomically).
+     * Drop <prefix>_* tables not in the dump and replay the dump, atomically.
+     * pgsql: one psql --single-transaction run (PluginBackup::replaceAndRestore),
+     * so PHP's connection/session is untouched. Other drivers (SQLite tests):
+     * PHP-side drop only, there is no dump to replay.
      */
     protected function restoreReplacingPluginTables(array $manifest, ?string $file): void
     {
-        $keep = $file === null ? [] : $this->backup->dumpTables($file);
-        $sql = $file === null ? '' : $this->backup->restoreSql($file);
+        if ($this->backup->replaceAndRestore($this->prefix($manifest), $file)) {
+            return;
+        }
 
-        DB::transaction(function () use ($manifest, $keep, $sql) {
-            $this->dropPluginTables($manifest, $keep);
-            if (trim($sql) !== '') {
-                DB::unprepared($sql);
-            }
-        });
+        $keep = $file === null ? [] : $this->backup->dumpTables($file);
+        DB::transaction(fn () => $this->dropPluginTables($manifest, $keep));
     }
 
     /**

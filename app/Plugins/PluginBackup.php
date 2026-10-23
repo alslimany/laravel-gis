@@ -104,6 +104,60 @@ class PluginBackup
     }
 
     /**
+     * pgsql only: in ONE psql --single-transaction run, DROP the <prefix>_*
+     * tables (pg_tables, schemaname = current_schema()) that the dump does not
+     * contain, then replay the dump (pg_restore --clean --if-exists -f -
+     * output, incl. COPY ... FROM stdin data and pg 17.6+ \\restrict lines,
+     * which only psql understands). Drops are schema-qualified, quoted and use
+     * CASCADE: it only reaches objects depending on plugin tables (FKs between
+     * plugin tables, plugin views); core never FKs to plugin tables (ADR §6).
+     * Runs out of process, so PHP's connection (search_path etc.) is unaffected.
+     * Returns false on non-pgsql drivers (caller drops tables itself).
+     */
+    public function replaceAndRestore(string $prefix, ?string $file): bool
+    {
+        $connection = DB::connection($this->connection);
+        if ($connection->getDriverName() !== 'pgsql') {
+            return false;
+        }
+        if ($prefix === '') {
+            throw new PluginLifecycleException('Refusing to drop tables without a data.prefix.');
+        }
+
+        $schema = (string) $connection->selectOne('select current_schema() as s')->s;
+        $keep = $file === null ? [] : $this->dumpTables($file);
+        $tables = collect($connection->select(
+            'select tablename from pg_tables where schemaname = current_schema()'
+        ))->pluck('tablename')
+            ->filter(fn ($t) => str_starts_with((string) $t, $prefix) && ! in_array($t, $keep, true))
+            ->values();
+
+        $quote = fn (string $id) => '"'.str_replace('"', '""', $id).'"';
+        $sql = '';
+        foreach ($tables as $table) {
+            $sql .= 'DROP TABLE IF EXISTS '.$quote($schema).'.'.$quote((string) $table)." CASCADE;\n";
+        }
+        if ($file !== null) {
+            $sql .= $this->restoreSql($file);
+        }
+
+        $tmp = tempnam(sys_get_temp_dir(), 'plugin-restore-').'.sql';
+        file_put_contents($tmp, $sql);
+        try {
+            $result = $this->pg($connection->getConfig(), [
+                'psql', '-X', '-q', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', $tmp,
+            ]);
+        } finally {
+            @unlink($tmp);
+        }
+        if (! $result->successful()) {
+            throw new PluginLifecycleException('Plugin restore (psql) failed and was rolled back: '.trim($result->errorOutput()));
+        }
+
+        return true;
+    }
+
+    /**
      * The dump as plain SQL (`pg_restore --clean --if-exists -f -`), so the
      * caller can run it inside its own transaction.
      */

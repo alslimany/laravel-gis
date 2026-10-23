@@ -481,18 +481,16 @@ class PluginLifecycleTest extends TestCase
                 return ['file' => "/tmp/fake-{$key}-{$action}.dump", 'skipped' => null];
             }
 
-            public array $sqlFor = [];
+            public function replaceAndRestore(string $prefix, ?string $file): bool
+            {
+                return false;
+            }
 
             public function dumpTables(string $file): array
             {
-                return ['hello_items', 'hello_notes'];
-            }
-
-            public function restoreSql(string $file): string
-            {
                 $this->restored[] = $file;
 
-                return '';
+                return ['hello_items', 'hello_notes'];
             }
 
             public function restore(?string $file): bool
