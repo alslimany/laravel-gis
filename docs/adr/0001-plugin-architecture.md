@@ -1,6 +1,6 @@
 # ADR-0001: Plugin host and plugin contract (Lumina GIS)
 
-- Status: Proposed, rev 4, addressing Code Review CHANGES on 8599f66 (rollback by batch, plugin-scoped restore) (#53)
+- Status: Proposed, rev 5, Code Review APPROVE on d776e76 (notes folded in) (rollback by batch, plugin-scoped restore) (#53)
 - Inputs: Web Dev #54 prep, Lumina PM decisions 2026-10-23, Code Review of 24e45de and 8599f66
 - Epic: #52 · Blocks: A2, A3, A4
 - Date: 2026-10-23
@@ -35,6 +35,7 @@
 | D10 | Plugin API version | SemVer starting **1.0.0** (`config('lumina.plugin_api')`). | First public contract. |
 | D11 | Core schema guard | PHPUnit test (`CoreSchemaUntouchedTest`), not CI-only (Actions disabled). It is a **test-time snapshot only** (core columns/indexes before vs after installing every plugin on a test DB); it is not a runtime or DB-permission control. | Runs everywhere; cheap. No separate DB-role restriction is proposed (single app DB user; plugins are first-party and code-reviewed). |
 | D12 | Early Warning data | `ew_basins` and forecasts global, stored once; orgs subscribe to areas. DEM fetched by script, not committed. | Avoids duplicate data and repo bloat. |
+| D13 | Frontend slot wiring | Merged into §1b (Web Dev confirmations) and §7; kept as a number for traceability. | Settled there. |
 | D14 | Queue/console tenancy | `App\Tenancy\CurrentOrganization` (scoped singleton) is the single source of the current org for the `BelongsToOrganization` scope. HTTP: the existing `organization` middleware (`EnsureUserHasOrganization`) also sets `CurrentOrganization` from `auth()->user()->organization_id` and runs **before** `plugin:{key}`. Jobs: the `SetsOrganizationContext` job middleware sets it from the job's `organization_id`. **Fail closed:** if no org is set, scoped queries throw `MissingOrganizationContext` (no console bypass). `CurrentOrganization::runUnscoped(fn ...)` (logged) is allowed **only** in jobs marked `GlobalJob` and in callbacks registered in a provider's `schedule()`; an arch test bans it in controllers and in any `OrganizationScopedJob`. Every job class under `packages/*` must implement `OrganizationScopedJob` or the explicit `GlobalJob` marker (arch test). **Scope:** D14 covers plugin models only; core models (e.g. `Layer`) stay unscoped and keep their existing explicit queries and policies. | Workers run in console; a "bypass in console" scope would make every queued job unscoped. |
 | D15 | Plugin migrations | Run with `php artisan migrate --path=<plugin migrations> --realpath --force` in their **own batch**, always **after** core `migrate`; each batch number is appended to `installed_plugins.meta.batches`. Rollback is `php artisan migrate:rollback --batch=<n> --force` for each recorded plugin batch, **newest first** (never `--step`, which counts the latest batches DB-wide). Before install/upgrade a **plugin-only** dump (`pg_dump -t '<prefix>_*'`) is taken; restore on `down()` failure touches only plugin-prefixed tables. The full DB dump is outage-level DR only (§8). | Plugin batches stay isolated from core batches; a failed plugin rollback can never revert other orgs' core writes. |
 
@@ -193,6 +194,11 @@ D13 is the source; this section only adds the component loading.
 - **Gating during dump + migrate:** the plugin is gated off for all orgs (`status=upgrading`, so `plugin:{key}` returns 404 and `SetsOrganizationContext` releases its jobs) from before the dump until migrate/rollback finishes; it returns to `installed` only on success.
 
 All lifecycle actions (install, upgrade, rollback, enable, disable, uninstall, purge, settings change) are written to `plugin_events` (D9).
+
+**Restore implementation notes (CR on d776e76):**
+- **Naming rule:** every database object a plugin creates (tables, sequences, enum types, functions, views, indexes) must use the `<prefix>_` name, so `pg_dump -t '<prefix>_*'` captures it. Plugin enum types and functions are also listed in the manifest and dumped explicitly (`-t` for each, or a dedicated schema with `-n`); an arch/migration test fails on any unprefixed object.
+- **Restoring with core FKs:** run `pg_restore --single-transaction --exit-on-error`. Before re-adding FKs to core tables (`organizations`, `layers`), detect orphaned rows whose core parent was deleted after the dump; by default abort and report them in `plugin_events`, with an explicit `--prune-orphans` flag to delete them first.
+- **Reconcile state:** after a restore, rewrite the plugin's rows in `migrations` and `installed_plugins.meta.batches` to match the restored schema version, and record the result in `plugin_events`.
 
 ## 9. Versioning / compatibility
 - Plugin SemVer. The manifest `core` constraint is checked against `config('lumina.plugin_api')`, starting at `1.0.0`. An incompatible plugin cannot be installed or upgraded, and a running one is gated off with an admin banner.
