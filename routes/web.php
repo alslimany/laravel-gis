@@ -150,7 +150,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/ai/gis-assistant', [GisAssistantController::class, 'chat'])->name('ai.gis-assistant.chat');
     });
 
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware(['organization', 'role:admin'])->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'edit', 'update', 'destroy']);
     });
 

@@ -5,27 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
     /**
-     * Create a new controller instance.
-     */
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:admin']);
-    }
-
-    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', User::class);
+
+        // Always scope to the admin's own organization (the 'organization'
+        // middleware guarantees it is non-null). Previously a null-org admin
+        // skipped this filter and saw every user (#66).
         $users = User::with(['organization', 'roles'])
-            ->when($request->user()->organization_id, function ($query) use ($request) {
-                return $query->where('organization_id', $request->user()->organization_id);
-            })
+            ->where('organization_id', $request->user()->organization_id)
             ->paginate(15);
 
         return Inertia::render('Users/Index', [
@@ -60,8 +57,15 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'roles' => 'array',
-            'roles.*' => 'exists:roles,id',
+            'roles.*' => [
+                'integer',
+                Rule::in(Role::whereIn('name', User::ASSIGNABLE_ROLES)->pluck('id')->all()),
+            ],
         ]);
+
+        if (isset($validated['roles'])) {
+            $this->guardAdminRemoval($request->user(), $user, $validated['roles']);
+        }
 
         $user->update([
             'name' => $validated['name'],
@@ -69,7 +73,13 @@ class UserController extends Controller
         ]);
 
         if (isset($validated['roles'])) {
-            $user->roles()->sync($validated['roles']);
+            // Grants made here are scoped to the managed user's organization,
+            // which the policy has already checked equals the admin's.
+            // withPivotValue limits the sync to this org's grants and stamps
+            // new grants with it, so grants in other orgs are left alone.
+            $user->roles()
+                ->withPivotValue('organization_id', $user->organization_id)
+                ->sync($validated['roles']);
         }
 
         return redirect()->route('users.index')
@@ -87,5 +97,42 @@ class UserController extends Controller
 
         return redirect()->route('users.index')
             ->with('success', 'User deleted successfully.');
+    }
+
+    /**
+     * An admin may not drop their own admin role, and an org must keep at
+     * least one admin (#66).
+     *
+     * @param  array<int, int|string>  $roleIds
+     */
+    protected function guardAdminRemoval(User $actor, User $user, array $roleIds): void
+    {
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+
+        if ($adminRoleId === null
+            || in_array((int) $adminRoleId, array_map('intval', $roleIds), true)
+            || ! $user->hasRole('admin')) {
+            return;
+        }
+
+        if ($actor->is($user)) {
+            throw ValidationException::withMessages([
+                'roles' => 'You cannot remove your own admin role.',
+            ]);
+        }
+
+        $otherAdmins = User::query()
+            ->where('organization_id', $user->organization_id)
+            ->whereKeyNot($user->getKey())
+            ->whereHas('roles', fn ($query) => $query
+                ->where('roles.id', $adminRoleId)
+                ->where('role_user.organization_id', $user->organization_id))
+            ->exists();
+
+        if (! $otherAdmins) {
+            throw ValidationException::withMessages([
+                'roles' => 'An organization must keep at least one admin.',
+            ]);
+        }
     }
 }

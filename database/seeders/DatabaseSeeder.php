@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Assign user to organization
-        $user->update(['organization_id' => $organization->id]);
+        $user->forceFill(['organization_id' => $organization->id])->save();
 
         // Assign admin role to test user
         $adminRole = Role::where('name', 'admin')->first();
@@ -68,7 +68,7 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $additionalUser->id,
             ]);
 
-            $additionalUser->update(['organization_id' => $org->id]);
+            $additionalUser->forceFill(['organization_id' => $org->id])->save();
 
             // Assign viewer role to additional users
             $viewerRole = Role::where('name', 'viewer')->first();

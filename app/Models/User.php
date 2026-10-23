@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Traits\SpatialTrait;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,11 +15,22 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, SpatialTrait;
 
     /**
      * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    /**
+     * Roles an organization admin may grant from user management (#66).
+     */
+    public const ASSIGNABLE_ROLES = ['admin', 'editor', 'viewer'];
+
+    /**
+     * organization_id is deliberately not mass assignable (#66); set it
+     * explicitly (forceFill) in trusted code paths only.
      *
      * @var list<string>
      */
@@ -27,7 +39,6 @@ class User extends Authenticatable
         'email',
         'password',
         'location',
-        'organization_id',
     ];
 
     /**
@@ -91,7 +102,9 @@ class User extends Authenticatable
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class);
+        return $this->belongsToMany(Role::class)
+            ->using(RoleUser::class)
+            ->withPivot('organization_id');
     }
 
     /**
@@ -107,7 +120,7 @@ class User extends Authenticatable
      */
     public function hasRole(string $roleName): bool
     {
-        return $this->roles()->where('name', $roleName)->exists();
+        return $this->hasAnyRole([$roleName]);
     }
 
     /**
@@ -115,7 +128,32 @@ class User extends Authenticatable
      */
     public function hasAnyRole(array $roleNames): bool
     {
-        return $this->roles()->whereIn('name', $roleNames)->exists();
+        return $this->hasRoleInOrg($roleNames, $this->organization_id);
+    }
+
+    /**
+     * Check if the user holds any of the given roles within an organization.
+     * A null organization only matches grants made without an organization.
+     */
+    public function hasRoleInOrg(array|string $roleNames, ?int $organizationId): bool
+    {
+        // Roles are organization roles only (#66). A user without an
+        // organization holds no role, even if a legacy null-org grant exists.
+        // No onboarding/org-creation route needs an exception today.
+        if ($organizationId === null) {
+            return false;
+        }
+
+        $roleNames = (array) $roleNames;
+
+        // Role grants are scoped to the organization they were granted in
+        // (role_user.organization_id). A user with an organization only gets
+        // grants for that organization; a user without one only gets grants
+        // that were made without an organization (#66 / D2).
+        return $this->roles()
+            ->whereIn('roles.name', $roleNames)
+            ->where('role_user.organization_id', $organizationId)
+            ->exists();
     }
 
     /**

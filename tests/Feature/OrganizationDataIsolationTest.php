@@ -138,8 +138,8 @@ class OrganizationDataIsolationTest extends TestCase
         $this->assertEquals($org1->id, $user->organization_id);
         $this->assertEquals($org1->id, $user->organization->id);
 
-        // Change to org2
-        $user->update(['organization_id' => $org2->id]);
+        // Change to org2 (organization_id is not mass assignable, #66)
+        $user->forceFill(['organization_id' => $org2->id])->save();
         $user->refresh();
 
         // Verify user now belongs to org2 only

@@ -112,7 +112,8 @@ class AuthenticationTest extends TestCase
     {
         Role::create(['name' => 'admin', 'description' => 'Administrator']);
 
-        $user = User::factory()->create();
+        // Roles are organization roles (#66): the user needs an organization.
+        $user = User::factory()->create(['organization_id' => Organization::factory()->create()->id]);
         $user->roles()->attach(Role::where('name', 'admin')->first());
 
         $this->assertTrue($user->hasRole('admin'));
@@ -124,7 +125,7 @@ class AuthenticationTest extends TestCase
         Role::create(['name' => 'admin', 'description' => 'Administrator']);
         Role::create(['name' => 'editor', 'description' => 'Editor']);
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['organization_id' => Organization::factory()->create()->id]);
         $user->roles()->attach(Role::whereIn('name', ['admin', 'editor'])->get());
 
         $this->assertTrue($user->hasAnyRole(['admin', 'editor']));
