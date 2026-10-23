@@ -5,6 +5,7 @@ namespace App\Plugins;
 use App\Models\InstalledPlugin;
 use App\Models\Organization;
 use App\Models\OrganizationPlugin;
+use App\Models\PluginEvent;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -114,7 +115,30 @@ class PluginManager
         }
         $row->save();
 
+        PluginEvent::record($key, $enabled ? PluginEvent::ENABLE : PluginEvent::DISABLE, [
+            'organization_id' => $organization->getKey(),
+            'actor_id' => $actor?->getKey(),
+            'to_version' => InstalledPlugin::query()->where('plugin_key', $key)->value('version'),
+            'meta' => ['super_admin' => (bool) $actor?->isSuperAdmin()],
+        ]);
+
+        $provider = $this->provider($key);
+        $enabled ? $provider?->onEnable($organization) : $provider?->onDisable($organization);
+
         return $row;
+    }
+
+    /**
+     * The plugin's provider instance (registered one if booted).
+     */
+    public function provider(string $key): ?PluginServiceProvider
+    {
+        $class = $this->manifest($key)['provider'] ?? null;
+        if (! $class || ! class_exists($class) || ! is_subclass_of($class, PluginServiceProvider::class)) {
+            return null;
+        }
+
+        return app()->getProvider($class) ?? new $class(app());
     }
 
     /**
@@ -158,7 +182,7 @@ class PluginManager
     public function registryCacheKey(): string
     {
         $path = $this->installedJsonPath;
-        $hash = is_file($path) ? md5(filemtime($path).':'.filesize($path)) : 'missing';
+        $hash = is_file($path) ? md5($path.':'.filemtime($path).':'.filesize($path)) : 'missing';
 
         return "plugins:registry:{$hash}";
     }

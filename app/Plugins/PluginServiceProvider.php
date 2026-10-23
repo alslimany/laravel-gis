@@ -15,6 +15,10 @@ use Illuminate\Support\ServiceProvider;
  * web, auth, organization and plugin:{key}; gating happens per request.
  * Migrations are never auto-loaded into `artisan migrate`; they run only
  * through the plugin install/upgrade path in their own batch (D15).
+ *
+ * Extension points: boot() is final; put boot work in bootPlugin() and
+ * commands in consoleCommands(). register() may be overridden but MUST call
+ * parent::register(); boot() throws a LogicException otherwise.
  */
 abstract class PluginServiceProvider extends ServiceProvider
 {
@@ -22,6 +26,16 @@ abstract class PluginServiceProvider extends ServiceProvider
      * Must equal the manifest key in extra.lumina.
      */
     abstract public function key(): string;
+
+    private bool $pluginRegistered = false;
+
+    /**
+     * Subclasses overriding this must call parent::register().
+     */
+    public function register(): void
+    {
+        $this->pluginRegistered = true;
+    }
 
     /**
      * Absolute path to the plugin routes file, or null.
@@ -78,6 +92,10 @@ abstract class PluginServiceProvider extends ServiceProvider
 
     final public function boot(): void
     {
+        if (! $this->pluginRegistered) {
+            throw new \LogicException(static::class.'::register() must call parent::register().');
+        }
+
         $key = $this->key();
 
         if (($routes = $this->routes()) !== null && ! $this->app->routesAreCached()) {

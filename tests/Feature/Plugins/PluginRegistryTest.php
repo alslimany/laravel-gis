@@ -165,8 +165,19 @@ class PluginRegistryTest extends TestCase
 
         $this->actingAs($super)->getJson('/x/early-warning/ping')->assertForbidden();
         $this->actingAs($super)->get('/api/x/early-warning/ping', ['Accept' => 'application/json'])->assertForbidden();
-        // A regular org-less user still gets 403 on web as before.
-        $this->actingAs($this->userIn(null))->get('/x/early-warning/ping')->assertForbidden();
+    }
+
+    public function test_ordinary_user_without_org_gets_403_with_contact_admin_message_on_web(): void
+    {
+        $this->install();
+        $this->plugins->setEnabled(self::KEY, $this->orgA, true);
+        $user = $this->userIn(null);
+
+        $response = $this->actingAs($user)->get('/x/early-warning/ping')->assertForbidden();
+        $this->assertStringContainsString('Contact your administrator', $response->exception->getMessage());
+
+        $this->actingAs($user)->getJson('/x/early-warning/ping')->assertForbidden()
+            ->assertJsonFragment(['message' => 'You are not a member of an organization. Contact your administrator.']);
     }
 
     public function test_early_warning_provider_extends_core_plugin_base(): void

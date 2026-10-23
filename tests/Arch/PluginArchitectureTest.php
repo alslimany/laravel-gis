@@ -1,0 +1,137 @@
+<?php
+
+namespace Tests\Arch;
+
+use App\Plugins\PluginServiceProvider;
+use Illuminate\Support\Facades\File;
+use Symfony\Component\Finder\SplFileInfo;
+use Tests\TestCase;
+
+/**
+ * ADR-0001 §4/§12 architecture rules, enforced by file scan.
+ */
+class PluginArchitectureTest extends TestCase
+{
+    /**
+     * @return array<string, array<string, mixed>> plugin dir => manifest
+     */
+    protected function plugins(): array
+    {
+        $plugins = [];
+        foreach (File::directories(base_path('packages')) as $dir) {
+            $composer = json_decode((string) File::get($dir.'/composer.json'), true);
+            $plugins[$dir] = $composer;
+        }
+
+        return $plugins;
+    }
+
+    /**
+     * @return list<SplFileInfo>
+     */
+    protected function phpFiles(string $dir): array
+    {
+        return array_values(array_filter(
+            File::allFiles($dir),
+            fn (SplFileInfo $f) => $f->getExtension() === 'php' && ! str_contains($f->getPathname(), '/vendor/'),
+        ));
+    }
+
+    public function test_core_does_not_depend_on_plugin_namespaces(): void
+    {
+        $offenders = [];
+        foreach (['app', 'bootstrap', 'config', 'routes', 'database'] as $dir) {
+            foreach ($this->phpFiles(base_path($dir)) as $file) {
+                if (str_contains($file->getPathname(), '/bootstrap/cache/')) {
+                    continue;
+                }
+                if (preg_match('/\bLumina\\\\[A-Z]/', $file->getContents())) {
+                    $offenders[] = $file->getRelativePathname();
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Core must not reference Lumina\\* plugin classes.');
+    }
+
+    public function test_every_plugin_has_a_valid_manifest_and_provider(): void
+    {
+        $this->assertNotEmpty($this->plugins());
+
+        foreach ($this->plugins() as $dir => $composer) {
+            $manifest = $composer['extra']['lumina'] ?? null;
+            $this->assertIsArray($manifest, "{$dir}: missing extra.lumina");
+            foreach (['key', 'name', 'version', 'core', 'provider'] as $field) {
+                $this->assertNotEmpty($manifest[$field] ?? null, "{$dir}: manifest.{$field}");
+            }
+            $this->assertMatchesRegularExpression('/^[a-z][a-z0-9-]*$/', $manifest['key']);
+            $this->assertTrue(is_subclass_of($manifest['provider'], PluginServiceProvider::class), "{$dir}: provider must extend core PluginServiceProvider");
+            $this->assertSame($manifest['key'], (new $manifest['provider']($this->app))->key(), "{$dir}: provider key");
+            $this->assertStringStartsWith('Lumina\\', $manifest['provider']);
+        }
+    }
+
+    public function test_plugin_migrations_only_touch_plugin_tables(): void
+    {
+        foreach ($this->plugins() as $dir => $composer) {
+            $tables = array_merge(
+                $composer['extra']['lumina']['data']['tables'] ?? [],
+                $composer['extra']['lumina']['data']['global_tables'] ?? [],
+            );
+            $prefix = $tables ? strstr($tables[0], '_', true).'_' : null;
+            $this->assertNotNull($prefix, "{$dir}: manifest data.tables required for migrations");
+
+            if (! is_dir($dir.'/database/migrations')) {
+                continue;
+            }
+            foreach ($this->phpFiles($dir.'/database/migrations') as $file) {
+                preg_match_all("/Schema::(?:create|table|drop|dropIfExists|rename)\\(\\s*'([^']+)'/", $file->getContents(), $m);
+                $this->assertNotEmpty($m[1], $file->getFilename().': no literal table name found');
+                foreach ($m[1] as $table) {
+                    $this->assertStringStartsWith($prefix, $table, $file->getFilename()." touches non-plugin table {$table}");
+                }
+                $this->assertDoesNotMatchRegularExpression('/Schema::table\(\s*\$/', $file->getContents(), $file->getFilename().': dynamic Schema::table');
+            }
+        }
+    }
+
+    public function test_plugin_providers_do_not_auto_load_migrations(): void
+    {
+        foreach ($this->plugins() as $dir => $composer) {
+            foreach ($this->phpFiles($dir.'/src') as $file) {
+                $this->assertStringNotContainsString('loadMigrationsFrom', $file->getContents(), $file->getRelativePathname());
+            }
+        }
+    }
+
+    public function test_no_raw_http_in_plugins(): void
+    {
+        $banned = '/\b(curl_init|curl_exec|fsockopen|stream_socket_client)\s*\(|GuzzleHttp\\\\|file_get_contents\(\s*[\'"]https?:/';
+        foreach ($this->plugins() as $dir => $composer) {
+            foreach ($this->phpFiles($dir.'/src') as $file) {
+                $this->assertDoesNotMatchRegularExpression($banned, $file->getContents(), $file->getRelativePathname().' uses raw HTTP; use the Http facade');
+            }
+        }
+    }
+
+    public function test_scheduled_tasks_only_declared_in_provider_schedule(): void
+    {
+        foreach ($this->plugins() as $dir => $composer) {
+            foreach ($this->phpFiles($dir.'/src') as $file) {
+                $isProvider = str_contains($file->getRelativePathname(), 'Providers/');
+                if (! $isProvider) {
+                    $this->assertDoesNotMatchRegularExpression('/\bSchedule\b/', $file->getContents(), $file->getRelativePathname().' declares scheduling outside the provider');
+                }
+            }
+        }
+    }
+
+    public function test_core_plugin_base_keeps_boot_final(): void
+    {
+        $boot = new \ReflectionMethod(PluginServiceProvider::class, 'boot');
+        $migrations = new \ReflectionMethod(PluginServiceProvider::class, 'migrationsPath');
+
+        $this->assertTrue($boot->isFinal());
+        $this->assertTrue($migrations->isStatic());
+    }
+}

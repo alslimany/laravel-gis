@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('plugin_key', 64)->unique();
             $table->string('version', 32);
-            $table->enum('status', ['installed', 'upgrading', 'failed', 'uninstalled'])->default('installed');
+            $table->enum('status', ['installing', 'installed', 'upgrading', 'failed', 'uninstalled'])->default('installed');
             $table->foreignId('installed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('installed_at')->nullable();
             $table->timestamp('uninstalled_at')->nullable();

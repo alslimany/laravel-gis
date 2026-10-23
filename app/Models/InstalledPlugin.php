@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class InstalledPlugin extends Model
 {
+    public const STATUS_INSTALLING = 'installing';
+
     public const STATUS_INSTALLED = 'installed';
 
     public const STATUS_UPGRADING = 'upgrading';

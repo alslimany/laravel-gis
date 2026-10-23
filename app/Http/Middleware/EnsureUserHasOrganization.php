@@ -26,7 +26,7 @@ class EnsureUserHasOrganization
                 return redirect()->route('organization.setup');
             }
 
-            abort(403, 'You must belong to an organization to access this resource.');
+            abort(403, 'You are not a member of an organization. Contact your administrator.');
         }
 
         return $next($request);
