@@ -175,11 +175,6 @@ class PluginBackup
     }
 
     /**
-     * Run a pg_* client with the connection's host/port/user, sslmode and
-     * socket support (a host starting with "/" is a Unix socket directory;
-     * an empty host lets libpq use its default socket).
-     */
-    /**
      * <prefix>_* tables in the current schema (pg_tables).
      *
      * @return list<string>
@@ -267,6 +262,11 @@ class PluginBackup
         return $versions;
     }
 
+    /**
+     * Run a pg_* client with the connection's host/port/user, sslmode and
+     * socket support (a host starting with "/" is a Unix socket directory;
+     * an empty host lets libpq use its default socket).
+     */
     protected function pg(array $config, array $command, ?string $input = null)
     {
         $command[] = '--dbname='.(string) $config['database'];
