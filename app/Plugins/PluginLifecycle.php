@@ -312,6 +312,9 @@ class PluginLifecycle
         }
 
         $backupFile = $pending['backup'] ?? null;
+        if ($backupFile !== null && DB::getDriverName() === 'pgsql') {
+            $this->backup->preflight();
+        }
         $failedBatches = [];
         $restoredAfterFailure = false;
 

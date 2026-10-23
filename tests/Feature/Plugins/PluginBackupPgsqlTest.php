@@ -39,8 +39,15 @@ class PluginBackupPgsqlTest extends TestCase
         } catch (Throwable $e) {
             $this->markTestSkipped('PostgreSQL not available: '.$e->getMessage());
         }
-        if (! Process::run(['pg_dump', '--version'])->successful()) {
-            $this->markTestSkipped('pg_dump not on PATH.');
+        foreach (['pg_dump', 'pg_restore', 'psql'] as $tool) {
+            try {
+                $ok = Process::run([PluginBackup::bin($tool), '--version'])->successful();
+            } catch (Throwable) {
+                $ok = false;
+            }
+            if (! $ok) {
+                $this->markTestSkipped("{$tool} not available.");
+            }
         }
 
         $this->prefix = 'zbk'.random_int(1000, 9999).'_';
@@ -124,7 +131,7 @@ class PluginBackupPgsqlTest extends TestCase
         @unlink($dump);
     }
 
-    public function test_failed_replay_rolls_back_everything(): void
+    public function test_core_fk_or_view_on_plugin_table_aborts_before_drop(): void
     {
         $db = DB::connection('pgsql_backup_test');
         $items = "{$this->prefix}items";
@@ -134,20 +141,54 @@ class PluginBackupPgsqlTest extends TestCase
         $dump = $this->backup()->dump('zbk', $this->prefix, 'upgrade')['file'];
         $db->statement("create table {$extra} (id int)");
 
-        // A core (non-prefixed) object depending on a plugin table makes the
-        // replay's DROP fail mid-script; the whole run must roll back.
+        // A core (non-prefixed) view and FK depending on plugin tables: abort
+        // before any DROP/--clean, nothing changes.
         $view = 'corev'.random_int(1000, 9999);
+        $core = 'corefk'.random_int(1000, 9999);
         $db->statement("create view {$view} as select id from {$items}");
+        $db->statement("create table {$core} (id int, item_id int references {$items}(id))");
         try {
             $this->backup()->replaceAndRestore($this->prefix, $dump);
             $this->fail('should throw');
         } catch (PluginLifecycleException $e) {
-            $this->assertStringContainsString('rolled back', $e->getMessage());
+            $this->assertStringContainsString("view {$view} -> {$items}", $e->getMessage());
+            $this->assertStringContainsString("on {$core} -> {$items}", $e->getMessage());
         } finally {
             $db->statement("drop view if exists {$view}");
+            $db->statement("drop table if exists {$core}");
         }
-        $this->assertTrue((bool) $db->selectOne('select to_regclass(?) as r', [$extra])->r, 'extra drop rolled back');
+        $this->assertTrue((bool) $db->selectOne('select to_regclass(?) as r', [$extra])->r, 'nothing dropped');
         $this->assertSame(1, $db->table($items)->count());
         @unlink($dump);
+    }
+
+    public function test_replay_leaves_no_temp_files_and_preflight_reports_versions(): void
+    {
+        $db = DB::connection('pgsql_backup_test');
+        $db->statement("create table {$this->prefix}items (id int primary key)");
+        $dump = $this->backup()->dump('zbk', $this->prefix, 'upgrade')['file'];
+        $before = glob(sys_get_temp_dir().'/*') ?: [];
+
+        $this->assertTrue($this->backup()->replaceAndRestore($this->prefix, $dump));
+
+        // Only our own artefacts: the shared tmp dir also has other processes' files.
+        $new = array_filter(
+            array_diff(glob(sys_get_temp_dir().'/*') ?: [], $before),
+            fn ($f) => str_contains($f, 'plugin-restore') || str_ends_with($f, '.sql'),
+        );
+        $this->assertSame([], array_values($new));
+        $this->assertSame([], glob(sys_get_temp_dir().'/plugin-restore-*') ?: []);
+        $versions = $this->backup()->preflight();
+        $this->assertStringContainsString('pg_restore', $versions['pg_restore']);
+        $this->assertStringContainsString('psql', $versions['psql']);
+        @unlink($dump);
+    }
+
+    public function test_preflight_fails_clearly_when_psql_missing(): void
+    {
+        config(['plugins.psql_binary' => '/nonexistent/psql']);
+        $this->expectException(PluginLifecycleException::class);
+        $this->expectExceptionMessage('psql not found');
+        $this->backup()->preflight();
     }
 }

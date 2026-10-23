@@ -19,4 +19,14 @@ return [
 
     // Seconds to wait for the lock before failing.
     'lock_wait' => (int) env('PLUGIN_LOCK_WAIT', 5),
+
+    /*
+    | PostgreSQL client tools for plugin backup/restore. pg_dump, pg_restore
+    | and psql MUST come from the same client package/version (and be >= the
+    | server major), e.g. all from /usr/lib/postgresql/17/bin. plugin:rollback
+    | runs a `--version` preflight and logs both versions before restoring.
+    */
+    'pg_dump_binary' => env('PLUGIN_PG_DUMP_BINARY', 'pg_dump'),
+    'pg_restore_binary' => env('PLUGIN_PG_RESTORE_BINARY', 'pg_restore'),
+    'psql_binary' => env('PLUGIN_PSQL_BINARY', 'psql'),
 ];

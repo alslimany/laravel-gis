@@ -3,6 +3,7 @@
 namespace App\Plugins;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -44,7 +45,7 @@ class PluginBackup
         }
         $file = $dir.'/'.now()->format('Ymd_His_u').'-'.$action.'.dump';
 
-        $result = $this->pg($connection->getConfig(), ['pg_dump', '-Fc', '-t', $prefix.'*', '-f', $file]);
+        $result = $this->pg($connection->getConfig(), [self::bin('pg_dump'), '-Fc', '-t', $prefix.'*', '-f', $file]);
 
         if (! $result->successful() || ! is_file($file) || filesize($file) === 0) {
             @unlink($file);
@@ -68,7 +69,7 @@ class PluginBackup
         }
 
         $result = $this->pg($connection->getConfig(), [
-            'pg_restore', '--single-transaction', '--exit-on-error', '--clean', '--if-exists', '--no-owner', $file,
+            self::bin('pg_restore'), '--single-transaction', '--exit-on-error', '--clean', '--if-exists', '--no-owner', $file,
         ]);
         if (! $result->successful()) {
             throw new PluginLifecycleException('pg_restore failed: '.trim($result->errorOutput()));
@@ -84,7 +85,7 @@ class PluginBackup
      */
     public function dumpTables(string $file): array
     {
-        $result = Process::timeout((int) config('plugins.backup_timeout', 1800))->run(['pg_restore', '-l', $file]);
+        $result = Process::timeout((int) config('plugins.backup_timeout', 1800))->run([self::bin('pg_restore'), '-l', $file]);
         if (! $result->successful()) {
             throw new PluginLifecycleException('pg_restore -l failed: '.trim($result->errorOutput()));
         }
@@ -126,11 +127,14 @@ class PluginBackup
 
         $schema = (string) $connection->selectOne('select current_schema() as s')->s;
         $keep = $file === null ? [] : $this->dumpTables($file);
-        $tables = collect($connection->select(
+        $pluginTables = collect($connection->select(
             'select tablename from pg_tables where schemaname = current_schema()'
         ))->pluck('tablename')
-            ->filter(fn ($t) => str_starts_with((string) $t, $prefix) && ! in_array($t, $keep, true))
+            ->filter(fn ($t) => str_starts_with((string) $t, $prefix))
             ->values();
+        $tables = $pluginTables->reject(fn ($t) => in_array($t, $keep, true))->values();
+
+        $this->assertNoCoreDependents($prefix, $pluginTables->all());
 
         $quote = fn (string $id) => '"'.str_replace('"', '""', $id).'"';
         $sql = '';
@@ -141,15 +145,10 @@ class PluginBackup
             $sql .= $this->restoreSql($file);
         }
 
-        $tmp = tempnam(sys_get_temp_dir(), 'plugin-restore-').'.sql';
-        file_put_contents($tmp, $sql);
-        try {
-            $result = $this->pg($connection->getConfig(), [
-                'psql', '-X', '-q', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', $tmp,
-            ]);
-        } finally {
-            @unlink($tmp);
-        }
+        // Piped through stdin: the restore SQL (with plugin data) never touches disk.
+        $result = $this->pg($connection->getConfig(), [
+            self::bin('psql'), '-X', '-q', '-v', 'ON_ERROR_STOP=1', '--single-transaction', '-f', '-',
+        ], $sql);
         if (! $result->successful()) {
             throw new PluginLifecycleException('Plugin restore (psql) failed and was rolled back: '.trim($result->errorOutput()));
         }
@@ -167,7 +166,7 @@ class PluginBackup
             throw new PluginLifecycleException("Backup {$file} is missing; cannot restore.");
         }
         $result = Process::timeout((int) config('plugins.backup_timeout', 1800))
-            ->run(['pg_restore', '--clean', '--if-exists', '--no-owner', '-f', '-', $file]);
+            ->run([self::bin('pg_restore'), '--clean', '--if-exists', '--no-owner', '-f', '-', $file]);
         if (! $result->successful()) {
             throw new PluginLifecycleException('pg_restore -f - failed: '.trim($result->errorOutput()));
         }
@@ -180,7 +179,79 @@ class PluginBackup
      * socket support (a host starting with "/" is a Unix socket directory;
      * an empty host lets libpq use its default socket).
      */
-    protected function pg(array $config, array $command)
+    /**
+     * Abort before any DROP ... CASCADE / --clean if an object outside the
+     * plugin prefix (core FK or view) depends on a plugin table.
+     *
+     * @param  list<string>  $tables
+     */
+    public function assertNoCoreDependents(string $prefix, array $tables): void
+    {
+        if ($tables === []) {
+            return;
+        }
+        $connection = DB::connection($this->connection);
+        $in = implode(',', array_fill(0, count($tables), '?'));
+        $targets = "select c.oid from pg_class c join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = current_schema() and c.relname in ({$in})";
+
+        $fks = $connection->select("select con.conname as name, src.relname as source, dst.relname as target
+            from pg_constraint con
+            join pg_class src on src.oid = con.conrelid
+            join pg_class dst on dst.oid = con.confrelid
+            where con.contype = 'f' and con.confrelid in ({$targets})", $tables);
+        $views = $connection->select("select distinct v.relname as source, t.relname as target
+            from pg_depend d
+            join pg_rewrite r on r.oid = d.objid
+            join pg_class v on v.oid = r.ev_class
+            join pg_class t on t.oid = d.refobjid
+            where d.classid = 'pg_rewrite'::regclass and d.refobjid in ({$targets}) and v.oid <> d.refobjid", $tables);
+
+        $offenders = collect($fks)->map(fn ($r) => "foreign key {$r->name} on {$r->source} -> {$r->target}")
+            ->merge(collect($views)->map(fn ($r) => "view {$r->source} -> {$r->target}"))
+            ->filter(fn ($line) => ! preg_match('/^(foreign key \S+ on|view) '.preg_quote($prefix, '/').'/', $line))
+            ->values();
+
+        if ($offenders->isNotEmpty()) {
+            throw new PluginLifecycleException('Refusing to restore: objects outside the plugin prefix depend on plugin tables: '
+                .$offenders->implode('; ').'. Remove them (core must not depend on plugin tables, ADR §6) and retry.');
+        }
+    }
+
+    /**
+     * Binary path for a PostgreSQL client tool (config plugins.<tool>_binary).
+     * pg_dump, pg_restore and psql must come from the same client package.
+     */
+    public static function bin(string $tool): string
+    {
+        return (string) config("plugins.{$tool}_binary", $tool);
+    }
+
+    /**
+     * Check pg_restore and psql exist before a restore; logs their versions.
+     *
+     * @return array{pg_restore: string, psql: string}
+     */
+    public function preflight(): array
+    {
+        $versions = [];
+        foreach (['pg_restore', 'psql'] as $tool) {
+            try {
+                $result = Process::timeout(30)->run([self::bin($tool), '--version']);
+            } catch (\Throwable $e) {
+                $result = null;
+            }
+            if (! $result || ! $result->successful()) {
+                throw new PluginLifecycleException("{$tool} not found or not runnable (".self::bin($tool)."); set plugins.{$tool}_binary / PLUGIN_".strtoupper($tool).'_BINARY. Nothing was changed.');
+            }
+            $versions[$tool] = trim($result->output());
+        }
+        Log::info('plugin restore preflight', $versions);
+
+        return $versions;
+    }
+
+    protected function pg(array $config, array $command, ?string $input = null)
     {
         $command[] = '--dbname='.(string) $config['database'];
         $args = [];
@@ -202,6 +273,11 @@ class PluginBackup
             'PGSSLKEY' => (string) ($config['sslkey'] ?? ''),
         ], fn ($v) => $v !== '');
 
-        return Process::env($env)->timeout((int) config('plugins.backup_timeout', 1800))->run($command);
+        $process = Process::env($env)->timeout((int) config('plugins.backup_timeout', 1800));
+        if ($input !== null) {
+            $process = $process->input($input);
+        }
+
+        return $process->run($command);
     }
 }
