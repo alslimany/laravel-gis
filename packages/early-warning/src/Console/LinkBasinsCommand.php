@@ -74,6 +74,23 @@ class LinkBasinsCommand extends Command
         }
 
         $pgsql = DB::connection()->getDriverName() === 'pgsql';
+        if ($pgsql) {
+            $empty = [];
+            foreach ($data['features'] as $i => $feature) {
+                if ($this->cleanedGeometryIsEmpty($feature['geometry'])) {
+                    $empty[] = "Feature #{$i} ({$feature['properties']['basin_code']}): geometry is empty after ST_MakeValid/ST_CollectionExtract";
+                }
+            }
+            if ($empty) {
+                foreach ($empty as $e) {
+                    $this->error($e);
+                }
+                $this->error('No basins written.');
+
+                return self::FAILURE;
+            }
+        }
+
         $count = 0;
         DB::transaction(function () use ($data, $layerId, $featureIds, $pgsql, &$count) {
             foreach ($data['features'] as $feature) {
@@ -115,6 +132,15 @@ class LinkBasinsCommand extends Command
         $this->info("Linked {$count} basin(s)".($layerId ? " to layer {$layerId}" : '').'.');
 
         return self::SUCCESS;
+    }
+
+    /** Same cleaning expression as the write path; true when nothing polygonal survives. */
+    private function cleanedGeometryIsEmpty(array $geometry): bool
+    {
+        return (bool) DB::scalar(
+            'SELECT COALESCE(ST_IsEmpty(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(?), 4326)), 3))), true)',
+            [json_encode($geometry)]
+        );
     }
 
     /** @return list<string> problems with one feature (empty = valid) */

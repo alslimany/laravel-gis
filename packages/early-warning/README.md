@@ -8,7 +8,7 @@ migration by path.
 ## Decisions
 - `ew_basins` is **global** (no `organization_id`); orgs subscribe to areas later (ADR D12).
 - Geometry is stored **in `ew_basins.geom`**: `geometry(MultiPolygon, 4326)`, GIST index,
-  `CHECK (ST_IsValid(geom))`, loaded with bound
+  `CHECK (geom IS NULL OR (ST_IsValid(geom) AND NOT ST_IsEmpty(geom)))`, loaded with bound
   `ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(?), 4326)), 3))`.
 - An imported org layer is an **optional view only**: `layer_id`/`feature_id` are nullable, with
   no foreign key and no cascade, so no tenant's layer can delete or own global basins.
@@ -53,7 +53,9 @@ Choices (all in `tools/aoi.json`, edit and rerun):
 2. Load: `php artisan early-warning:link-basins packages/early-warning/data/out/tripoli_basins.geojson`
    (idempotent upsert by `basin_code`, attributes + geometry). Every feature is schema-checked
    first (non-empty `basin_code`, Polygon/MultiPolygon geometry, numeric/string types); if any
-   feature fails, nothing is written.
+   feature fails, nothing is written. On PostgreSQL each geometry is also cleaned
+   (`ST_MakeValid` + `ST_CollectionExtract(…,3)`) up front; if any comes out empty the whole
+   run fails and nothing is written.
 3. Optional org view: upload the same GeoJSON through the Data Import UI (SRID 4326), set layer
    metadata `plugin = early-warning`, then rerun step 2 with `--layer=<layers.id>`. The command
    refuses layers whose `metadata.plugin` is not `early-warning`; `feature_id` is resolved from the
@@ -74,3 +76,13 @@ attribution required). Required notice:
 Copernicus DEM GLO-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018,
 provided under COPERNICUS by the European Union and ESA; all rights reserved. Accessed via the
 AWS Open Data bucket `copernicus-dem-30m`.
+
+## Tests
+`php vendor/bin/phpunit --testsuite Plugins` (SQLite). The PostGIS path (`PostgisGeometryTest`)
+needs a **disposable** database whose name **must end in `_test`** (the test drops `ew_basins`
+and `migrations`; any other name is refused):
+```bash
+EW_PGSQL_TEST_URL=pgsql://postgres@127.0.0.1:54329/ew_test php vendor/bin/phpunit --testsuite Plugins
+```
+Without `EW_PGSQL_TEST_URL` those tests are skipped, but they **fail** when `EW_REQUIRE_PGSQL=1` or
+`CI` is set, so CI cannot pass without PostGIS.

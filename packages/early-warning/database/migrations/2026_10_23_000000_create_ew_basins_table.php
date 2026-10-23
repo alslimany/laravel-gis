@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * Early Warning: global basin registry (#59, ADR 0001 D12). See README "Decisions".
  * - Global reference data: NO organization_id (orgs subscribe to areas later).
  * - Geometry is stored HERE: geom geometry(MultiPolygon,4326), GIST-indexed,
- *   CHECK ST_IsValid. An imported org layer (layer_id + feature_id) is an
+ *   CHECK ST_IsValid AND NOT ST_IsEmpty. An imported org layer (layer_id + feature_id) is an
  *   optional view only: nullable, no foreign key, no cascade.
  * - Until #54's plugin:install, run by path in its own batch, after core:
  *   php artisan migrate --path=packages/early-warning/database/migrations --realpath
@@ -46,7 +46,7 @@ return new class extends Migration
 
         if (DB::connection()->getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE ew_basins ADD COLUMN geom geometry(MultiPolygon, 4326)');
-            DB::statement('ALTER TABLE ew_basins ADD CONSTRAINT ew_basins_geom_valid CHECK (geom IS NULL OR ST_IsValid(geom))');
+            DB::statement('ALTER TABLE ew_basins ADD CONSTRAINT ew_basins_geom_valid CHECK (geom IS NULL OR (ST_IsValid(geom) AND NOT ST_IsEmpty(geom)))');
             DB::statement('CREATE INDEX ew_basins_geom_gist ON ew_basins USING GIST (geom)');
         } else {
             Schema::table('ew_basins', fn (Blueprint $t) => $t->text('geom')->nullable());
