@@ -312,8 +312,17 @@ class PluginLifecycle
         }
 
         $backupFile = $pending['backup'] ?? null;
-        if ($backupFile !== null && DB::getDriverName() === 'pgsql') {
-            $this->backup->preflight();
+        // Preflight before ANY batch is rolled back, whenever a restore or a
+        // table drop could follow: client tools present, and no core FK/view
+        // depends on a plugin table (else pg_restore --clean would fail after
+        // the batches were already undone). Nothing changes if this throws.
+        $firstInstallPending = ($pending['prior_status'] ?? null) === null;
+        if (DB::getDriverName() === 'pgsql' && ($backupFile !== null || $firstInstallPending)) {
+            if ($backupFile !== null) {
+                $this->backup->preflight();
+            }
+            $prefix = $this->prefix($manifest);
+            $this->backup->assertNoCoreDependents($prefix, $this->backup->prefixTables($prefix));
         }
         $failedBatches = [];
         $restoredAfterFailure = false;

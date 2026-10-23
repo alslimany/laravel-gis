@@ -180,6 +180,22 @@ class PluginBackup
      * an empty host lets libpq use its default socket).
      */
     /**
+     * <prefix>_* tables in the current schema (pg_tables).
+     *
+     * @return list<string>
+     */
+    public function prefixTables(string $prefix): array
+    {
+        if ($prefix === '') {
+            return [];
+        }
+
+        return collect(DB::connection($this->connection)->select(
+            'select tablename from pg_tables where schemaname = current_schema()'
+        ))->pluck('tablename')->filter(fn ($t) => str_starts_with((string) $t, $prefix))->values()->all();
+    }
+
+    /**
      * Abort before any DROP ... CASCADE / --clean if an object outside the
      * plugin prefix (core FK or view) depends on a plugin table.
      *

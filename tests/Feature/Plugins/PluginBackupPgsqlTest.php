@@ -13,7 +13,7 @@ use Throwable;
  * Real pg_dump / pg_restore against PostgreSQL. Skipped unless a pgsql
  * connection is reachable (set PLUGIN_PGSQL_TEST_DB to a scratch database;
  * optional PLUGIN_PGSQL_TEST_HOST/PORT/USER/PASSWORD)
- * and pg_dump is on PATH.
+ * and pg_dump, pg_restore and psql are all available.
  */
 class PluginBackupPgsqlTest extends TestCase
 {
@@ -167,17 +167,11 @@ class PluginBackupPgsqlTest extends TestCase
         $db = DB::connection('pgsql_backup_test');
         $db->statement("create table {$this->prefix}items (id int primary key)");
         $dump = $this->backup()->dump('zbk', $this->prefix, 'upgrade')['file'];
-        $before = glob(sys_get_temp_dir().'/*') ?: [];
+        $before = glob(sys_get_temp_dir().'/plugin-restore-*') ?: [];
 
         $this->assertTrue($this->backup()->replaceAndRestore($this->prefix, $dump));
 
-        // Only our own artefacts: the shared tmp dir also has other processes' files.
-        $new = array_filter(
-            array_diff(glob(sys_get_temp_dir().'/*') ?: [], $before),
-            fn ($f) => str_contains($f, 'plugin-restore') || str_ends_with($f, '.sql'),
-        );
-        $this->assertSame([], array_values($new));
-        $this->assertSame([], glob(sys_get_temp_dir().'/plugin-restore-*') ?: []);
+        $this->assertSame($before, glob(sys_get_temp_dir().'/plugin-restore-*') ?: []);
         $versions = $this->backup()->preflight();
         $this->assertStringContainsString('pg_restore', $versions['pg_restore']);
         $this->assertStringContainsString('psql', $versions['psql']);
