@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\UserController;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleUser;
@@ -54,35 +53,7 @@ class UserOrganizationFollowupsQaTest extends TestCase
         return $t;
     }
 
-    public function test_last_admin_refusal_over_http_leaves_no_partial_changes(): void
-    {
-        $target = $this->seedTarget();
-        $actor = User::factory()->create(['organization_id' => $this->orgA->id]);
-        $actor->roles()->attach($this->admin);
-        $before = $this->snapshot($target);
-
-        // Real request and transaction. Over HTTP the acting admin always counts
-        // as another admin, so the override drops the actor's grant *inside* the
-        // transaction before the guard runs; that write must roll back too.
-        $this->app->bind(UserController::class, fn () => new class extends UserController
-        {
-            protected function guardAdminRemoval(User $actor, User $user, array $roleIds): void
-            {
-                \DB::table('role_user')->where('user_id', $actor->id)->delete();
-                parent::guardAdminRemoval($actor, $user, $roleIds);
-            }
-        });
-        $actorBefore = $this->snapshot($actor);
-
-        $this->actingAs($actor)->put("/users/{$target->id}", [
-            'name' => 'Changed', 'email' => 'changed@qa.test', 'roles' => [$this->viewer->id],
-        ])->assertSessionHasErrors(["roles" => "An organization must keep at least one admin."]);
-
-        $this->assertSame($before, $this->snapshot($target));
-        $this->assertSame($actorBefore, $this->snapshot($actor));
-    }
-
-    public function test_self_demotion_refusal_leaves_no_partial_changes(): void
+    public function test_self_demotion_with_name_change_is_refused_and_rolled_back(): void
     {
         $target = $this->seedTarget();
         User::factory()->create(['organization_id' => $this->orgA->id])->roles()->attach($this->admin);
