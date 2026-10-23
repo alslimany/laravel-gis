@@ -29,18 +29,18 @@ trait UsesHelloPlugin
         $this->setHelloVersion($version);
     }
 
-    protected function setHelloVersion(string $version): void
+    protected function setHelloVersion(string $version, ?array $data = null): void
     {
         $this->helloInstalledJson = sys_get_temp_dir().'/hello-installed-'.uniqid().'.json';
         file_put_contents($this->helloInstalledJson, json_encode(['packages' => [[
             'name' => 'lumina/hello',
+            'version' => $version,
             'extra' => ['lumina' => [
                 'key' => 'hello',
                 'name' => 'Hello',
-                'version' => $version,
                 'core' => '^1.0',
                 'provider' => HelloServiceProvider::class,
-                'data' => ['tables' => ['hello_items', 'hello_notes']],
+                'data' => $data ?? ['prefix' => 'hello_', 'tables' => ['hello_items', 'hello_notes']],
             ]],
         ]]]));
 

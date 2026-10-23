@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 class PluginPurge extends Command
 {
     protected $signature = 'plugin:purge {key}
-        {--actor= : Email of the super admin performing this}
+        {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}
         {--confirm= : Type the plugin key to confirm (non-interactive)}';
 
     protected $description = 'Permanently drop an uninstalled plugin\'s tables and layers (audited)';
@@ -23,6 +23,10 @@ class PluginPurge extends Command
     {
         $key = $this->argument('key');
         $manifest = $plugins->manifest($key);
+
+        // TODO(#54 follow-up): purge should also remove the plugin's GeoServer
+        // publications (layers/styles/workspaces); tracked in a follow-up ticket.
+        $this->warn('Note: GeoServer publications are NOT removed by purge yet; this is coming in a follow-up ticket.');
 
         if ($manifest) {
             $this->warn('This drops: '.(implode(', ', $lifecycle->pluginTables($manifest)) ?: '(no tables)'));

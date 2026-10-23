@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  */
 class PluginInstall extends Command
 {
-    protected $signature = 'plugin:install {key} {--actor= : Email of the super admin performing this}';
+    protected $signature = 'plugin:install {key} {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}';
 
     protected $description = 'Install a plugin (super admin; audited in plugin_events)';
 

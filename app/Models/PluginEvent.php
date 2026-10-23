@@ -22,6 +22,15 @@ class PluginEvent extends Model
 
     public const DISABLE = 'disable';
 
+    public const ROLLBACK = 'rollback';
+
+    public const SUPER_ADMIN_GRANT = 'super-admin.grant';
+
+    public const SUPER_ADMIN_REVOKE = 'super-admin.revoke';
+
+    /** Lifecycle actions; with no actor_id they were run from the CLI (actor=cli). */
+    public const CLI_ACTIONS = [self::INSTALL, self::UPGRADE, self::UNINSTALL, self::PURGE, self::ROLLBACK, self::SUPER_ADMIN_GRANT, self::SUPER_ADMIN_REVOKE];
+
     /**
      * Written only by PluginLifecycle / PluginManager.
      *
@@ -36,6 +45,13 @@ class PluginEvent extends Model
 
     public static function record(string $key, string $action, array $attributes = []): self
     {
+        if (in_array($action, self::CLI_ACTIONS, true)) {
+            $attributes['meta'] = array_merge(
+                ['actor' => empty($attributes['actor_id']) ? 'cli' : 'user'],
+                $attributes['meta'] ?? [],
+            );
+        }
+
         $event = new self;
         $event->forceFill(array_merge([
             'plugin_key' => $key,

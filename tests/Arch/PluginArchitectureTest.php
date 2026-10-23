@@ -2,13 +2,16 @@
 
 namespace Tests\Arch;
 
+use App\Plugins\PluginManager;
 use App\Plugins\PluginServiceProvider;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Finder\SplFileInfo;
 use Tests\TestCase;
 
 /**
- * ADR-0001 §4/§12 architecture rules, enforced by file scan.
+ * ADR-0001 §4/§12 architecture rules, enforced by a best-effort static file
+ * scan (regex over source). It catches honest mistakes, not determined
+ * evasion (dynamic table names, raw SQL); it is not a security boundary.
  */
 class PluginArchitectureTest extends TestCase
 {
@@ -61,7 +64,9 @@ class PluginArchitectureTest extends TestCase
         foreach ($this->plugins() as $dir => $composer) {
             $manifest = $composer['extra']['lumina'] ?? null;
             $this->assertIsArray($manifest, "{$dir}: missing extra.lumina");
-            foreach (['key', 'name', 'version', 'core', 'provider'] as $field) {
+            $this->assertNotEmpty($composer['version'] ?? null, "{$dir}: composer version (single source of truth)");
+            $this->assertArrayNotHasKey('version', $manifest, "{$dir}: duplicate extra.lumina.version; use composer version");
+            foreach (['key', 'name', 'core', 'provider'] as $field) {
                 $this->assertNotEmpty($manifest[$field] ?? null, "{$dir}: manifest.{$field}");
             }
             $this->assertMatchesRegularExpression('/^[a-z][a-z0-9-]*$/', $manifest['key']);
@@ -74,12 +79,9 @@ class PluginArchitectureTest extends TestCase
     public function test_plugin_migrations_only_touch_plugin_tables(): void
     {
         foreach ($this->plugins() as $dir => $composer) {
-            $tables = array_merge(
-                $composer['extra']['lumina']['data']['tables'] ?? [],
-                $composer['extra']['lumina']['data']['global_tables'] ?? [],
-            );
-            $prefix = $tables ? strstr($tables[0], '_', true).'_' : null;
-            $this->assertNotNull($prefix, "{$dir}: manifest data.tables required for migrations");
+            $manifest = $composer['extra']['lumina'] ?? [];
+            $this->assertSame([], PluginManager::validateManifest($manifest), "{$dir}: manifest data.prefix/tables");
+            $prefix = $manifest['data']['prefix'];
 
             if (! is_dir($dir.'/database/migrations')) {
                 continue;

@@ -4,6 +4,7 @@ namespace Tests\Feature\Plugins;
 
 use App\Models\InstalledPlugin;
 use App\Models\Organization;
+use App\Models\PluginEvent;
 use App\Models\Role;
 use App\Models\User;
 use App\Plugins\PluginManager;
@@ -236,8 +237,21 @@ class PluginRegistryTest extends TestCase
         $this->artisan('lumina:make-super-admin', ['email' => $user->email])->assertSuccessful();
         $this->assertTrue($user->fresh()->isSuperAdmin());
 
+        $other = $this->userIn($this->orgA);
+        $this->artisan('lumina:make-super-admin', ['email' => $other->email, '--actor' => $user->email])->assertSuccessful();
+
         $this->artisan('lumina:make-super-admin', ['email' => $user->email, '--revoke' => true])->assertSuccessful();
         $this->assertFalse($user->fresh()->isSuperAdmin());
+
+        // Last super admin cannot be removed.
+        $this->artisan('lumina:make-super-admin', ['email' => $other->email, '--revoke' => true])
+            ->expectsOutputToContain('last super admin')->assertFailed();
+        $this->assertTrue($other->fresh()->isSuperAdmin());
+
+        $events = PluginEvent::query()->where('plugin_key', 'core')->orderBy('id')->get();
+        $this->assertSame(['super-admin.grant', 'super-admin.grant', 'super-admin.revoke'], $events->pluck('action')->all());
+        $this->assertSame('cli', $events[0]->meta['actor']);
+        $this->assertSame($user->id, $events[1]->actor_id);
 
         $this->artisan('lumina:make-super-admin', ['email' => 'nobody@example.com'])->assertFailed();
     }

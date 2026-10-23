@@ -16,7 +16,6 @@
         "lumina": {
             "key": "early-warning",
             "name": "Disaster Early Warning",
-            "version": "0.1.0",
             "core": "^1.0",
             "provider": "Lumina\\EarlyWarning\\Providers\\EarlyWarningServiceProvider",
             "permissions": [
@@ -24,6 +23,7 @@
                 "early-warning.manage"
             ],
             "data": {
+                "prefix": "ew_",
                 "tables": [
                     "ew_basins"
                 ],

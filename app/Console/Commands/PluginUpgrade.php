@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  */
 class PluginUpgrade extends Command
 {
-    protected $signature = 'plugin:upgrade {key} {--actor= : Email of the super admin performing this}';
+    protected $signature = 'plugin:upgrade {key} {--actor= : Email of the super admin performing this (optional: omitted = run from the CLI, audited as actor=cli)}';
 
     protected $description = 'Upgrade a plugin (super admin; audited in plugin_events)';
 

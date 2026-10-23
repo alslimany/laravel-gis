@@ -6,8 +6,10 @@ use App\Models\InstalledPlugin;
 use App\Models\Layer;
 use App\Models\PluginEvent;
 use App\Models\User;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -19,6 +21,14 @@ use Throwable;
  * `migrate --path=<plugin> --realpath --force` in their own batch after core;
  * every batch is appended to installed_plugins.meta.batches and rolled back
  * newest-first with `migrate:rollback --batch=<n>` (never --step).
+ *
+ * Batches are reconciled from the migrations table (rows whose migration is
+ * one of the plugin's files) in a finally block, so a failed install/upgrade
+ * still records what ran and `plugin:rollback` can undo it.
+ *
+ * Every operation holds one global lifecycle lock on the cache store named by
+ * config('plugins.lock_store'); that store must be shared by every app/worker
+ * node (database or redis, never array/file in multi-node deployments).
  */
 class PluginLifecycle
 {
@@ -28,6 +38,11 @@ class PluginLifecycle
     ) {}
 
     public function install(string $key, ?User $actor = null): InstalledPlugin
+    {
+        return $this->locked(fn () => $this->doInstall($key, $actor));
+    }
+
+    protected function doInstall(string $key, ?User $actor): InstalledPlugin
     {
         $manifest = $this->manifestOrFail($key);
         $this->assertCoreMigrated();
@@ -42,23 +57,36 @@ class PluginLifecycle
 
         $fromVersion = $row->exists ? $row->version : null;
         $meta = $row->meta ?? [];
+        $meta['pending'] = [
+            'action' => PluginEvent::INSTALL,
+            'prior_batches' => $this->recordedBatches($manifest),
+            'prior_status' => $row->exists ? $row->status : null,
+            'prior_version' => $fromVersion,
+            'backup' => null,
+        ];
         $this->transition($row, InstalledPlugin::STATUS_INSTALLING, [
             'plugin_key' => $key,
             'version' => $row->version ?? (string) $manifest['version'],
             'installed_by' => $actor?->getKey(),
+            'meta' => $meta,
         ]);
 
+        $batch = null;
         try {
             $backup = $this->backup->dump($key, $this->prefix($manifest), 'install');
+            $meta['pending']['backup'] = $backup['file'];
             $batch = $this->migrate($manifest);
             $this->provider($manifest)?->onInstall();
         } catch (Throwable $e) {
             $this->fail($row, PluginEvent::INSTALL, $actor, $fromVersion, (string) $manifest['version'], $e);
             throw $e;
+        } finally {
+            $meta['batches'] = $this->recordedBatches($manifest);
+            $meta['migrations'] = $this->pluginMigrations($manifest);
+            $row->forceFill(['meta' => $meta])->save();
         }
 
-        $meta['batches'] = $this->appendBatch($meta['batches'] ?? [], $batch);
-        $meta['migrations'] = $this->pluginMigrations($manifest);
+        unset($meta['pending']);
         $this->transition($row, InstalledPlugin::STATUS_INSTALLED, [
             'version' => (string) $manifest['version'],
             'installed_at' => now(),
@@ -71,13 +99,18 @@ class PluginLifecycle
             'actor_id' => $actor?->getKey(),
             'from_version' => $fromVersion,
             'to_version' => (string) $manifest['version'],
-            'meta' => ['batch' => $batch, 'backup' => $backup],
+            'meta' => ['batch' => $batch, 'backup' => $backup['file'], 'backup_skipped' => $backup['skipped']],
         ]);
 
         return $row->fresh();
     }
 
     public function upgrade(string $key, ?User $actor = null): InstalledPlugin
+    {
+        return $this->locked(fn () => $this->doUpgrade($key, $actor));
+    }
+
+    protected function doUpgrade(string $key, ?User $actor): InstalledPlugin
     {
         $manifest = $this->manifestOrFail($key);
         $this->assertCoreMigrated();
@@ -89,26 +122,38 @@ class PluginLifecycle
             throw new PluginLifecycleException("{$key} {$from} is current (code is {$to}).");
         }
 
-        $this->transition($row, InstalledPlugin::STATUS_UPGRADING);
+        $meta = $row->meta ?? [];
+        $meta['pending'] = [
+            'action' => PluginEvent::UPGRADE,
+            'prior_batches' => $this->recordedBatches($manifest),
+            'prior_status' => InstalledPlugin::STATUS_INSTALLED,
+            'prior_version' => $from,
+            'backup' => null,
+        ];
+        $this->transition($row, InstalledPlugin::STATUS_UPGRADING, ['meta' => $meta]);
 
+        $batch = null;
         try {
             $backup = $this->backup->dump($key, $this->prefix($manifest), 'upgrade');
+            $meta['pending']['backup'] = $backup['file'];
             $batch = $this->migrate($manifest);
         } catch (Throwable $e) {
             $this->fail($row, PluginEvent::UPGRADE, $actor, $from, $to, $e);
             throw $e;
+        } finally {
+            $meta['batches'] = $this->recordedBatches($manifest);
+            $meta['migrations'] = $this->pluginMigrations($manifest);
+            $row->forceFill(['meta' => $meta])->save();
         }
 
-        $meta = $row->meta ?? [];
-        $meta['batches'] = $this->appendBatch($meta['batches'] ?? [], $batch);
-        $meta['migrations'] = $this->pluginMigrations($manifest);
+        unset($meta['pending']);
         $this->transition($row, InstalledPlugin::STATUS_INSTALLED, ['version' => $to, 'meta' => $meta]);
 
         PluginEvent::record($key, PluginEvent::UPGRADE, [
             'actor_id' => $actor?->getKey(),
             'from_version' => $from,
             'to_version' => $to,
-            'meta' => ['batch' => $batch, 'backup' => $backup],
+            'meta' => ['batch' => $batch, 'backup' => $backup['file'], 'backup_skipped' => $backup['skipped']],
         ]);
 
         return $row->fresh();
@@ -118,6 +163,11 @@ class PluginLifecycle
      * Flip state only: routes 404, jobs off, data kept indefinitely.
      */
     public function uninstall(string $key, ?User $actor = null): InstalledPlugin
+    {
+        return $this->locked(fn () => $this->doUninstall($key, $actor));
+    }
+
+    protected function doUninstall(string $key, ?User $actor): InstalledPlugin
     {
         $manifest = $this->plugins->manifest($key);
         $row = $this->installedOrFail($key, [InstalledPlugin::STATUS_INSTALLED, InstalledPlugin::STATUS_FAILED]);
@@ -137,38 +187,56 @@ class PluginLifecycle
     }
 
     /**
-     * Requires uninstalled. Dumps plugin tables, rolls back the plugin's own
-     * batches newest-first, drops any leftover plugin-prefixed tables and
-     * deletes layers created by the plugin. Never touches core tables.
+     * Requires uninstalled. Dumps plugin tables, then (in one DB transaction
+     * where the driver allows DDL in transactions) deletes the plugin's layers,
+     * rolls back its own batches newest-first and drops leftover manifest
+     * tables. Never touches core tables.
+     *
+     * TODO(follow-up ticket): unpublish the plugin's GeoServer layers/styles;
+     * purge does not touch GeoServer yet (the command warns about this).
      *
      * @return array<string, mixed> summary
      */
     public function purge(string $key, ?User $actor = null): array
     {
+        return $this->locked(fn () => $this->doPurge($key, $actor));
+    }
+
+    protected function doPurge(string $key, ?User $actor): array
+    {
         $manifest = $this->manifestOrFail($key);
         $row = $this->installedOrFail($key, [InstalledPlugin::STATUS_UNINSTALLED]);
         $prefix = $this->prefix($manifest);
 
+        // Check every batch before backing up or deleting anything.
+        $batches = $this->batchesFor($row, $manifest);
+        rsort($batches);
+        foreach ($batches as $batch) {
+            $this->assertPluginOnlyBatch($manifest, (int) $batch);
+        }
+
         try {
             $backup = $this->backup->dump($key, $prefix, 'purge');
 
-            $batches = $row->meta['batches'] ?? [];
-            rsort($batches);
-            foreach ($batches as $batch) {
-                $this->rollbackBatch($manifest, (int) $batch);
-            }
+            [$layerIds, $dropped] = DB::transaction(function () use ($key, $manifest, $batches) {
+                $layers = $this->pluginLayers($key);
+                $layerIds = $layers->pluck('id')->all();
+                $layers->each->delete();
 
-            $dropped = [];
-            foreach ($this->pluginTables($manifest) as $table) {
-                if (Schema::hasTable($table)) {
-                    Schema::drop($table);
-                    $dropped[] = $table;
+                foreach ($batches as $batch) {
+                    $this->rollbackBatch($manifest, (int) $batch);
                 }
-            }
 
-            $layers = $this->pluginLayers($key);
-            $layerIds = $layers->pluck('id')->all();
-            $layers->each->delete();
+                $dropped = [];
+                foreach ($this->pluginTables($manifest) as $table) {
+                    if (Schema::hasTable($table)) {
+                        Schema::drop($table);
+                        $dropped[] = $table;
+                    }
+                }
+
+                return [$layerIds, $dropped];
+            });
 
             $this->provider($manifest)?->onUninstall(true);
         } catch (Throwable $e) {
@@ -185,7 +253,9 @@ class PluginLifecycle
             'batches' => $batches,
             'dropped_tables' => $dropped,
             'deleted_layers' => $layerIds,
-            'backup' => $backup,
+            'backup' => $backup['file'],
+            'backup_skipped' => $backup['skipped'],
+            'geoserver' => 'not unpublished (follow-up ticket)',
         ];
 
         PluginEvent::record($key, PluginEvent::PURGE, [
@@ -199,29 +269,106 @@ class PluginLifecycle
     }
 
     /**
+     * Undo a failed install/upgrade: roll back every batch recorded since the
+     * operation started (newest first), check no plugin migration rows are
+     * orphaned, restore the pre-operation backup (pgsql) and return the row
+     * to its prior state.
+     *
+     * @return array<string, mixed> summary
+     */
+    public function rollback(string $key, ?User $actor = null): array
+    {
+        return $this->locked(fn () => $this->doRollback($key, $actor));
+    }
+
+    protected function doRollback(string $key, ?User $actor): array
+    {
+        $manifest = $this->manifestOrFail($key);
+        $row = $this->installedOrFail($key, [
+            InstalledPlugin::STATUS_FAILED, InstalledPlugin::STATUS_INSTALLING, InstalledPlugin::STATUS_UPGRADING,
+        ]);
+        $meta = $row->meta ?? [];
+        $pending = $meta['pending'] ?? null;
+        if (! is_array($pending)) {
+            throw new PluginLifecycleException("{$key} has no recorded failed operation to roll back.");
+        }
+
+        $prior = array_map('intval', $pending['prior_batches'] ?? []);
+        $batches = array_values(array_diff($this->batchesFor($row, $manifest), $prior));
+        rsort($batches);
+        foreach ($batches as $batch) {
+            $this->assertPluginOnlyBatch($manifest, (int) $batch);
+        }
+
+        try {
+            foreach ($batches as $batch) {
+                $this->rollbackBatch($manifest, (int) $batch);
+            }
+
+            // Orphan check: every remaining plugin migration row must sit in a prior batch.
+            $orphans = array_values(array_diff($this->recordedBatches($manifest), $prior));
+            if ($orphans !== []) {
+                throw new PluginLifecycleException("{$key} still has plugin migrations in batches ".implode(', ', $orphans).'; resolve manually.');
+            }
+
+            $restored = $this->backup->restore($pending['backup'] ?? null);
+        } catch (Throwable $e) {
+            $meta['batches'] = $this->recordedBatches($manifest);
+            $row->forceFill(['meta' => $meta])->save();
+            PluginEvent::record($key, PluginEvent::ROLLBACK, [
+                'actor_id' => $actor?->getKey(),
+                'from_version' => $row->version,
+                'to_version' => $pending['prior_version'] ?? null,
+                'outcome' => 'failed',
+                'meta' => ['error' => $e->getMessage(), 'action' => $pending['action'] ?? null],
+            ]);
+            throw $e;
+        }
+
+        $meta['batches'] = $this->recordedBatches($manifest);
+        unset($meta['pending']);
+
+        $summary = [
+            'action' => $pending['action'] ?? null,
+            'rolled_back_batches' => $batches,
+            'restored_backup' => $restored,
+        ];
+
+        PluginEvent::record($key, PluginEvent::ROLLBACK, [
+            'actor_id' => $actor?->getKey(),
+            'from_version' => $row->version,
+            'to_version' => $pending['prior_version'] ?? null,
+            'meta' => $summary,
+        ]);
+
+        if (($pending['prior_status'] ?? null) === null) {
+            $row->delete();
+        } else {
+            $this->transition($row, $pending['prior_status'], [
+                'version' => $pending['prior_version'] ?? $row->version,
+                'meta' => $meta,
+            ]);
+        }
+
+        return $summary;
+    }
+
+    /**
      * Layers created by a plugin (metadata.plugin = key).
      *
      * @return Collection<int, Layer>
      */
     public function pluginLayers(string $key)
     {
-        return Layer::query()->whereNotNull('metadata')->get()
-            ->filter(fn (Layer $layer) => ($layer->metadata['plugin'] ?? null) === $key)
-            ->values();
+        return Layer::query()->where('metadata->plugin', $key)->get();
     }
 
     /**
-     * Table prefix owned by a plugin, from its manifest data.tables.
+     * Table prefix owned by a plugin (manifest data.prefix, ADR-0001 rev 4).
      */
     public function prefix(array $manifest): string
     {
-        if (! empty($manifest['data']['prefix'])) {
-            return (string) $manifest['data']['prefix'];
-        }
-
-        $first = $this->pluginTables($manifest)[0] ?? null;
-
-        return $first !== null && str_contains($first, '_') ? strstr($first, '_', true).'_' : '';
+        return (string) ($manifest['data']['prefix'] ?? '');
     }
 
     /**
@@ -233,6 +380,47 @@ class PluginLifecycle
             $manifest['data']['tables'] ?? [],
             $manifest['data']['global_tables'] ?? [],
         )));
+    }
+
+    /**
+     * Batches that currently hold this plugin's migrations (source of truth).
+     *
+     * @return list<int>
+     */
+    public function recordedBatches(array $manifest): array
+    {
+        $migrations = $this->pluginMigrations($manifest);
+        if ($migrations === []) {
+            return [];
+        }
+
+        return DB::table('migrations')->whereIn('migration', $migrations)
+            ->distinct()->orderBy('batch')->pluck('batch')->map(fn ($b) => (int) $b)->values()->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected function batchesFor(InstalledPlugin $row, array $manifest): array
+    {
+        return $this->appendBatches($row->meta['batches'] ?? [], $this->recordedBatches($manifest));
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    protected function locked(callable $callback): mixed
+    {
+        $lock = Cache::store(config('plugins.lock_store'))->lock('plugin-lifecycle', (int) config('plugins.lock_seconds', 1800));
+
+        try {
+            return $lock->block((int) config('plugins.lock_wait', 5), $callback);
+        } catch (LockTimeoutException) {
+            throw new PluginLifecycleException('Another plugin lifecycle operation is running; try again later.');
+        }
     }
 
     protected function migrate(array $manifest): ?int
@@ -252,16 +440,20 @@ class PluginLifecycle
         return $after > $before ? $after : null;
     }
 
-    protected function rollbackBatch(array $manifest, int $batch): void
+    protected function assertPluginOnlyBatch(array $manifest, int $batch): void
     {
-        $path = $this->migrationsPath($manifest);
-        $pluginMigrations = $this->pluginMigrations($manifest);
         $inBatch = DB::table('migrations')->where('batch', $batch)->pluck('migration')->all();
 
         // Never roll back a batch that holds anything other than this plugin.
-        if (array_diff($inBatch, $pluginMigrations) !== []) {
+        if (array_diff($inBatch, $this->pluginMigrations($manifest)) !== []) {
             throw new PluginLifecycleException("Batch {$batch} contains non-plugin migrations; refusing to roll back.");
         }
+    }
+
+    protected function rollbackBatch(array $manifest, int $batch): void
+    {
+        $path = $this->migrationsPath($manifest);
+        $this->assertPluginOnlyBatch($manifest, $batch);
 
         $exit = Artisan::call('migrate:rollback', [
             '--batch' => $batch, '--path' => $path, '--realpath' => true, '--force' => true,
@@ -326,6 +518,9 @@ class PluginLifecycle
         if (empty($manifest['version'])) {
             throw new PluginLifecycleException("Plugin {$key} manifest has no version.");
         }
+        if ($errors = PluginManager::validateManifest($manifest)) {
+            throw new PluginLifecycleException("Plugin {$key} manifest is invalid: ".implode(' ', $errors));
+        }
         $class = $manifest['provider'] ?? null;
         if ($class && class_exists($class) && is_subclass_of($class, PluginServiceProvider::class)) {
             $provider = app()->getProvider($class) ?? new $class(app());
@@ -370,15 +565,15 @@ class PluginLifecycle
 
     /**
      * @param  list<int>  $batches
+     * @param  list<int>  $more
      * @return list<int>
      */
-    protected function appendBatch(array $batches, ?int $batch): array
+    protected function appendBatches(array $batches, array $more): array
     {
-        if ($batch !== null) {
-            $batches[] = $batch;
-        }
+        $all = array_values(array_unique(array_map('intval', array_merge($batches, $more))));
+        sort($all);
 
-        return array_values(array_unique(array_map('intval', $batches)));
+        return $all;
     }
 
     protected function markSourceMissing(string $key): void

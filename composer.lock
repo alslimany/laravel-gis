@@ -2776,7 +2776,7 @@
             "dist": {
                 "type": "path",
                 "url": "packages/early-warning",
-                "reference": "c9d6b7815a35cb50c557f682cdcdeacb6995d53a"
+                "reference": "9eaf6728709d2891058501bae88babd43feb2d18"
             },
             "require": {
                 "php": "^8.3"
@@ -2786,7 +2786,6 @@
                 "lumina": {
                     "key": "early-warning",
                     "name": "Disaster Early Warning",
-                    "version": "0.1.0",
                     "core": "^1.0",
                     "provider": "Lumina\\EarlyWarning\\Providers\\EarlyWarningServiceProvider",
                     "permissions": [
@@ -2794,6 +2793,7 @@
                         "early-warning.manage"
                     ],
                     "data": {
+                        "prefix": "ew_",
                         "tables": [
                             "ew_basins"
                         ],

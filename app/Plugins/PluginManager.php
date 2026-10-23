@@ -206,10 +206,38 @@ class PluginManager
                 continue;
             }
             $manifest['package'] = $package['name'] ?? null;
+            // Single source of truth: the composer package version (extra.lumina.version is a legacy fallback).
+            $manifest['version'] ??= $package['version'] ?? null;
             $registry[$manifest['key']] = $manifest;
         }
         ksort($registry);
 
         return $registry;
+    }
+
+    /**
+     * ADR-0001 rev 4: every plugin object is named <prefix>_. data.prefix is
+     * required and every data.tables / data.global_tables entry must start with it.
+     *
+     * @return list<string> validation errors (empty when valid)
+     */
+    public static function validateManifest(array $manifest): array
+    {
+        $errors = [];
+        $prefix = $manifest['data']['prefix'] ?? null;
+        if (! is_string($prefix) || ! preg_match('/^[a-z][a-z0-9]*_$/', $prefix)) {
+            $errors[] = 'data.prefix is required and must look like "abc_".';
+
+            return $errors;
+        }
+        foreach (['tables', 'global_tables'] as $field) {
+            foreach ($manifest['data'][$field] ?? [] as $table) {
+                if (! is_string($table) || ! str_starts_with($table, $prefix)) {
+                    $errors[] = "data.{$field} entry ".json_encode($table)." does not start with prefix {$prefix}.";
+                }
+            }
+        }
+
+        return $errors;
     }
 }
