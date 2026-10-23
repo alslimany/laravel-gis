@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\UserController;
+use App\Models\Group;
 use App\Models\Organization;
 use App\Models\Role;
+use App\Models\SolutionPackDefinition;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -50,11 +54,11 @@ class UserOrganizationScopingTest extends TestCase
         $admin = $this->userIn($this->orgA, $this->admin);
         $foreign = $this->userIn($this->orgB);
 
-        $this->actingAs($admin)->get("/users/{$foreign->id}/edit")->assertForbidden();
+        $this->actingAs($admin)->get("/users/{$foreign->id}/edit")->assertNotFound();
         $this->actingAs($admin)->put("/users/{$foreign->id}", [
             'name' => 'Hijacked', 'email' => 'x@example.com',
-        ])->assertForbidden();
-        $this->actingAs($admin)->delete("/users/{$foreign->id}")->assertForbidden();
+        ])->assertNotFound();
+        $this->actingAs($admin)->delete("/users/{$foreign->id}")->assertNotFound();
 
         $this->assertDatabaseHas('users', ['id' => $foreign->id, 'name' => $foreign->name]);
     }
@@ -102,7 +106,7 @@ class UserOrganizationScopingTest extends TestCase
         $admin = $this->userIn($this->orgA, $this->admin);
         $orphan = $this->userIn(null);
 
-        $this->actingAs($admin)->get("/users/{$orphan->id}/edit")->assertForbidden();
+        $this->actingAs($admin)->get("/users/{$orphan->id}/edit")->assertNotFound();
     }
 
     public function test_update_cannot_change_organization_id(): void
@@ -143,7 +147,8 @@ class UserOrganizationScopingTest extends TestCase
     {
         $user = $this->userIn(null, $this->viewer);
         $this->assertDatabaseHas('role_user', ['user_id' => $user->id, 'organization_id' => null]);
-        $this->assertTrue($user->hasRole('viewer'));
+        // Follow-up: a legacy null-org grant confers no role at all.
+        $this->assertFalse($user->hasRole('viewer'));
 
         // A grant tied to an org does not apply to an org-less user.
         $user->roles()->attach($this->admin, ['organization_id' => $this->orgA->id]);
@@ -182,5 +187,114 @@ class UserOrganizationScopingTest extends TestCase
         $this->actingAs($crossGrant)->get('/solution-packs')->assertForbidden();
         $this->actingAs($crossGrant)->get('/users')->assertForbidden();
         $this->actingAs($nullAdmin)->get('/solution-packs')->assertForbidden();
+    }
+
+    public function test_no_org_user_with_legacy_null_admin_grant_is_not_admin_anywhere(): void
+    {
+        $legacy = $this->userIn(null, $this->admin);
+        $this->assertDatabaseHas('role_user', ['user_id' => $legacy->id, 'organization_id' => null]);
+
+        $this->assertFalse($legacy->hasRole('admin'));
+        $this->assertFalse($legacy->hasRoleInOrg('admin', null));
+        $this->assertFalse($legacy->can('create', Organization::class));
+        $this->assertFalse($legacy->can('create', Group::class));
+        $this->actingAs($legacy)->get('/organization/settings')->assertForbidden();
+        $this->actingAs($legacy)->get('/users')->assertForbidden();
+    }
+
+    public function test_same_role_can_be_granted_in_two_orgs(): void
+    {
+        $user = $this->userIn($this->orgA, $this->admin);
+        $user->roles()->attach($this->admin, ['organization_id' => $this->orgB->id]);
+
+        $this->assertSame(2, DB::table('role_user')->where('user_id', $user->id)->where('role_id', $this->admin->id)->count());
+    }
+
+    public function test_admin_cannot_remove_own_admin_role(): void
+    {
+        $admin = $this->userIn($this->orgA, $this->admin);
+        $this->userIn($this->orgA, $this->admin);
+
+        $this->actingAs($admin)->put("/users/{$admin->id}", [
+            'name' => $admin->name, 'email' => $admin->email, 'roles' => [$this->viewer->id],
+        ])->assertSessionHasErrors('roles');
+
+        $this->assertTrue($admin->fresh()->hasRole('admin'));
+    }
+
+    public function test_can_demote_other_admin_when_another_admin_remains(): void
+    {
+        $actor = $this->userIn($this->orgA, $this->admin);
+        $target = $this->userIn($this->orgA, $this->admin);
+
+        // Two admins: demoting the other one is fine.
+        $this->actingAs($actor)->put("/users/{$target->id}", [
+            'name' => $target->name, 'email' => $target->email, 'roles' => [$this->viewer->id],
+        ])->assertSessionHasNoErrors();
+        $this->assertFalse($target->fresh()->hasRole('admin'));
+
+        // An admin grant in another org does not count toward org A.
+        $actor2 = $this->userIn($this->orgB, $this->admin);
+        $actor2->forceFill(['organization_id' => $this->orgA->id])->save();
+        $this->assertFalse($actor2->fresh()->hasRole('admin'));
+    }
+
+    public function test_last_admin_guard_blocks_demoting_sole_org_admin(): void
+    {
+        // Over HTTP the acting admin always counts as another admin, so the
+        // last-admin rule is a defensive backstop; exercise it directly.
+        $target = $this->userIn($this->orgA, $this->admin);
+        $actor = $this->userIn($this->orgA);
+
+        $controller = new UserController;
+        $guard = new \ReflectionMethod($controller, 'guardAdminRemoval');
+
+        try {
+            $guard->invoke($controller, $actor, $target, [$this->viewer->id]);
+            $this->fail('Expected last-admin guard to throw.');
+        } catch (ValidationException $e) {
+            $this->assertSame('An organization must keep at least one admin.', $e->errors()['roles'][0]);
+        }
+    }
+
+    public function test_roles_outside_allowlist_are_rejected(): void
+    {
+        $admin = $this->userIn($this->orgA, $this->admin);
+        $member = $this->userIn($this->orgA);
+        $owner = Role::create(['name' => 'owner', 'description' => 'Not assignable']);
+
+        $this->actingAs($admin)->put("/users/{$member->id}", [
+            'name' => $member->name, 'email' => $member->email, 'roles' => [$owner->id],
+        ])->assertSessionHasErrors('roles.0');
+        $this->assertDatabaseMissing('role_user', ['user_id' => $member->id, 'role_id' => $owner->id]);
+    }
+
+    public function test_editor_and_viewer_are_forbidden_on_admin_routes(): void
+    {
+        $editorRole = Role::create(['name' => 'editor', 'description' => 'Editor']);
+        $editor = $this->userIn($this->orgA, $editorRole);
+        $viewer = $this->userIn($this->orgA, $this->viewer);
+        $member = $this->userIn($this->orgA);
+
+        foreach ([$editor, $viewer] as $user) {
+            $this->actingAs($user)->get('/users')->assertForbidden();
+            $this->actingAs($user)->get("/users/{$member->id}/edit")->assertForbidden();
+            $this->actingAs($user)->put("/users/{$member->id}", ['name' => 'x', 'email' => 'x@example.com'])->assertForbidden();
+            $this->actingAs($user)->delete("/users/{$member->id}")->assertForbidden();
+            $this->actingAs($user)->get('/solution-packs')->assertForbidden();
+            $this->actingAs($user)->get('/solution-packs/create')->assertForbidden();
+        }
+    }
+
+    public function test_invalid_update_to_other_org_pack_is_404_not_validation_redirect(): void
+    {
+        $adminA = $this->userIn($this->orgA, $this->admin);
+        $packB = SolutionPackDefinition::create([
+            'organization_id' => $this->orgB->id, 'user_id' => $this->userIn($this->orgB)->id, 'slug' => 'b-pack', 'name' => 'Pack B', 'definition' => [],
+        ]);
+
+        $this->actingAs($adminA)->put("/solution-packs/{$packB->id}", ['slug' => '', 'name' => ''])
+            ->assertNotFound()
+            ->assertSessionHasNoErrors();
     }
 }

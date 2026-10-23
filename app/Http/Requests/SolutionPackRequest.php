@@ -15,6 +15,14 @@ class SolutionPackRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // Ownership before validation (#66): another org's pack is a 404,
+        // never a 302 with validation errors that would confirm it exists.
+        $pack = $this->route('solutionPack');
+        if ($pack instanceof SolutionPackDefinition
+            && $pack->organization_id !== $this->user()?->organization_id) {
+            abort(404);
+        }
+
         return true;
     }
 

@@ -15,13 +15,12 @@ class RoleUser extends Pivot
 
     protected static function booted(): void
     {
-        // When no organization is given explicitly, scope the grant to the
-        // user's current organization (null stays null for org-less users).
         static::creating(function (RoleUser $pivot) {
-            if (! array_key_exists('organization_id', $pivot->getAttributes())) {
-                $pivot->organization_id = User::query()
-                    ->whereKey($pivot->user_id)
-                    ->value('organization_id');
+            // Use the already-loaded parent user (no extra query). Grants made
+            // from the Role side must pass organization_id explicitly.
+            if (! array_key_exists('organization_id', $pivot->getAttributes())
+                && $pivot->pivotParent instanceof User) {
+                $pivot->organization_id = $pivot->pivotParent->organization_id;
             }
         });
     }

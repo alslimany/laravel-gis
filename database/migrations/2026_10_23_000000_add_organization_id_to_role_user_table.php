@@ -34,6 +34,17 @@ return new class extends Migration
 
     public function down(): void
     {
+        // If the follow-up widening migration is still applied, put the
+        // original (role_id, user_id) unique back first so this column can go.
+        if (Schema::hasIndex('role_user', 'role_user_role_user_org_unique')) {
+            Schema::table('role_user', function (Blueprint $table) {
+                $table->unique(['role_id', 'user_id']);
+            });
+            Schema::table('role_user', function (Blueprint $table) {
+                $table->dropUnique('role_user_role_user_org_unique');
+            });
+        }
+
         Schema::table('role_user', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'organization_id']);
             $table->dropConstrainedForeignId('organization_id');

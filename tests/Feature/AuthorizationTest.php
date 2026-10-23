@@ -67,7 +67,7 @@ class AuthorizationTest extends TestCase
         $user = User::factory()->create(['organization_id' => $org2->id]);
 
         $response = $this->actingAs($admin)->get("/users/{$user->id}/edit");
-        $response->assertStatus(403);
+        $response->assertStatus(404); // other org's user is not disclosed (#66)
     }
 
     public function test_editor_can_create_projects(): void

@@ -23,17 +23,23 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    /**
+     * Roles an organization admin may grant from user management (#66).
+     */
+    public const ASSIGNABLE_ROLES = ['admin', 'editor', 'viewer'];
+
+    /**
+     * organization_id is deliberately not mass assignable (#66); set it
+     * explicitly (forceFill) in trusted code paths only.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'location',
     ];
-
-    /**
-     * organization_id is deliberately NOT mass assignable (#66). Set it
-     * explicitly (forceFill / direct assignment) in trusted code paths only.
-     */
 
     /**
      * The attributes that should be hidden for serialization.
@@ -131,6 +137,13 @@ class User extends Authenticatable
      */
     public function hasRoleInOrg(array|string $roleNames, ?int $organizationId): bool
     {
+        // Roles are organization roles only (#66). A user without an
+        // organization holds no role, even if a legacy null-org grant exists.
+        // No onboarding/org-creation route needs an exception today.
+        if ($organizationId === null) {
+            return false;
+        }
+
         $roleNames = (array) $roleNames;
 
         // Role grants are scoped to the organization they were granted in
@@ -139,11 +152,7 @@ class User extends Authenticatable
         // that were made without an organization (#66 / D2).
         return $this->roles()
             ->whereIn('roles.name', $roleNames)
-            ->when(
-                $organizationId === null,
-                fn ($query) => $query->whereNull('role_user.organization_id'),
-                fn ($query) => $query->where('role_user.organization_id', $organizationId),
-            )
+            ->where('role_user.organization_id', $organizationId)
             ->exists();
     }
 

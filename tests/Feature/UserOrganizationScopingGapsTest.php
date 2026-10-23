@@ -6,8 +6,8 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\SolutionPackDefinition;
 use App\Models\User;
+use App\SolutionPacks\SolutionPack;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -17,7 +17,9 @@ class UserOrganizationScopingGapsTest extends TestCase
     use RefreshDatabase;
 
     protected Organization $orgA;
+
     protected Organization $orgB;
+
     protected Role $admin;
 
     protected function setUp(): void
@@ -34,6 +36,7 @@ class UserOrganizationScopingGapsTest extends TestCase
         if ($role) {
             $u->roles()->attach($role);
         }
+
         return $u;
     }
 
@@ -51,7 +54,7 @@ class UserOrganizationScopingGapsTest extends TestCase
         $foreign = $this->userIn($this->orgB);
         $this->actingAs($adminA)->put("/users/{$foreign->id}", [
             'name' => $foreign->name, 'email' => $foreign->email, 'roles' => [$this->admin->id],
-        ])->assertForbidden();
+        ])->assertNotFound(); // #66 follow-up: other org's user is a 404
         $this->assertFalse($foreign->fresh()->roles()->exists());
     }
 
@@ -104,7 +107,7 @@ class UserOrganizationScopingGapsTest extends TestCase
         $this->actingAs($adminA)->get("/solution-packs/{$packB->id}/edit")->assertNotFound();
         $this->actingAs($adminA)->put("/solution-packs/{$packB->id}", [
             'slug' => 'b-pack-x', 'name' => 'x',
-            'definition' => \App\SolutionPacks\SolutionPack::all()[0]->definition(),
+            'definition' => SolutionPack::all()[0]->definition(),
         ])->assertNotFound();
         $this->actingAs($adminA)->delete("/solution-packs/{$packB->id}")->assertNotFound();
         $this->assertDatabaseHas('solution_pack_definitions', ['id' => $packB->id, 'name' => 'Pack b-pack']);
