@@ -75,8 +75,15 @@ def main():
     with rasterio.open(work / "basins.tif") as src:
         arr = src.read(1); polys = [(shape(g), int(v)) for g, v in shapes(arr.astype("int32"), mask=arr > 0, transform=src.transform)]
     g = gpd.GeoDataFrame([{"VALUE": v} for _, v in polys], geometry=[p for p, _ in polys], crs=crs).dissolve(by="VALUE").reset_index()
-    g = g.merge(pts.drop(columns="geometry"), on="VALUE")
+    g["geometry"] = g.geometry.make_valid()
+    assert len(g) > 0, "watershed produced no basins (check outlets / snap distance)"
+    assert not g.geometry.is_empty.any(), "empty basin polygon after polygonise"
+    g = g.merge(pts.drop(columns="geometry"), on="VALUE", how="inner", validate="one_to_one")
+    missing = set(pts["VALUE"]) - set(g["VALUE"])
+    assert not missing, f"no watershed for outlet VALUE(s) {sorted(missing)}"
     snapped = gpd.read_file(work / "outlets_snapped.shp").to_crs("EPSG:4326")
+    assert "VALUE" in snapped.columns, "snapped outlets lost the VALUE attribute"
+    snap_xy = {int(v): (round(p.x, 6), round(p.y, 6)) for v, p in zip(snapped["VALUE"], snapped.geometry)}
     sl = zonal_stats(g, str(work / "slope.tif"), stats=["mean", "max"])
     fa = zonal_stats(g, str(work / "facc.tif"), stats=["max"])
     now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
@@ -85,12 +92,17 @@ def main():
     g["max_slope_deg"] = [round(s["max"] or 0, 3) for s in sl]
     g["max_flow_acc_cells"] = [int(f["max"] or 0) for f in fa]
     g["max_flow_acc_km2"] = (g["max_flow_acc_cells"] * cell_km2).round(4)
-    g["outlet_lon"] = [round(p.x, 6) for p in snapped.geometry][: len(g)]
-    g["outlet_lat"] = [round(p.y, 6) for p in snapped.geometry][: len(g)]
+    # join snapped outlets by raster VALUE (watershed id == pour-point VALUE), never by row position
+    g["outlet_lon"] = [snap_xy[int(v)][0] for v in g["VALUE"]]
+    g["outlet_lat"] = [snap_xy[int(v)][1] for v in g["VALUE"]]
     g["dem_source"] = aoi["dem"]["source"]; g["dem_version"] = aoi["dem"]["version"]; g["processed_at"] = now
     g["stream_threshold_km2"] = aoi["stream_threshold_km2"]
     g["geometry"] = g.geometry.simplify(aoi["simplify_tolerance_m"], preserve_topology=True)
     g = g.drop(columns=["VALUE", "lon", "lat"]).to_crs("EPSG:4326")
+    g["geometry"] = g.geometry.make_valid()
+    assert not g.geometry.is_empty.any(), "empty basin polygon after simplify/reproject"
+    assert g.geometry.is_valid.all(), "invalid basin polygon after make_valid"
+    assert set(g.geom_type) <= {"Polygon", "MultiPolygon"}, f"unexpected geometry types {set(g.geom_type)}"
 
     dest = out / "tripoli_basins.geojson"
     g.to_file(dest, driver="GeoJSON")

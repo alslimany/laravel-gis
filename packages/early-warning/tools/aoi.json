@@ -8,7 +8,12 @@
     "source": "Copernicus DEM GLO-30",
     "version": "2023_1",
     "tiles": ["Copernicus_DSM_COG_10_N32_00_E012_00_DEM", "Copernicus_DSM_COG_10_N32_00_E013_00_DEM"],
-    "base_url": "https://copernicus-dem-30m.s3.amazonaws.com"
+    "base_url": "https://copernicus-dem-30m.s3.amazonaws.com",
+    "_sha256_comment": "Pinned SHA-256 of each tile .tif, computed from the AWS copernicus-dem-30m bucket on 2026-10-23. download_dem.py refuses any file that does not match.",
+    "sha256": {
+      "Copernicus_DSM_COG_10_N32_00_E012_00_DEM": "3bae73c5161829dbca088c8b7d9034dc94eac15a290664bd9e36b30628ab5ab6",
+      "Copernicus_DSM_COG_10_N32_00_E013_00_DEM": "ddbb9c0147fe42fd6323d7685ea6cc5bd5e3ef4e352267e125cd714de40e07e3"
+    }
   },
   "stream_threshold_km2": 1.0,
   "snap_distance_m": 300,
