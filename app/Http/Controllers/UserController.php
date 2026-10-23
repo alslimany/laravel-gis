@@ -14,7 +14,7 @@ class UserController extends Controller
      */
     public function __construct()
     {
-        $this->middleware(['auth', 'role:admin']);
+        $this->middleware(['auth', 'organization', 'role:admin']);
     }
 
     /**
@@ -22,10 +22,13 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', User::class);
+
+        // Always scope to the admin's own organization (the 'organization'
+        // middleware guarantees it is non-null). Previously a null-org admin
+        // skipped this filter and saw every user (#66).
         $users = User::with(['organization', 'roles'])
-            ->when($request->user()->organization_id, function ($query) use ($request) {
-                return $query->where('organization_id', $request->user()->organization_id);
-            })
+            ->where('organization_id', $request->user()->organization_id)
             ->paginate(15);
 
         return Inertia::render('Users/Index', [
@@ -69,7 +72,13 @@ class UserController extends Controller
         ]);
 
         if (isset($validated['roles'])) {
-            $user->roles()->sync($validated['roles']);
+            // Grants made here are scoped to the managed user's organization,
+            // which the policy has already checked equals the admin's.
+            $user->roles()->sync(
+                collect($validated['roles'])->mapWithKeys(fn ($roleId) => [
+                    $roleId => ['organization_id' => $user->organization_id],
+                ])->all()
+            );
         }
 
         return redirect()->route('users.index')

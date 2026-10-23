@@ -25,10 +25,13 @@ class AuthorizationTest extends TestCase
 
     public function test_only_admin_can_access_user_management(): void
     {
-        $admin = User::factory()->create();
+        // Admins are organization admins (#66): user management needs an org.
+        $organization = Organization::factory()->create();
+
+        $admin = User::factory()->create(['organization_id' => $organization->id]);
         $admin->roles()->attach(Role::where('name', 'admin')->first());
 
-        $viewer = User::factory()->create();
+        $viewer = User::factory()->create(['organization_id' => $organization->id]);
         $viewer->roles()->attach(Role::where('name', 'viewer')->first());
 
         // Admin can access

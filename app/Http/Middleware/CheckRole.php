@@ -11,7 +11,7 @@ class CheckRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
@@ -19,7 +19,11 @@ class CheckRole
             return redirect()->route('login');
         }
 
-        if (! $request->user()->hasAnyRole($roles)) {
+        // Org-aware (#66): roles are organization roles, never global. A user
+        // without an organization holds no admin-style role on these routes.
+        $organizationId = $request->user()->organization_id;
+
+        if ($organizationId === null || ! $request->user()->hasRoleInOrg($roles, (int) $organizationId)) {
             abort(403, 'Unauthorized action.');
         }
 
