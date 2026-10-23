@@ -37,6 +37,8 @@ return new class extends Migration
         // If the follow-up widening migration is still applied, put the
         // original (role_id, user_id) unique back first so this column can go.
         if (Schema::hasIndex('role_user', 'role_user_role_user_org_unique')) {
+            $this->dedupeSameRoleGrants();
+
             Schema::table('role_user', function (Blueprint $table) {
                 $table->unique(['role_id', 'user_id']);
             });
@@ -49,5 +51,37 @@ return new class extends Migration
             $table->dropIndex(['user_id', 'organization_id']);
             $table->dropConstrainedForeignId('organization_id');
         });
+    }
+
+    /**
+     * The old (role_id, user_id) unique cannot hold the same role granted in
+     * several organizations. Keep one grant per pair: the one in the user's
+     * current organization, otherwise the oldest (lowest id). The extra
+     * grants are deleted; this is the only lossy part of the rollback.
+     */
+    protected function dedupeSameRoleGrants(): void
+    {
+        $duplicates = DB::table('role_user')
+            ->select('role_id', 'user_id')
+            ->groupBy('role_id', 'user_id')
+            ->havingRaw('count(*) > 1')
+            ->get();
+
+        foreach ($duplicates as $pair) {
+            $userOrg = DB::table('users')->where('id', $pair->user_id)->value('organization_id');
+
+            $keepId = DB::table('role_user')
+                ->where('role_id', $pair->role_id)
+                ->where('user_id', $pair->user_id)
+                ->orderByRaw('case when organization_id = ? then 0 else 1 end', [$userOrg ?? 0])
+                ->orderBy('id')
+                ->value('id');
+
+            DB::table('role_user')
+                ->where('role_id', $pair->role_id)
+                ->where('user_id', $pair->user_id)
+                ->where('id', '!=', $keepId)
+                ->delete();
+        }
     }
 };
