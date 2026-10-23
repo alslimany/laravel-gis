@@ -1,0 +1,19 @@
+{
+    "name": "lumina/early-warning",
+    "description": "Lumina Disaster Early Warning plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
+    "type": "library",
+    "license": "proprietary",
+    "require": { "php": "^8.3" },
+    "autoload": { "psr-4": { "Lumina\\EarlyWarning\\": "src/" } },
+    "extra": {
+        "lumina": {
+            "key": "early-warning",
+            "name": "Disaster Early Warning",
+            "version": "0.1.0",
+            "plugin_api": "^1.0",
+            "provider": "Lumina\\EarlyWarning\\Providers\\EarlyWarningServiceProvider",
+            "permissions": ["early-warning.view", "early-warning.manage"],
+            "data": { "tables": ["ew_basins"], "global_tables": ["ew_basins"] }
+        }
+    }
+}
