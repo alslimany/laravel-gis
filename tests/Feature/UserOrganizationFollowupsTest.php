@@ -66,15 +66,41 @@ class UserOrganizationFollowupsTest extends TestCase
         $this->assertTrue(Schema::hasIndex('role_user', 'role_user_role_user_org_unique'));
     }
 
-    public function test_widen_down_keeps_oldest_when_no_grant_matches_current_org(): void
+    public function test_widen_down_prefers_null_org_grant_over_other_org_grant(): void
     {
         $user = User::factory()->create(['organization_id' => $this->orgA->id]);
-        $first = DB::table('role_user')->insertGetId(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => $this->orgB->id]);
-        DB::table('role_user')->insert(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => null]);
+        DB::table('role_user')->insert(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => $this->orgB->id]);
+        $null = DB::table('role_user')->insertGetId(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => null]);
 
         $this->migration('2026_10_23_000001_widen_role_user_unique_to_organization')->down();
 
-        $this->assertSame([$first], DB::table('role_user')->where('user_id', $user->id)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([$null], DB::table('role_user')->where('user_id', $user->id)->pluck('id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_widen_down_prefers_current_org_grant_over_null_org_grant(): void
+    {
+        $user = User::factory()->create(['organization_id' => $this->orgA->id]);
+        DB::table('role_user')->insert(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => null]);
+        $current = DB::table('role_user')->insertGetId(['role_id' => $this->viewer->id, 'user_id' => $user->id, 'organization_id' => $this->orgA->id]);
+
+        $this->migration('2026_10_23_000001_widen_role_user_unique_to_organization')->down();
+
+        $this->assertSame([$current], DB::table('role_user')->where('user_id', $user->id)->pluck('id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_rollback_two_steps_and_remigrate_does_not_rehome_other_org_admin_grant(): void
+    {
+        // QA repro: U is in org A but holds admin only in org B.
+        $user = User::factory()->create(['organization_id' => $this->orgA->id]);
+        $user->roles()->attach($this->admin, ['organization_id' => $this->orgB->id]);
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+
+        $this->artisan('migrate:rollback', ['--step' => 2])->assertSuccessful();
+        $this->assertFalse(Schema::hasColumn('role_user', 'organization_id'));
+        $this->artisan('migrate')->assertSuccessful();
+
+        $this->assertSame(0, DB::table('role_user')->where('user_id', $user->id)->count());
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
     }
 
     public function test_full_rollback_of_both_migrations_with_cross_org_grants(): void

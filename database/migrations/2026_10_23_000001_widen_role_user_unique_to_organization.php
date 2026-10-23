@@ -38,9 +38,11 @@ return new class extends Migration
 
     /**
      * The old (role_id, user_id) unique cannot hold the same role granted in
-     * several organizations. Keep one grant per pair: the one in the user's
-     * current organization, otherwise the oldest (lowest id). The extra
-     * grants are deleted; this is the only lossy part of the rollback.
+     * several organizations. Keep one grant per pair, preferring, in order:
+     * the grant in the user's current organization, then a null-org grant
+     * (inert: confers no access), then the oldest other-org grant. Null and
+     * non-null grants are all candidates, ranked explicitly, so NULL never
+     * matches by accident. The extra grants are deleted (lossy).
      */
     protected function dedupeSameRoleGrants(): void
     {
@@ -56,7 +58,10 @@ return new class extends Migration
             $keepId = DB::table('role_user')
                 ->where('role_id', $pair->role_id)
                 ->where('user_id', $pair->user_id)
-                ->orderByRaw('case when organization_id = ? then 0 else 1 end', [$userOrg ?? 0])
+                ->orderByRaw(
+                    'case when organization_id is not null and organization_id = ? then 0 when organization_id is null then 1 else 2 end',
+                    [$userOrg ?? 0]
+                )
                 ->orderBy('id')
                 ->value('id');
 

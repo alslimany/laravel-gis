@@ -47,6 +47,24 @@ return new class extends Migration
             });
         }
 
+        // Drop grants that belong to an organization other than the user's
+        // current one. Without the column they would look like current-org
+        // grants, and re-running up() would backfill them into the user's
+        // current organization (privilege escalation, e.g. an org-B admin
+        // grant becoming admin in org A). DATA LOSS: these cross-org grants
+        // are deleted on rollback and are not restored by re-migrating.
+        DB::table('role_user')
+            ->whereNotNull('organization_id')
+            ->where(function ($query) {
+                $query->whereNotExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('users')
+                        ->whereColumn('users.id', 'role_user.user_id')
+                        ->whereColumn('users.organization_id', 'role_user.organization_id');
+                });
+            })
+            ->delete();
+
         Schema::table('role_user', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'organization_id']);
             $table->dropConstrainedForeignId('organization_id');
@@ -55,9 +73,11 @@ return new class extends Migration
 
     /**
      * The old (role_id, user_id) unique cannot hold the same role granted in
-     * several organizations. Keep one grant per pair: the one in the user's
-     * current organization, otherwise the oldest (lowest id). The extra
-     * grants are deleted; this is the only lossy part of the rollback.
+     * several organizations. Keep one grant per pair, preferring, in order:
+     * the grant in the user's current organization, then a null-org grant
+     * (inert: confers no access), then the oldest other-org grant. Null and
+     * non-null grants are all candidates, ranked explicitly, so NULL never
+     * matches by accident. The extra grants are deleted (lossy).
      */
     protected function dedupeSameRoleGrants(): void
     {
@@ -73,7 +93,10 @@ return new class extends Migration
             $keepId = DB::table('role_user')
                 ->where('role_id', $pair->role_id)
                 ->where('user_id', $pair->user_id)
-                ->orderByRaw('case when organization_id = ? then 0 else 1 end', [$userOrg ?? 0])
+                ->orderByRaw(
+                    'case when organization_id is not null and organization_id = ? then 0 when organization_id is null then 1 else 2 end',
+                    [$userOrg ?? 0]
+                )
                 ->orderBy('id')
                 ->value('id');
 
