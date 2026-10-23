@@ -7,9 +7,12 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
 use App\Plugins\PluginManager;
+use App\Plugins\PluginServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Lumina\EarlyWarning\Providers\EarlyWarningServiceProvider;
 use Tests\TestCase;
 
 /**
@@ -140,8 +143,41 @@ class PluginRegistryTest extends TestCase
         $this->actingAs($this->userIn($this->orgA, super: true))->get('/x/early-warning/ping')->assertOk();
         // Own org disabled (plugin only on in org A): 404, no bypass.
         $this->actingAs($this->userIn($this->orgB, super: true))->get('/x/early-warning/ping')->assertNotFound();
-        // No org: stopped by the organization middleware before plugin gating.
-        $this->actingAs($this->userIn(null, super: true))->get('/x/early-warning/ping')->assertForbidden();
+    }
+
+    public function test_super_admin_without_org_is_redirected_to_org_setup_on_web(): void
+    {
+        $this->install();
+        $this->plugins->setEnabled(self::KEY, $this->orgA, true);
+        $super = $this->userIn(null, super: true);
+
+        $this->actingAs($super)->get('/x/early-warning/ping')->assertRedirect(route('organization.setup'));
+        $this->actingAs($super)->get('/x/early-warning/ping', ['X-Inertia' => 'true'])->assertRedirect(route('organization.setup'));
+        $this->actingAs($super)->get(route('organization.setup'))->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Organization/Setup'));
+    }
+
+    public function test_super_admin_without_org_gets_403_on_json_requests(): void
+    {
+        $this->install();
+        $this->plugins->setEnabled(self::KEY, $this->orgA, true);
+        $super = $this->userIn(null, super: true);
+
+        $this->actingAs($super)->getJson('/x/early-warning/ping')->assertForbidden();
+        $this->actingAs($super)->get('/api/x/early-warning/ping', ['Accept' => 'application/json'])->assertForbidden();
+        // A regular org-less user still gets 403 on web as before.
+        $this->actingAs($this->userIn(null))->get('/x/early-warning/ping')->assertForbidden();
+    }
+
+    public function test_early_warning_provider_extends_core_plugin_base(): void
+    {
+        $provider = new EarlyWarningServiceProvider($this->app);
+
+        $this->assertInstanceOf(PluginServiceProvider::class, $provider);
+        $this->assertSame(self::KEY, $provider->key());
+        $this->assertSame($this->plugins->manifest(self::KEY)['key'], $provider->key());
+        $this->assertDirectoryExists($provider::migrationsPath());
+        $this->assertArrayHasKey('early-warning:link-basins', Artisan::all());
     }
 
     public function test_super_admin_cross_org_bypass_only_for_platform_toggle(): void
