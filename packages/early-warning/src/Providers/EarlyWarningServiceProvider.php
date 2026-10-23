@@ -2,25 +2,27 @@
 
 namespace Lumina\EarlyWarning\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Plugins\PluginServiceProvider;
 use Lumina\EarlyWarning\Console\LinkBasinsCommand;
 
 /**
- * TODO(#54): extend Lumina\Plugins\PluginServiceProvider once the core plugin
- * registry lands. Migrations are deliberately NOT loaded into `artisan migrate`;
- * plugin:install runs them from migrationsPath().
+ * Early Warning plugin provider. Migrations are deliberately NOT loaded into
+ * `artisan migrate`; plugin install runs them from migrationsPath() (D15).
  */
-class EarlyWarningServiceProvider extends ServiceProvider
+class EarlyWarningServiceProvider extends PluginServiceProvider
 {
+    public function key(): string
+    {
+        return 'early-warning';
+    }
+
     public static function migrationsPath(): string
     {
         return dirname(__DIR__, 2).'/database/migrations';
     }
 
-    public function boot(): void
+    public function consoleCommands(): array
     {
-        if ($this->app->runningInConsole()) {
-            $this->commands([LinkBasinsCommand::class]);
-        }
+        return [LinkBasinsCommand::class];
     }
 }

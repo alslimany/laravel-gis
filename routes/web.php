@@ -31,6 +31,7 @@ use App\Http\Controllers\SolutionPackController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/map-icons/{name}.svg', [MapIconController::class, 'show'])
     ->where('name', '[a-z0-9\-]+')
@@ -104,6 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/comments', [ProjectController::class, 'storeComment'])->name('projects.comments.store');
     Route::delete('/projects/{project}/comments/{comment}', [ProjectController::class, 'destroyComment'])->name('projects.comments.destroy');
     Route::resource('projects', ProjectController::class);
+
+    Route::get('/organization/setup', fn () => Inertia::render('Organization/Setup'))->name('organization.setup');
 
     Route::middleware('organization')->group(function () {
         Route::get('/apps', [AppGalleryController::class, 'index'])->name('apps.index');

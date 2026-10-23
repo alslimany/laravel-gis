@@ -11,7 +11,7 @@ class EnsureUserHasOrganization
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -20,7 +20,13 @@ class EnsureUserHasOrganization
         }
 
         if (! $request->user()->organization_id) {
-            abort(403, 'You must belong to an organization to access this resource.');
+            // ADR-0001 §5: a super admin with no org is sent to org setup on
+            // web/Inertia requests; JSON/API callers get a plain 403.
+            if ($request->user()->isSuperAdmin() && ! $request->expectsJson()) {
+                return redirect()->route('organization.setup');
+            }
+
+            abort(403, 'You are not a member of an organization. Contact your administrator.');
         }
 
         return $next($request);

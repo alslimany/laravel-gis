@@ -62,6 +62,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'location' => 'string',
+            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -162,6 +163,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    /**
+     * Platform super admin (ADR-0001 D1). The flag is not fillable and is
+     * only set by `php artisan lumina:make-super-admin`.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 
     /**
