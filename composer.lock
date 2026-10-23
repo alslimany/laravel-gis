@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d77cefa3cebcedcceff0063e79916fb0",
+    "content-hash": "47e18e6f9971e3a27f1df421f9cd7a40",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -2769,6 +2769,58 @@
                 }
             ],
             "time": "2026-03-08T20:05:35+00:00"
+        },
+        {
+            "name": "lumina/early-warning",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/early-warning",
+                "reference": "c9d6b7815a35cb50c557f682cdcdeacb6995d53a"
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "lumina": {
+                    "key": "early-warning",
+                    "name": "Disaster Early Warning",
+                    "version": "0.1.0",
+                    "core": "^1.0",
+                    "provider": "Lumina\\EarlyWarning\\Providers\\EarlyWarningServiceProvider",
+                    "permissions": [
+                        "early-warning.view",
+                        "early-warning.manage"
+                    ],
+                    "data": {
+                        "tables": [
+                            "ew_basins"
+                        ],
+                        "global_tables": [
+                            "ew_basins"
+                        ]
+                    }
+                },
+                "laravel": {
+                    "providers": [
+                        "Lumina\\EarlyWarning\\Providers\\EarlyWarningServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Lumina\\EarlyWarning\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Lumina Disaster Early Warning plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "maennchen/zipstream-php",

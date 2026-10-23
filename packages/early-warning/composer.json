@@ -1,6 +1,7 @@
 {
     "name": "lumina/early-warning",
     "description": "Lumina Disaster Early Warning plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
+    "version": "0.1.0",
     "type": "library",
     "license": "proprietary",
     "require": {

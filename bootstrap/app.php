@@ -2,6 +2,8 @@
 
 use App\Exceptions\SchemaValidationException;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsurePluginEnabled;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasOrganization;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -24,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
             'organization' => EnsureUserHasOrganization::class,
+            'plugin' => EnsurePluginEnabled::class,
+            'super-admin' => EnsureSuperAdmin::class,
         ]);
 
         $middleware->statefulApi();
