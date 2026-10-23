@@ -88,19 +88,63 @@ class UserOrganizationFollowupsTest extends TestCase
         $this->assertSame([$current], DB::table('role_user')->where('user_id', $user->id)->pluck('id')->map(fn ($id) => (int) $id)->all());
     }
 
-    public function test_rollback_two_steps_and_remigrate_does_not_rehome_other_org_admin_grant(): void
+    public function test_rollback_and_remigrate_does_not_rehome_other_org_admin_grant(): void
     {
         // QA repro: U is in org A but holds admin only in org B.
         $user = User::factory()->create(['organization_id' => $this->orgA->id]);
         $user->roles()->attach($this->admin, ['organization_id' => $this->orgB->id]);
         $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
 
-        $this->artisan('migrate:rollback', ['--step' => 2])->assertSuccessful();
-        $this->assertFalse(Schema::hasColumn('role_user', 'organization_id'));
-        $this->artisan('migrate')->assertSuccessful();
+        $this->rollBackAndRemigrateRoleOrgMigrations();
 
         $this->assertSame(0, DB::table('role_user')->where('user_id', $user->id)->count());
         $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+    }
+
+    public function test_rollback_and_remigrate_does_not_activate_null_org_grant_of_user_with_org(): void
+    {
+        // An inert null-org admin grant held by a user who now has an org.
+        $user = User::factory()->create(['organization_id' => $this->orgA->id]);
+        DB::table('role_user')->insert(['role_id' => $this->admin->id, 'user_id' => $user->id, 'organization_id' => null]);
+        // A user without an org keeps their null-org grant.
+        $orgless = User::factory()->create(['organization_id' => null]);
+        DB::table('role_user')->insert(['role_id' => $this->viewer->id, 'user_id' => $orgless->id, 'organization_id' => null]);
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+
+        $this->rollBackAndRemigrateRoleOrgMigrations();
+
+        $this->assertSame(0, DB::table('role_user')->where('user_id', $user->id)->count());
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+        $kept = DB::table('role_user')->where('user_id', $orgless->id)->get();
+        $this->assertCount(1, $kept);
+        $this->assertNull($kept->first()->organization_id);
+    }
+
+    public function test_rollback_and_remigrate_with_other_org_admin_and_null_org_grant(): void
+    {
+        // QA pairing: U is in org A, admin in org B, plus a legacy null-org grant.
+        $user = User::factory()->create(['organization_id' => $this->orgA->id]);
+        DB::table('role_user')->insert(['role_id' => $this->admin->id, 'user_id' => $user->id, 'organization_id' => $this->orgB->id]);
+        DB::table('role_user')->insert(['role_id' => $this->admin->id, 'user_id' => $user->id, 'organization_id' => null]);
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+
+        $this->rollBackAndRemigrateRoleOrgMigrations();
+
+        $this->assertFalse($user->fresh()->hasRoleInOrg('admin', $this->orgA->id));
+        $this->assertSame(0, DB::table('role_user')->where('user_id', $user->id)->count());
+    }
+
+    /**
+     * Run both #66 migrations down then up directly, so the test does not
+     * depend on them being the latest two migrations.
+     */
+    protected function rollBackAndRemigrateRoleOrgMigrations(): void
+    {
+        $this->migration('2026_10_23_000001_widen_role_user_unique_to_organization')->down();
+        $this->migration('2026_10_23_000000_add_organization_id_to_role_user_table')->down();
+        $this->assertFalse(Schema::hasColumn('role_user', 'organization_id'));
+        $this->migration('2026_10_23_000000_add_organization_id_to_role_user_table')->up();
+        $this->migration('2026_10_23_000001_widen_role_user_unique_to_organization')->up();
     }
 
     public function test_full_rollback_of_both_migrations_with_cross_org_grants(): void

@@ -65,6 +65,21 @@ return new class extends Migration
             })
             ->delete();
 
+        // Also drop null-org grants held by users who now have an
+        // organization. A null-org grant is inert, but up() backfills null
+        // grants from users.organization_id, which would turn it into a live
+        // grant (e.g. admin) in the user's current organization. Null-org
+        // grants of users without an organization stay null and are kept.
+        DB::table('role_user')
+            ->whereNull('organization_id')
+            ->whereExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('users')
+                    ->whereColumn('users.id', 'role_user.user_id')
+                    ->whereNotNull('users.organization_id');
+            })
+            ->delete();
+
         Schema::table('role_user', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'organization_id']);
             $table->dropConstrainedForeignId('organization_id');
