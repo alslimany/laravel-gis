@@ -37,7 +37,9 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "Lumina\\EarlyWarning\\": "packages/early-warning/src/",
+            "Lumina\\EarlyWarning\\Tests\\": "packages/early-warning/tests/"
         }
     },
     "scripts": {

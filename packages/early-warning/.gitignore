@@ -1,0 +1,6 @@
+# DEM and derived rasters are downloaded/generated, never committed (ADR D12)
+/data/dem/
+/data/work/
+/data/out/*.tif
+/tools/.venv/
+__pycache__/
