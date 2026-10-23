@@ -8,24 +8,27 @@ use Illuminate\Support\Facades\Schema;
 use Lumina\EarlyWarning\Models\Basin;
 
 /**
- * Upsert ew_basins from the pipeline GeoJSON, keyed by basin_code, and link
- * each basin to the layer created by the normal Data Import flow.
+ * Upsert global ew_basins (attributes + geometry) from the pipeline GeoJSON,
+ * keyed by basin_code. Optionally link each basin to an imported org layer
+ * (a view only; the geometry of record is ew_basins.geom).
  *
- *   php artisan early-warning:link-basins packages/early-warning/data/out/tripoli_basins.geojson --layer=12
+ *   php artisan early-warning:link-basins packages/early-warning/data/out/tripoli_basins.geojson [--layer=12]
  *
- * feature_id is resolved from the layer's import table (column basin_code)
- * when that table exists; otherwise it falls back to the GeoJSON feature id.
+ * Fails closed: every feature is schema-checked first and nothing is written
+ * if any feature is invalid. --layer must have metadata.plugin = early-warning.
  */
 class LinkBasinsCommand extends Command
 {
     protected $signature = 'early-warning:link-basins
         {geojson : Path to basins GeoJSON produced by tools/delineate_basins.py}
-        {--layer= : layers.id of the imported basin layer}
+        {--layer= : Optional layers.id of an imported basin layer (metadata.plugin=early-warning)}
         {--region=tripoli : Region tag}';
 
-    protected $description = 'Upsert global ew_basins from basin GeoJSON and link them to an imported layer';
+    protected $description = 'Upsert global ew_basins from basin GeoJSON, optionally linking an imported layer';
 
     private const NUMERIC = ['area_km2', 'mean_slope_deg', 'max_slope_deg', 'max_flow_acc_cells', 'max_flow_acc_km2', 'outlet_lon', 'outlet_lat'];
+
+    private const STRINGS = ['name', 'name_ar', 'dem_source', 'dem_version', 'processed_at'];
 
     public function handle(): int
     {
@@ -40,45 +43,71 @@ class LinkBasinsCommand extends Command
         }
 
         $data = json_decode(file_get_contents($path), true);
-        if (($data['type'] ?? null) !== 'FeatureCollection') {
-            $this->error('Expected a GeoJSON FeatureCollection.');
+        if (($data['type'] ?? null) !== 'FeatureCollection' || ! is_array($data['features'] ?? null) || $data['features'] === []) {
+            $this->error('Expected a non-empty GeoJSON FeatureCollection.');
+
+            return self::FAILURE;
+        }
+
+        $errors = [];
+        foreach ($data['features'] as $i => $feature) {
+            foreach ($this->validateFeature($feature) as $e) {
+                $errors[] = "Feature #{$i}: {$e}";
+            }
+        }
+        if ($errors) {
+            foreach ($errors as $e) {
+                $this->error($e);
+            }
+            $this->error('No basins written.');
 
             return self::FAILURE;
         }
 
         $layerId = $this->option('layer') !== null ? (int) $this->option('layer') : null;
-        $featureIds = $layerId ? $this->featureIdsFromLayer($layerId) : [];
-        if ($layerId === -1) {
-            return self::FAILURE;
+        $featureIds = [];
+        if ($layerId !== null) {
+            $featureIds = $this->featureIdsFromLayer($layerId);
+            if ($featureIds === null) {
+                return self::FAILURE;
+            }
         }
 
+        $pgsql = DB::connection()->getDriverName() === 'pgsql';
         $count = 0;
-        DB::transaction(function () use ($data, $layerId, $featureIds, &$count) {
-            foreach ($data['features'] as $i => $feature) {
-                $p = $feature['properties'] ?? [];
-                $code = $p['basin_code'] ?? null;
-                if (! $code) {
-                    $this->warn("Feature #{$i} has no basin_code; skipped.");
-                    continue;
-                }
+        DB::transaction(function () use ($data, $layerId, $featureIds, $pgsql, &$count) {
+            foreach ($data['features'] as $feature) {
+                $p = $feature['properties'];
+                $code = $p['basin_code'];
 
                 $row = [
                     'name' => $p['name'] ?? $code,
                     'name_ar' => $p['name_ar'] ?? null,
                     'region' => $this->option('region'),
                     'layer_id' => $layerId,
-                    'feature_id' => isset($featureIds[$code]) ? (string) $featureIds[$code] : (isset($feature['id']) ? (string) $feature['id'] : null),
+                    'feature_id' => $layerId === null ? null
+                        : (isset($featureIds[$code]) ? (string) $featureIds[$code] : (isset($feature['id']) ? (string) $feature['id'] : null)),
                     'dem_source' => $p['dem_source'] ?? null,
                     'dem_version' => $p['dem_version'] ?? null,
                     'processed_at' => $p['processed_at'] ?? null,
                 ];
                 foreach (self::NUMERIC as $k) {
-                    $row[$k] = isset($p[$k]) ? $p[$k] : null;
+                    $row[$k] = $p[$k] ?? null;
                 }
                 $known = array_merge(array_keys($row), ['basin_code']);
-                $row['attributes'] = array_diff_key($p, array_flip($known)) ?: null;
+                $row['props'] = array_diff_key($p, array_flip($known)) ?: null;
 
                 Basin::updateOrCreate(['basin_code' => $code], $row);
+
+                $geojson = json_encode($feature['geometry']);
+                if ($pgsql) {
+                    DB::update(
+                        'UPDATE ew_basins SET geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(?), 4326)), 3)) WHERE basin_code = ?',
+                        [$geojson, $code]
+                    );
+                } else {
+                    DB::table('ew_basins')->where('basin_code', $code)->update(['geom' => $geojson]);
+                }
                 $count++;
             }
         });
@@ -88,15 +117,55 @@ class LinkBasinsCommand extends Command
         return self::SUCCESS;
     }
 
-    /** @return array<string,mixed> basin_code => feature id */
-    private function featureIdsFromLayer(int &$layerId): array
+    /** @return list<string> problems with one feature (empty = valid) */
+    private function validateFeature(mixed $feature): array
+    {
+        if (! is_array($feature) || ($feature['type'] ?? null) !== 'Feature') {
+            return ['not a GeoJSON Feature'];
+        }
+        $e = [];
+        $p = $feature['properties'] ?? null;
+        if (! is_array($p)) {
+            return ['missing properties'];
+        }
+        if (! is_string($p['basin_code'] ?? null) || trim($p['basin_code']) === '') {
+            $e[] = 'missing basin_code';
+        }
+        foreach (self::NUMERIC as $k) {
+            if (isset($p[$k]) && ! is_int($p[$k]) && ! is_float($p[$k])) {
+                $e[] = "{$k} must be numeric";
+            }
+        }
+        foreach (self::STRINGS as $k) {
+            if (isset($p[$k]) && ! is_string($p[$k])) {
+                $e[] = "{$k} must be a string";
+            }
+        }
+        $g = $feature['geometry'] ?? null;
+        if (! is_array($g) || ! in_array($g['type'] ?? null, ['Polygon', 'MultiPolygon'], true)
+            || ! is_array($g['coordinates'] ?? null) || $g['coordinates'] === []) {
+            $e[] = 'geometry must be a non-empty Polygon or MultiPolygon';
+        }
+
+        return $e;
+    }
+
+    /**
+     * @return array<string,mixed>|null basin_code => feature id, or null (error already printed)
+     */
+    private function featureIdsFromLayer(int $layerId): ?array
     {
         $layer = DB::table('layers')->where('id', $layerId)->first();
         if (! $layer) {
             $this->error("Layer {$layerId} not found.");
-            $layerId = -1;
 
-            return [];
+            return null;
+        }
+        $meta = is_string($layer->metadata ?? null) ? json_decode($layer->metadata, true) : (array) ($layer->metadata ?? []);
+        if (($meta['plugin'] ?? null) !== 'early-warning') {
+            $this->error("Layer {$layerId} is not an early-warning layer (metadata.plugin must be \"early-warning\").");
+
+            return null;
         }
         $table = $layer->table_name;
         if (! $table || ! Schema::hasTable($table) || ! Schema::hasColumn($table, 'basin_code')) {
