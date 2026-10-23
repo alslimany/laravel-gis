@@ -1,0 +1,22 @@
+{
+  "name": "tripoli-wadis",
+  "_comment": "Tripoli wadis pilot (#59). bbox is WGS84 [min_lon, min_lat, max_lon, max_lat]; covers the coastal strip from Janzour to Tajoura and the inland Jefara catchments draining to the city. Buffer added before clipping so basins are not truncated.",
+  "bbox": [12.95, 32.45, 13.55, 32.95],
+  "buffer_deg": 0.05,
+  "target_crs": "EPSG:32633",
+  "dem": {
+    "source": "Copernicus DEM GLO-30",
+    "version": "2023_1",
+    "tiles": ["Copernicus_DSM_COG_10_N32_00_E012_00_DEM", "Copernicus_DSM_COG_10_N32_00_E013_00_DEM"],
+    "base_url": "https://copernicus-dem-30m.s3.amazonaws.com"
+  },
+  "stream_threshold_km2": 1.0,
+  "snap_distance_m": 300,
+  "simplify_tolerance_m": 15,
+  "_outlets_comment": "PROVISIONAL outlets (approximate coastal mouths / urban crossings). Must be confirmed by Abdullah / field team; adjust lon/lat then rerun. Pour points are snapped to the highest flow-accumulation cell within snap_distance_m.",
+  "outlets": [
+    {"basin_code": "TRP-MAJENIN", "name": "Wadi Al-Majenin", "name_ar": "وادي المجينين", "lon": 13.1860, "lat": 32.8930},
+    {"basin_code": "TRP-RABIE",   "name": "Wadi Al-Rabie",   "name_ar": "وادي الربيع",   "lon": 13.3350, "lat": 32.8790},
+    {"basin_code": "TRP-HIRA",    "name": "Wadi Al-Hira",    "name_ar": "وادي الهيرة",   "lon": 13.0300, "lat": 32.8350}
+  ]
+}
