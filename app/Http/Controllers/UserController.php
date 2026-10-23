@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -63,24 +64,28 @@ class UserController extends Controller
             ],
         ]);
 
-        if (isset($validated['roles'])) {
-            $this->guardAdminRemoval($request->user(), $user, $validated['roles']);
-        }
+        // One transaction with the org's admin grants locked, so two admins
+        // demoting each other concurrently cannot leave the org with none.
+        DB::transaction(function () use ($request, $user, $validated) {
+            if (isset($validated['roles'])) {
+                $this->guardAdminRemoval($request->user(), $user, $validated['roles']);
+            }
 
-        $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-        ]);
+            $user->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+            ]);
 
-        if (isset($validated['roles'])) {
-            // Grants made here are scoped to the managed user's organization,
-            // which the policy has already checked equals the admin's.
-            // withPivotValue limits the sync to this org's grants and stamps
-            // new grants with it, so grants in other orgs are left alone.
-            $user->roles()
-                ->withPivotValue('organization_id', $user->organization_id)
-                ->sync($validated['roles']);
-        }
+            if (isset($validated['roles'])) {
+                // Grants made here are scoped to the managed user's organization,
+                // which the policy has already checked equals the admin's.
+                // withPivotValue limits the sync to this org's grants and stamps
+                // new grants with it, so grants in other orgs are left alone.
+                $user->roles()
+                    ->withPivotValue('organization_id', $user->organization_id)
+                    ->sync($validated['roles']);
+            }
+        });
 
         return redirect()->route('users.index')
             ->with('success', 'User updated successfully.');
@@ -121,13 +126,24 @@ class UserController extends Controller
             ]);
         }
 
-        $otherAdmins = User::query()
+        // Lock all of this org's admin grants, the target's included (no-op on
+        // SQLite), then count the remaining admins from the locked rows. Rows
+        // are locked in user_id order so concurrent updates can't deadlock.
+        //
+        // Known leftover: duplicate null-org admin grants can still exist,
+        // since MySQL/Postgres unique indexes treat NULLs as distinct. They
+        // are inert (null-org grants confer no access via hasRoleInOrg) and
+        // their cleanup is tracked as a follow-up.
+        $otherAdmins = DB::table('role_user')
+            ->where('role_id', $adminRoleId)
             ->where('organization_id', $user->organization_id)
-            ->whereKeyNot($user->getKey())
-            ->whereHas('roles', fn ($query) => $query
-                ->where('roles.id', $adminRoleId)
-                ->where('role_user.organization_id', $user->organization_id))
-            ->exists();
+            ->whereIn('user_id', User::query()
+                ->select('id')
+                ->where('organization_id', $user->organization_id))
+            ->orderBy('user_id')
+            ->lockForUpdate()
+            ->pluck('user_id')
+            ->contains(fn ($id) => (int) $id !== (int) $user->getKey());
 
         if (! $otherAdmins) {
             throw ValidationException::withMessages([
