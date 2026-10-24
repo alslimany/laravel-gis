@@ -34,6 +34,11 @@ or a mismatch stops the script (fail closed).
 ```bash
 python tools/delineate_basins.py           # -> data/out/tripoli_basins.geojson + SHA256SUMS
 ```
+**Reproducible:** a rerun with the same `aoi.json` and DEM tiles gives byte-identical output and an identical
+`SHA256SUMS` (features sorted by `basin_code`, coordinates rounded to 6 dp, `processed_at` taken from
+`SOURCE_DATE_EPOCH` or `aoi.json` `processed_at`, never the wall clock). The WhiteboxTools binary version is
+recorded per feature (`wbt_version`). `--reuse-work` skips the DEM/hydrology steps when `data/work` rasters exist
+(dev only; do not use after changing bbox, tiles or threshold).
 Choices (all in `tools/aoi.json`, edit and rerun):
 - **AOI bbox** `[12.95, 31.85, 13.65, 32.95]` (Janzour → Tajoura, inland past the Gharyan escarpment so the full Wadi Al-Majenin catchment fits; it crosses 32.0°N) + 0.05° buffer; needs 4 GLO-30 tiles (N31/N32 × E012/E013). A basin touching the buffered AOI edge fails the run.
 - **CRS** UTM 33N (EPSG:32633) at 30 m for metric area/slope; output reprojected to EPSG:4326.
@@ -42,9 +47,12 @@ Choices (all in `tools/aoi.json`, edit and rerun):
 - **Outlet join** snapped outlets are joined to watersheds by raster `VALUE`, never by row order;
   every outlet must produce exactly one non-empty, valid polygon (`make_valid` + asserts).
 - **Outlets** manual pour points at coastal mouths / urban crossings, snapped to the highest flow-accumulation stream cell within 400 m (done in Python; WBT's snap tools left points off-cell and produced 1-cell basins). A basin smaller than the stream threshold fails the run.
-  **CONFIRMED by Abdullah (2026-10-24):** Wadi Al-Majenin, Wadi Al-Rabie, Wadi Al-Hira (1 km² threshold, 400 m snap; at 300 m Majenin/Rabie outlets were 379/390 m from their channels).
+  **CONFIRMED by Abdullah (2026-10-24):** Wadi Al-Majenin, Wadi Al-Rabie, Wadi Al-Hira (1 km² threshold, 400 m snap; at 300 m Majenin/Rabie outlets were 379/390 m from their channels). Optional per-outlet `min_area_km2` fails the run if a basin
+  comes out smaller (Majenin ≥ 2000, Rabie ≥ 40, Hira ≥ 5). Rabie moved (chosen by Abdullah, 2026-10-24) from
+  13.3350, 32.8790 (a ~3.7 km² urban side drainage) to 13.3639, 32.8774 on the main Wadi Rabie channel (~57 km²); the old point is kept as
+  `previous_lon/lat` in `aoi.json`. A candidate at 13.3395, 32.8971 was rejected (sea level). Interior holes from raster→polygon are filled; a basin with holes fails the run.
 - **Attributes** `basin_code, name, name_ar, area_km2, mean/max_slope_deg, max_flow_acc_cells/km2,
-  outlet_lon/lat, dem_source, dem_version, processed_at, stream_threshold_km2`. Polygons simplified at 15 m.
+  outlet_lon/lat (= snapped_lon/lat), outlet_input_lon/lat, snap_dist_m, snap_max_m, wbt_version, dem_source, dem_version, processed_at, stream_threshold_km2`. Polygons simplified at 15 m.
 
 ## 4. Migrate + load
 1. Run the migration after core, in its own batch (until #54's `plugin:install`):

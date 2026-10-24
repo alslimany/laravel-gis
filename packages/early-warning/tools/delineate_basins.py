@@ -11,7 +11,7 @@ Pipeline (UTM 33N, metres):
 Output: data/out/tripoli_basins.geojson (+ checksums). Rasters stay in data/work (ignored).
 Usage:  python tools/delineate_basins.py [--aoi tools/aoi.json]
 """
-import argparse, json, pathlib, sys, hashlib, datetime as dt
+import argparse, json, os, pathlib, sys, hashlib, datetime as dt
 import numpy as np
 import rasterio
 from rasterio.merge import merge
@@ -25,55 +25,78 @@ import whitebox
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+def fill_holes(geom):
+    """Drop interior rings (raster->polygon artefacts: pits/flat cells routed elsewhere); a basin has no holes."""
+    from shapely.geometry import Polygon, MultiPolygon
+    from shapely.ops import unary_union
+    if geom.geom_type == "Polygon":
+        return Polygon(geom.exterior)
+    if geom.geom_type == "MultiPolygon":
+        return unary_union([Polygon(p.exterior) for p in geom.geoms])
+    if geom.geom_type == "GeometryCollection":
+        return unary_union([fill_holes(p) for p in geom.geoms if p.geom_type in ("Polygon", "MultiPolygon")])
+    return geom
+
+def n_holes(geom):
+    polys = [geom] if geom.geom_type == "Polygon" else list(getattr(geom, "geoms", []))
+    return sum(len(p.interiors) for p in polys if p.geom_type == "Polygon")
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aoi", default=str(ROOT / "tools" / "aoi.json"))
+    ap.add_argument("--reuse-work", action="store_true", help="skip DEM/hydrology steps if data/work rasters exist (dev only; aoi bbox/tiles/threshold must be unchanged)")
     a = ap.parse_args()
     aoi = json.load(open(a.aoi))
     dem_dir, work, out = ROOT / "data/dem", ROOT / "data/work", ROOT / "data/out"
     work.mkdir(parents=True, exist_ok=True); out.mkdir(parents=True, exist_ok=True)
     crs = aoi["target_crs"]
 
-    # 1. mosaic + clip (WGS84)
-    tiles = [rasterio.open(dem_dir / f"{t}.tif") for t in aoi["dem"]["tiles"]]
-    mosaic, tr = merge(tiles)
-    meta = tiles[0].meta.copy(); meta.update(height=mosaic.shape[1], width=mosaic.shape[2], transform=tr)
-    b = aoi["bbox"]; buf = aoi["buffer_deg"]
-    clip_geom = [box(b[0]-buf, b[1]-buf, b[2]+buf, b[3]+buf).__geo_interface__]
-    with rasterio.MemoryFile() as mf:
-        with mf.open(**meta) as ds:
-            ds.write(mosaic)
-            clipped, ctr = mask(ds, clip_geom, crop=True)
-        meta.update(height=clipped.shape[1], width=clipped.shape[2], transform=ctr)
-    # 2. reproject to UTM 30 m
-    t2, w2, h2 = calculate_default_transform(meta["crs"], crs, meta["width"], meta["height"],
-                                             *rasterio.transform.array_bounds(meta["height"], meta["width"], ctr), resolution=30)
-    dem_utm = work / "dem_utm.tif"
-    m2 = meta.copy(); m2.update(crs=crs, transform=t2, width=w2, height=h2, driver="GTiff", nodata=-9999, dtype="float32")
-    with rasterio.open(dem_utm, "w", **m2) as dst:
-        reproject(clipped.astype("float32"), rasterio.band(dst, 1), src_transform=ctr, src_crs=meta["crs"],
-                  dst_transform=t2, dst_crs=crs, resampling=Resampling.bilinear, dst_nodata=-9999)
-
-    # 3. hydrology
     wbt = whitebox.WhiteboxTools(); wbt.set_verbose_mode(False); wbt.set_working_dir(str(work))
     cell_km2 = (30 * 30) / 1e6
-    thr_cells = int(aoi["stream_threshold_km2"] / cell_km2)
-    wbt.breach_depressions_least_cost("dem_utm.tif", "dem_breached.tif", dist=100, fill=True)
-    wbt.d8_pointer("dem_breached.tif", "d8.tif")
-    wbt.d8_flow_accumulation("dem_breached.tif", "facc.tif", out_type="cells")
-    wbt.extract_streams("facc.tif", "streams.tif", threshold=thr_cells)
-    wbt.slope("dem_breached.tif", "slope.tif", units="degrees")
+    b = aoi["bbox"]; buf = aoi["buffer_deg"]
+    reuse = a.reuse_work and all((work / f).exists() for f in ("d8.tif", "facc.tif", "streams.tif", "slope.tif"))
+    if reuse: print("reusing hydrology rasters in data/work (--reuse-work)")
+    if not reuse:
+        # 1. mosaic + clip (WGS84)
+        tiles = [rasterio.open(dem_dir / f"{t}.tif") for t in aoi["dem"]["tiles"]]
+        mosaic, tr = merge(tiles)
+        meta = tiles[0].meta.copy(); meta.update(height=mosaic.shape[1], width=mosaic.shape[2], transform=tr)
+        b = aoi["bbox"]; buf = aoi["buffer_deg"]
+        clip_geom = [box(b[0]-buf, b[1]-buf, b[2]+buf, b[3]+buf).__geo_interface__]
+        with rasterio.MemoryFile() as mf:
+            with mf.open(**meta) as ds:
+                ds.write(mosaic)
+                clipped, ctr = mask(ds, clip_geom, crop=True)
+            meta.update(height=clipped.shape[1], width=clipped.shape[2], transform=ctr)
+        # 2. reproject to UTM 30 m
+        t2, w2, h2 = calculate_default_transform(meta["crs"], crs, meta["width"], meta["height"],
+                                                 *rasterio.transform.array_bounds(meta["height"], meta["width"], ctr), resolution=30)
+        dem_utm = work / "dem_utm.tif"
+        m2 = meta.copy(); m2.update(crs=crs, transform=t2, width=w2, height=h2, driver="GTiff", nodata=-9999, dtype="float32")
+        with rasterio.open(dem_utm, "w", **m2) as dst:
+            reproject(clipped.astype("float32"), rasterio.band(dst, 1), src_transform=ctr, src_crs=meta["crs"],
+                      dst_transform=t2, dst_crs=crs, resampling=Resampling.bilinear, dst_nodata=-9999)
+
+        # 3. hydrology
+
+        cell_km2 = (30 * 30) / 1e6
+        thr_cells = int(aoi["stream_threshold_km2"] / cell_km2)
+        wbt.breach_depressions_least_cost("dem_utm.tif", "dem_breached.tif", dist=100, fill=True)
+        wbt.d8_pointer("dem_breached.tif", "d8.tif")
+        wbt.d8_flow_accumulation("dem_breached.tif", "facc.tif", out_type="cells")
+        wbt.extract_streams("facc.tif", "streams.tif", threshold=thr_cells)
+        wbt.slope("dem_breached.tif", "slope.tif", units="degrees")
 
     # 4. pour points (confirmed outlets) -> snap -> watershed
     pts = gpd.GeoDataFrame(aoi["outlets"], geometry=[Point(o["lon"], o["lat"]) for o in aoi["outlets"]], crs="EPSG:4326").to_crs(crs)
     pts["VALUE"] = range(1, len(pts) + 1)
-    pts.to_file(work / "outlets.shp")
+    pts.drop(columns=[c for c in pts.columns if c.startswith("_") or c in ("note", "previous_lon", "previous_lat", "min_area_km2")]).to_file(work / "outlets.shp")
     # Snap in Python: WBT Jenson/SnapPourPoints left points off-cell (tiny 1-cell basins). Move each outlet to the
     # centre of the highest flow-accumulation stream cell within snap_distance_m (circular search).
     with rasterio.open(work / "facc.tif") as fs, rasterio.open(work / "streams.tif") as ss:
         fa_arr, st_arr = fs.read(1), ss.read(1)
         rad = int(aoi["snap_distance_m"] // abs(fs.transform.a))
-        snapped_geoms = []
+        snapped_geoms, snap_dists = [], []
         for p in pts.geometry:
             r0, c0 = fs.index(p.x, p.y)
             best, best_rc = -1, None
@@ -85,7 +108,8 @@ def main():
                     if st_arr[r, c] == 1 and fa_arr[r, c] > best:
                         best, best_rc = fa_arr[r, c], (r, c)
             assert best_rc is not None, f"no stream cell within {aoi['snap_distance_m']} m of outlet {p}"
-            snapped_geoms.append(Point(*fs.xy(*best_rc)))
+            sx, sy = fs.xy(*best_rc)
+            snapped_geoms.append(Point(sx, sy)); snap_dists.append(round(float(((sx - p.x) ** 2 + (sy - p.y) ** 2) ** 0.5), 1))
     pts_snap = pts.copy(); pts_snap["geometry"] = snapped_geoms
     pts_snap.to_file(work / "outlets_snapped.shp")
     wbt.watershed("d8.tif", "outlets_snapped.shp", "basins.tif")
@@ -94,7 +118,7 @@ def main():
     with rasterio.open(work / "basins.tif") as src:
         arr = src.read(1); polys = [(shape(g), int(v)) for g, v in shapes(arr.astype("int32"), mask=arr > 0, transform=src.transform)]
     g = gpd.GeoDataFrame([{"VALUE": v} for _, v in polys], geometry=[p for p, _ in polys], crs=crs).dissolve(by="VALUE").reset_index()
-    g["geometry"] = g.geometry.make_valid()
+    g["geometry"] = g.geometry.make_valid().apply(fill_holes)
     assert len(g) > 0, "watershed produced no basins (check outlets / snap distance)"
     assert not g.geometry.is_empty.any(), "empty basin polygon after polygonise"
     g = g.merge(pts.drop(columns="geometry"), on="VALUE", how="inner", validate="one_to_one")
@@ -105,10 +129,22 @@ def main():
     snap_xy = {int(v): (round(p.x, 6), round(p.y, 6)) for v, p in zip(snapped["VALUE"], snapped.geometry)}
     sl = zonal_stats(g, str(work / "slope.tif"), stats=["mean", "max"])
     fa = zonal_stats(g, str(work / "facc.tif"), stats=["max"])
-    now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    # reproducible timestamp: SOURCE_DATE_EPOCH, else aoi.json processed_at (never wall clock)
+    sde = os.environ.get("SOURCE_DATE_EPOCH")
+    if sde:
+        now = dt.datetime.fromtimestamp(int(sde), dt.timezone.utc).isoformat(timespec="seconds")
+    else:
+        now = aoi.get("processed_at")
+        assert now, "set SOURCE_DATE_EPOCH or processed_at in aoi.json (reproducible output)"
+    wbt_version = wbt.version().splitlines()[0].split(" (c)")[0].strip()
     g["area_km2"] = (g.geometry.area / 1e6).round(4)
     small = g.loc[g["area_km2"] < aoi["stream_threshold_km2"], "basin_code"].tolist()
     assert not small, f"basin(s) smaller than stream threshold, snapping failed: {small}"
+    # optional per-outlet floor (min_area_km2 in aoi.json outlets)
+    if "min_area_km2" in g.columns:
+        below = [(c, a, m) for c, a, m in zip(g["basin_code"], g["area_km2"], g["min_area_km2"]) if m == m and m is not None and a < m]
+        assert not below, f"basin(s) below their min_area_km2 (basin_code, area, min): {below}"
+        g = g.drop(columns=["min_area_km2"])
     g["mean_slope_deg"] = [round(s["mean"] or 0, 3) for s in sl]
     g["max_slope_deg"] = [round(s["max"] or 0, 3) for s in sl]
     g["max_flow_acc_cells"] = [int(f["max"] or 0) for f in fa]
@@ -116,6 +152,13 @@ def main():
     # join snapped outlets by raster VALUE (watershed id == pour-point VALUE), never by row position
     g["outlet_lon"] = [snap_xy[int(v)][0] for v in g["VALUE"]]
     g["outlet_lat"] = [snap_xy[int(v)][1] for v in g["VALUE"]]
+    snap_d = dict(zip(pts["VALUE"].astype(int), snap_dists))
+    g["outlet_input_lon"] = [round(float(x), 6) for x in g["lon"]]
+    g["outlet_input_lat"] = [round(float(y), 6) for y in g["lat"]]
+    g["snapped_lon"] = g["outlet_lon"]; g["snapped_lat"] = g["outlet_lat"]
+    g["snap_dist_m"] = [snap_d[int(v)] for v in g["VALUE"]]
+    g["snap_max_m"] = aoi["snap_distance_m"]
+    g["wbt_version"] = wbt_version
     g["dem_source"] = aoi["dem"]["source"]; g["dem_version"] = aoi["dem"]["version"]; g["processed_at"] = now
     g["stream_threshold_km2"] = aoi["stream_threshold_km2"]
     g["geometry"] = g.geometry.simplify(aoi["simplify_tolerance_m"], preserve_topology=True)
@@ -123,18 +166,39 @@ def main():
     g["geometry"] = g.geometry.make_valid()
     assert not g.geometry.is_empty.any(), "empty basin polygon after simplify/reproject"
     assert g.geometry.is_valid.all(), "invalid basin polygon after make_valid"
+    g["geometry"] = g.geometry.apply(fill_holes)
     assert set(g.geom_type) <= {"Polygon", "MultiPolygon"}, f"unexpected geometry types {set(g.geom_type)}"
+    holed = g.loc[g.geometry.apply(n_holes) > 0, "basin_code"].tolist()
+    assert not holed, f"basin polygon(s) still have interior rings: {holed}"
     # a basin touching the clipped DEM edge is truncated -> widen bbox
     edge = box(b[0]-buf, b[1]-buf, b[2]+buf, b[3]+buf).exterior.buffer(0.001)
     touching = g.loc[g.geometry.intersects(edge), "basin_code"].tolist()
     assert not touching, f"basin(s) touch the AOI edge (truncated), widen bbox: {touching}"
 
     dest = out / "tripoli_basins.geojson"
-    g.to_file(dest, driver="GeoJSON")
+    # byte-reproducible GeoJSON: features sorted by basin_code, coords rounded to 6 dp, stable key order
+    def rnd(c):
+        return [rnd(x) for x in c] if isinstance(c, (list, tuple)) and c and isinstance(c[0], (list, tuple)) else [round(float(v), 6) for v in c]
+    def clean(v):
+        if isinstance(v, (np.integer,)): return int(v)
+        if isinstance(v, (np.floating, float)): return None if v != v else round(float(v), 6)
+        return v
+    g = g.sort_values("basin_code").reset_index(drop=True)
+    feats = []
+    for _, r in g.iterrows():
+        geom = r.geometry.__geo_interface__
+        props = {k: clean(r[k]) for k in sorted(c for c in g.columns if c != "geometry" and not c.startswith("_"))}
+        feats.append({"type": "Feature", "id": r["basin_code"], "properties": props,
+                      "geometry": {"type": geom["type"], "coordinates": rnd(geom["coordinates"])}})
+    fc = {"type": "FeatureCollection", "name": "tripoli_basins",
+          "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}}, "features": feats}
+    dest.write_text(json.dumps(fc, allow_nan=False, ensure_ascii=False, separators=(",", ":"), sort_keys=False) + "\n", encoding="utf-8")
     digest = hashlib.sha256(dest.read_bytes()).hexdigest()
     (out / "SHA256SUMS").write_text(f"{digest}  {dest.name}\n")
     print(f"wrote {dest} ({len(g)} basins) sha256={digest}")
     print(g[["basin_code", "name", "area_km2", "mean_slope_deg", "max_flow_acc_km2"]].to_string(index=False))
+    print(g[["basin_code", "outlet_input_lon", "outlet_input_lat", "snapped_lon", "snapped_lat", "snap_dist_m"]].to_string(index=False))
+    print(f"processed_at={now} wbt={wbt_version}")
     return 0
 
 if __name__ == "__main__":

@@ -20,10 +20,13 @@
   "stream_threshold_km2": 1.0,
   "snap_distance_m": 400,
   "simplify_tolerance_m": 15,
+  "processed_at": "2026-10-24T00:00:00+00:00",
+  "_processed_at_comment": "Fixed timestamp written to every feature so reruns are byte-identical; SOURCE_DATE_EPOCH overrides it.",
+  "_min_area_comment": "Optional per-outlet min_area_km2: the run fails if that basin is smaller. Rabie >= 40 after its outlet moved to the main channel.",
   "_outlets_comment": "CONFIRMED outlets (confirmed by Abdullah, 2026-10-24; 400 m snap): coastal mouths / urban crossings. To change, adjust lon/lat then rerun. Pour points are snapped to the highest flow-accumulation cell within snap_distance_m.",
   "outlets": [
-    {"basin_code": "TRP-MAJENIN", "name": "Wadi Al-Majenin", "name_ar": "وادي المجينين", "lon": 13.1860, "lat": 32.8930},
-    {"basin_code": "TRP-RABIE",   "name": "Wadi Al-Rabie",   "name_ar": "وادي الربيع",   "lon": 13.3350, "lat": 32.8790},
-    {"basin_code": "TRP-HIRA",    "name": "Wadi Al-Hira",    "name_ar": "وادي الهيرة",   "lon": 13.0300, "lat": 32.8350}
+    {"basin_code": "TRP-MAJENIN", "name": "Wadi Al-Majenin", "name_ar": "وادي المجينين", "lon": 13.1860, "lat": 32.8930, "min_area_km2": 2000},
+    {"basin_code": "TRP-RABIE",   "name": "Wadi Al-Rabie",   "name_ar": "وادي الربيع",   "lon": 13.3639, "lat": 32.8774, "min_area_km2": 40, "previous_lon": 13.3350, "previous_lat": 32.8790, "note": "Moved 2026-10-24 (chosen by Abdullah): original point 13.3350,32.8790 sat on a ~3.7 km2 urban side drainage; 13.3639,32.8774 is on the main Wadi Rabie channel (~57 km2). Candidate 13.3395,32.8971 was rejected: it is at sea level (in the sea)."},
+    {"basin_code": "TRP-HIRA",    "name": "Wadi Al-Hira",    "name_ar": "وادي الهيرة",   "lon": 13.0300, "lat": 32.8350, "min_area_km2": 5}
   ]
 }
