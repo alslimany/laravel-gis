@@ -25,7 +25,7 @@ pip install -r tools/requirements.txt      # needs GDAL libs (brew install gdal)
 
 ## 2. Download DEM
 ```bash
-python tools/download_dem.py               # -> data/dem/*.tif (2 GLO-30 tiles, N32 E012/E013)
+python tools/download_dem.py               # -> data/dem/*.tif (4 GLO-30 tiles, N31/N32 × E012/E013)
 ```
 Each tile is checked against the SHA-256 pinned in `tools/aoi.json` (`dem.sha256`). A missing pin
 or a mismatch stops the script (fail closed).
@@ -35,14 +35,14 @@ or a mismatch stops the script (fail closed).
 python tools/delineate_basins.py           # -> data/out/tripoli_basins.geojson + SHA256SUMS
 ```
 Choices (all in `tools/aoi.json`, edit and rerun):
-- **AOI bbox** `[12.95, 32.45, 13.55, 32.95]` (Janzour → Tajoura, inland Jefara catchments) + 0.05° buffer.
+- **AOI bbox** `[12.95, 31.85, 13.65, 32.95]` (Janzour → Tajoura, inland past the Gharyan escarpment so the full Wadi Al-Majenin catchment fits; it crosses 32.0°N) + 0.05° buffer; needs 4 GLO-30 tiles (N31/N32 × E012/E013). A basin touching the buffered AOI edge fails the run.
 - **CRS** UTM 33N (EPSG:32633) at 30 m for metric area/slope; output reprojected to EPSG:4326.
 - **Conditioning** `BreachDepressionsLeastCost` (dist 100, fill) — breaching preserves urban channels better than filling.
 - **Stream threshold** 1 km² contributing area (≈1,111 cells) — conservative for small, poorly defined urban catchments.
 - **Outlet join** snapped outlets are joined to watersheds by raster `VALUE`, never by row order;
   every outlet must produce exactly one non-empty, valid polygon (`make_valid` + asserts).
-- **Outlets** manual pour points at coastal mouths / urban crossings, snapped (`JensonSnapPourPoints`, 300 m) to streams.
-  **PROVISIONAL:** Wadi Al-Majenin, Wadi Al-Rabie, Wadi Al-Hira — coordinates approximate, need confirmation.
+- **Outlets** manual pour points at coastal mouths / urban crossings, snapped to the highest flow-accumulation stream cell within 400 m (done in Python; WBT's snap tools left points off-cell and produced 1-cell basins). A basin smaller than the stream threshold fails the run.
+  **CONFIRMED by Abdullah (2026-10-24):** Wadi Al-Majenin, Wadi Al-Rabie, Wadi Al-Hira (1 km² threshold, 400 m snap; at 300 m Majenin/Rabie outlets were 379/390 m from their channels).
 - **Attributes** `basin_code, name, name_ar, area_km2, mean/max_slope_deg, max_flow_acc_cells/km2,
   outlet_lon/lat, dem_source, dem_version, processed_at, stream_threshold_km2`. Polygons simplified at 15 m.
 

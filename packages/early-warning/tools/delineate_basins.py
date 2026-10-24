@@ -4,7 +4,7 @@
 Pipeline (UTM 33N, metres):
   mosaic tiles -> clip to bbox+buffer -> reproject EPSG:32633 (30 m)
   BreachDepressionsLeastCost -> D8Pointer -> D8FlowAccumulation (cells)
-  ExtractStreams (threshold = stream_threshold_km2) -> JensonSnapPourPoints
+  ExtractStreams (threshold = stream_threshold_km2) -> snap to max flow-acc stream cell (Python)
   Watershed (one basin per outlet) -> Slope (degrees)
   polygonise -> zonal stats -> simplify -> GeoJSON EPSG:4326
 
@@ -64,11 +64,30 @@ def main():
     wbt.extract_streams("facc.tif", "streams.tif", threshold=thr_cells)
     wbt.slope("dem_breached.tif", "slope.tif", units="degrees")
 
-    # 4. pour points (provisional outlets) -> snap -> watershed
+    # 4. pour points (confirmed outlets) -> snap -> watershed
     pts = gpd.GeoDataFrame(aoi["outlets"], geometry=[Point(o["lon"], o["lat"]) for o in aoi["outlets"]], crs="EPSG:4326").to_crs(crs)
     pts["VALUE"] = range(1, len(pts) + 1)
     pts.to_file(work / "outlets.shp")
-    wbt.jenson_snap_pour_points("outlets.shp", "streams.tif", "outlets_snapped.shp", snap_dist=aoi["snap_distance_m"])
+    # Snap in Python: WBT Jenson/SnapPourPoints left points off-cell (tiny 1-cell basins). Move each outlet to the
+    # centre of the highest flow-accumulation stream cell within snap_distance_m (circular search).
+    with rasterio.open(work / "facc.tif") as fs, rasterio.open(work / "streams.tif") as ss:
+        fa_arr, st_arr = fs.read(1), ss.read(1)
+        rad = int(aoi["snap_distance_m"] // abs(fs.transform.a))
+        snapped_geoms = []
+        for p in pts.geometry:
+            r0, c0 = fs.index(p.x, p.y)
+            best, best_rc = -1, None
+            for dr in range(-rad, rad + 1):
+                for dc in range(-rad, rad + 1):
+                    r, c = r0 + dr, c0 + dc
+                    if dr * dr + dc * dc > rad * rad or not (0 <= r < fa_arr.shape[0] and 0 <= c < fa_arr.shape[1]):
+                        continue
+                    if st_arr[r, c] == 1 and fa_arr[r, c] > best:
+                        best, best_rc = fa_arr[r, c], (r, c)
+            assert best_rc is not None, f"no stream cell within {aoi['snap_distance_m']} m of outlet {p}"
+            snapped_geoms.append(Point(*fs.xy(*best_rc)))
+    pts_snap = pts.copy(); pts_snap["geometry"] = snapped_geoms
+    pts_snap.to_file(work / "outlets_snapped.shp")
     wbt.watershed("d8.tif", "outlets_snapped.shp", "basins.tif")
 
     # 5. polygonise + stats
@@ -88,6 +107,8 @@ def main():
     fa = zonal_stats(g, str(work / "facc.tif"), stats=["max"])
     now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     g["area_km2"] = (g.geometry.area / 1e6).round(4)
+    small = g.loc[g["area_km2"] < aoi["stream_threshold_km2"], "basin_code"].tolist()
+    assert not small, f"basin(s) smaller than stream threshold, snapping failed: {small}"
     g["mean_slope_deg"] = [round(s["mean"] or 0, 3) for s in sl]
     g["max_slope_deg"] = [round(s["max"] or 0, 3) for s in sl]
     g["max_flow_acc_cells"] = [int(f["max"] or 0) for f in fa]
@@ -103,6 +124,10 @@ def main():
     assert not g.geometry.is_empty.any(), "empty basin polygon after simplify/reproject"
     assert g.geometry.is_valid.all(), "invalid basin polygon after make_valid"
     assert set(g.geom_type) <= {"Polygon", "MultiPolygon"}, f"unexpected geometry types {set(g.geom_type)}"
+    # a basin touching the clipped DEM edge is truncated -> widen bbox
+    edge = box(b[0]-buf, b[1]-buf, b[2]+buf, b[3]+buf).exterior.buffer(0.001)
+    touching = g.loc[g.geometry.intersects(edge), "basin_code"].tolist()
+    assert not touching, f"basin(s) touch the AOI edge (truncated), widen bbox: {touching}"
 
     dest = out / "tripoli_basins.geojson"
     g.to_file(dest, driver="GeoJSON")

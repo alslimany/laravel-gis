@@ -1,24 +1,26 @@
 {
   "name": "tripoli-wadis",
-  "_comment": "Tripoli wadis pilot (#59). bbox is WGS84 [min_lon, min_lat, max_lon, max_lat]; covers the coastal strip from Janzour to Tajoura and the inland Jefara catchments draining to the city. Buffer added before clipping so basins are not truncated.",
-  "bbox": [12.95, 32.45, 13.55, 32.95],
+  "_comment": "Tripoli wadis pilot (#59). bbox is WGS84 [min_lon, min_lat, max_lon, max_lat]; covers the coastal strip from Janzour to Tajoura and the inland Jefara catchments draining to the city; bbox extended south to 31.85 and east to 13.65 (2026-10-24) so the full Wadi Al-Majenin catchment toward Gharyan fits. Buffer added before clipping so basins are not truncated.",
+  "bbox": [12.95, 31.85, 13.65, 32.95],
   "buffer_deg": 0.05,
   "target_crs": "EPSG:32633",
   "dem": {
     "source": "Copernicus DEM GLO-30",
     "version": "2023_1",
-    "tiles": ["Copernicus_DSM_COG_10_N32_00_E012_00_DEM", "Copernicus_DSM_COG_10_N32_00_E013_00_DEM"],
+    "tiles": ["Copernicus_DSM_COG_10_N32_00_E012_00_DEM", "Copernicus_DSM_COG_10_N32_00_E013_00_DEM", "Copernicus_DSM_COG_10_N31_00_E012_00_DEM", "Copernicus_DSM_COG_10_N31_00_E013_00_DEM"],
     "base_url": "https://copernicus-dem-30m.s3.amazonaws.com",
-    "_sha256_comment": "Pinned SHA-256 of each tile .tif, computed from the AWS copernicus-dem-30m bucket on 2026-10-23. download_dem.py refuses any file that does not match.",
+    "_sha256_comment": "Pinned SHA-256 of each tile .tif, computed from the AWS copernicus-dem-30m bucket on 2026-10-23 (N32) and 2026-10-24 (N31). download_dem.py refuses any file that does not match.",
     "sha256": {
       "Copernicus_DSM_COG_10_N32_00_E012_00_DEM": "3bae73c5161829dbca088c8b7d9034dc94eac15a290664bd9e36b30628ab5ab6",
-      "Copernicus_DSM_COG_10_N32_00_E013_00_DEM": "ddbb9c0147fe42fd6323d7685ea6cc5bd5e3ef4e352267e125cd714de40e07e3"
+      "Copernicus_DSM_COG_10_N32_00_E013_00_DEM": "ddbb9c0147fe42fd6323d7685ea6cc5bd5e3ef4e352267e125cd714de40e07e3",
+      "Copernicus_DSM_COG_10_N31_00_E012_00_DEM": "72690b66ef129b1dea29527f56d284440d86984dd61d41c9e04ab51a27eb9a1d",
+      "Copernicus_DSM_COG_10_N31_00_E013_00_DEM": "9949d30dc053146bfdbf5317dbce07ecabbd19ed710e35837543e9fa40ff42d2"
     }
   },
   "stream_threshold_km2": 1.0,
-  "snap_distance_m": 300,
+  "snap_distance_m": 400,
   "simplify_tolerance_m": 15,
-  "_outlets_comment": "PROVISIONAL outlets (approximate coastal mouths / urban crossings). Must be confirmed by Abdullah / field team; adjust lon/lat then rerun. Pour points are snapped to the highest flow-accumulation cell within snap_distance_m.",
+  "_outlets_comment": "CONFIRMED outlets (confirmed by Abdullah, 2026-10-24; 400 m snap): coastal mouths / urban crossings. To change, adjust lon/lat then rerun. Pour points are snapped to the highest flow-accumulation cell within snap_distance_m.",
   "outlets": [
     {"basin_code": "TRP-MAJENIN", "name": "Wadi Al-Majenin", "name_ar": "وادي المجينين", "lon": 13.1860, "lat": 32.8930},
     {"basin_code": "TRP-RABIE",   "name": "Wadi Al-Rabie",   "name_ar": "وادي الربيع",   "lon": 13.3350, "lat": 32.8790},
