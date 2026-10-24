@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Plugins;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\InstalledPlugin;
 use App\Models\Organization;
 use App\Models\PluginEvent;
@@ -152,8 +153,10 @@ class PluginRegistryTest extends TestCase
         $this->plugins->setEnabled(self::KEY, $this->orgA, true);
         $super = $this->userIn(null, super: true);
 
+        $version = (string) app(HandleInertiaRequests::class)->version(request());
+
         $this->actingAs($super)->get('/x/early-warning/ping')->assertRedirect(route('organization.setup'));
-        $this->actingAs($super)->get('/x/early-warning/ping', ['X-Inertia' => 'true'])->assertRedirect(route('organization.setup'));
+        $this->actingAs($super)->get('/x/early-warning/ping', ['X-Inertia' => 'true', 'X-Inertia-Version' => $version])->assertRedirect(route('organization.setup'));
         $this->actingAs($super)->get(route('organization.setup'))->assertOk()
             ->assertInertia(fn ($page) => $page->component('Organization/Setup'));
     }
