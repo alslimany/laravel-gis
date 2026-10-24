@@ -153,7 +153,7 @@ class PluginRegistryTest extends TestCase
         $super = $this->userIn(null, super: true);
 
         $this->actingAs($super)->get('/x/early-warning/ping')->assertRedirect(route('organization.setup'));
-        $this->actingAs($super)->get('/x/early-warning/ping', ['X-Inertia' => 'true'])->assertRedirect(route('organization.setup'));
+        $this->actingAs($super)->get('/x/early-warning/ping', ['X-Inertia' => 'true', 'X-Inertia-Version' => (string) app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request())])->assertRedirect(route('organization.setup'));
         $this->actingAs($super)->get(route('organization.setup'))->assertOk()
             ->assertInertia(fn ($page) => $page->component('Organization/Setup'));
     }
