@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Contracts\LayerCatalog;
+use App\Contracts\LayerPublisher;
 use App\Models\Organization;
 use App\Models\User;
 use App\Plugins\PluginManager;
+use App\Services\CoreLayerPublisher;
+use App\Services\EloquentLayerCatalog;
 use App\Services\GeoServerService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -21,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PluginManager::class);
+        $this->app->singleton(LayerCatalog::class, EloquentLayerCatalog::class);
+        $this->app->singleton(LayerPublisher::class, CoreLayerPublisher::class);
     }
 
     /**
@@ -47,5 +53,7 @@ class AppServiceProvider extends ServiceProvider
                 && (int) $user->organization_id === (int) $organization->getKey()
                 && $user->hasRole('admin');
         });
+
+        app(PluginManager::class)->registerPermissionGates();
     }
 }

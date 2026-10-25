@@ -91,9 +91,12 @@ class PluginArchitectureTest extends TestCase
                 // Known bypass (ADR-0001 rev 4 §12): only literal Schema::create/table/
                 // drop/rename names are checked. DB::statement / raw SQL (or a
                 // variable table name) can touch core tables unseen; CR must review it.
+                // CREATE/DROP VIEW with a literal prefixed name is allowed (e.g. SQL views for GeoServer).
                 preg_match_all("/Schema::(?:create|table|drop|dropIfExists|rename)\\(\\s*'([^']+)'/", $file->getContents(), $m);
-                $this->assertNotEmpty($m[1], $file->getFilename().': no literal table name found');
-                foreach ($m[1] as $table) {
+                preg_match_all('/\b(?:CREATE|DROP)\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+EXISTS\s+)?([a-z][a-z0-9_]*)/i', $file->getContents(), $views);
+                $names = array_values(array_unique(array_merge($m[1], $views[1])));
+                $this->assertNotEmpty($names, $file->getFilename().': no literal table/view name found');
+                foreach ($names as $table) {
                     $this->assertStringStartsWith($prefix, $table, $file->getFilename()." touches non-plugin table {$table}");
                 }
                 $this->assertDoesNotMatchRegularExpression('/Schema::table\(\s*\$/', $file->getContents(), $file->getFilename().': dynamic Schema::table');
@@ -128,6 +131,24 @@ class PluginArchitectureTest extends TestCase
                 if (! $isProvider) {
                     $this->assertDoesNotMatchRegularExpression('/\bSchedule\b/', $file->getContents(), $file->getRelativePathname().' declares scheduling outside the provider');
                 }
+            }
+        }
+    }
+
+    public function test_plugin_jobs_declare_global_or_org_scope_marker(): void
+    {
+        foreach ($this->plugins() as $dir => $composer) {
+            $jobsDir = $dir.'/src/Jobs';
+            if (! is_dir($jobsDir)) {
+                continue;
+            }
+            foreach ($this->phpFiles($jobsDir) as $file) {
+                $src = $file->getContents();
+                if (! preg_match('/\bclass\s+\w+/', $src)) {
+                    continue;
+                }
+                $ok = str_contains($src, 'GlobalJob') || str_contains($src, 'OrganizationScopedJob');
+                $this->assertTrue($ok, $file->getRelativePathname().' must implement GlobalJob or OrganizationScopedJob (ADR D14)');
             }
         }
     }

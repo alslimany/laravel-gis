@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Layer;
 use App\Models\Map;
+use App\Plugins\PluginManager;
 use App\Services\ContentAccessService;
 use App\Services\LayerExtent;
 use App\Services\PublicShareMap;
@@ -305,6 +306,7 @@ class MapController extends Controller
                 'viewport' => $viewport,
                 'basemap' => $map->basemap,
                 'layers' => $initialLayers,
+                'plugins' => $this->enabledPluginKeys(),
             ];
         }
 
@@ -315,7 +317,23 @@ class MapController extends Controller
             'viewport' => $seedViewport,
             'basemap' => $seedBasemap,
             'layers' => $initialLayers,
+            'plugins' => $this->enabledPluginKeys(),
         ];
+    }
+
+    /**
+     * Enabled plugin keys for the current organization (map-builder panels).
+     *
+     * @return list<string>
+     */
+    protected function enabledPluginKeys(): array
+    {
+        $orgId = Auth::user()?->organization_id;
+        if ($orgId === null) {
+            return [];
+        }
+
+        return array_keys(app(PluginManager::class)->enabledFor((int) $orgId));
     }
 
     protected function ensureShareToken(Map $map): void

@@ -147,7 +147,7 @@ class OrganizationDataIsolationTest extends TestCase
         $this->assertEquals($org2->id, $user->organization->id);
     }
 
-    public function test_console_nav_keeps_organize_separate_from_the_workspace(): void
+    public function test_console_modules_keep_organization_pages_out_of_core_gis(): void
     {
         $organization = Organization::factory()->create();
         $user = User::factory()->create(['organization_id' => $organization->id]);
@@ -155,19 +155,18 @@ class OrganizationDataIsolationTest extends TestCase
         $response = $this->actingAs($user)->get('/dashboard');
 
         $response->assertOk();
-        $nav = collect($response->viewData('page')['props']['nav']);
+        $modules = collect($response->viewData('page')['props']['modules']);
+        $labels = fn (string $key) => collect($modules->firstWhere('key', $key)['sections'])
+            ->flatMap(fn (array $section) => collect($section['items'])->pluck('label'))
+            ->all();
 
-        $this->assertSame(
-            ['Dashboard', 'Apps', 'Data imports', 'Layers', 'Maps', 'Projects'],
-            $nav->where('group', 'workspace')->pluck('label')->all()
-        );
-        $this->assertTrue($nav->where('group', 'organize')->pluck('label')->contains('Organization'));
-        $this->assertFalse($nav->where('group', 'workspace')->pluck('label')->contains('Catalog'));
-        // Solution packs is admin-only; a non-admin never sees it in the nav.
-        $this->assertFalse($nav->pluck('label')->contains('Solution packs'));
+        $this->assertNotContains('Organization', $labels('core'));
+        $this->assertContains('Settings', $labels('admin'));
+        // Solution packs is admin-only; a non-admin never sees it.
+        $this->assertNotContains('Solution packs', $labels('admin'));
     }
 
-    public function test_admin_console_nav_includes_solution_packs(): void
+    public function test_admin_console_modules_include_solution_packs(): void
     {
         $organization = Organization::factory()->create();
         $admin = User::factory()->create(['organization_id' => $organization->id]);
@@ -176,17 +175,9 @@ class OrganizationDataIsolationTest extends TestCase
         $response = $this->actingAs($admin)->get('/dashboard');
 
         $response->assertOk();
-        $nav = collect($response->viewData('page')['props']['nav']);
+        $adminModule = collect($response->viewData('page')['props']['modules'])->firstWhere('key', 'admin');
+        $packs = collect($adminModule['sections'])->flatMap(fn (array $section) => $section['items'])->firstWhere('label', 'Solution packs');
 
-        $this->assertSame(
-            ['Dashboard', 'Apps', 'Data imports', 'Layers', 'Maps', 'Projects'],
-            $nav->where('group', 'workspace')->pluck('label')->all()
-        );
-        $this->assertSame(
-            ['Catalog', 'Dashboards', 'Forms', 'Groups', 'API tokens', 'Solution packs', 'Organization', 'Users'],
-            $nav->where('group', 'organize')->pluck('label')->all()
-        );
-        $packs = $nav->firstWhere('label', 'Solution packs');
         $this->assertSame('packs', $packs['icon']);
         $this->assertSame(route('solution-packs.index'), $packs['href']);
     }

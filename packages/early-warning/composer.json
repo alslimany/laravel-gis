@@ -1,7 +1,7 @@
 {
     "name": "lumina/early-warning",
     "description": "Lumina Disaster Early Warning plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
-    "version": "0.1.0",
+    "version": "0.9.1",
     "type": "library",
     "license": "proprietary",
     "require": {
@@ -22,13 +22,108 @@
                 "early-warning.view",
                 "early-warning.manage"
             ],
+            "module": {
+                "label_en": "Early Warning",
+                "label_ar": "الإنذار المبكر",
+                "description_en": "Flood risk, forecasts and alerts",
+                "description_ar": "مخاطر الفيضانات والتنبؤات والتنبيهات",
+                "icon": "cloud-rain",
+                "accent": "cyan",
+                "home": "early-warning.index",
+                "order": 100,
+                "sections": [
+                    {
+                        "label_en": "Monitor",
+                        "label_ar": "المراقبة",
+                        "items": [
+                            {
+                                "key": "early-warning",
+                                "label_en": "Overview",
+                                "label_ar": "نظرة عامة",
+                                "route": "early-warning.index",
+                                "icon": "cloud-rain",
+                                "permission": "early-warning.view"
+                            },
+                            {
+                                "key": "early-warning-alert-rules",
+                                "label_en": "Alert rules",
+                                "label_ar": "قواعد التنبيه",
+                                "route": "early-warning.alert-rules.index",
+                                "icon": "bell",
+                                "permission": "early-warning.view"
+                            },
+                            {
+                                "key": "early-warning-citizen-reports",
+                                "label_en": "Citizen reports",
+                                "label_ar": "بلاغات المواطنين",
+                                "route": "early-warning.citizen-reports.index",
+                                "icon": "map-pin",
+                                "permission": "early-warning.view"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "nav": [
+                {
+                    "key": "early-warning",
+                    "label_en": "Early Warning",
+                    "label_ar": "الإنذار المبكر",
+                    "route": "early-warning.index",
+                    "icon": "cloud-rain",
+                    "order": 100,
+                    "permission": "early-warning.view"
+                }
+            ],
+            "frontend": {
+                "entry": "resources/js/EarlyWarningPanel.jsx",
+                "slots": {
+                    "mapBuilder.panel": "EarlyWarningPanel"
+                }
+            },
+            "settings": {
+                "rules": {
+                    "rain_threshold_mm": ["required", "numeric", "min:0", "max:500"],
+                    "notify_emails": ["nullable", "array"],
+                    "notify_emails.*": ["email"],
+                    "telegram_chat_ids": ["nullable", "array"],
+                    "telegram_chat_ids.*": ["string"],
+                    "notify_phones": ["nullable", "array"],
+                    "notify_phones.*": ["string"]
+                },
+                "defaults": {
+                    "rain_threshold_mm": 50,
+                    "notify_emails": [],
+                    "telegram_chat_ids": [],
+                    "notify_phones": []
+                }
+            },
+            "outbound_hosts": [
+                "api.open-meteo.com",
+                "api.telegram.org",
+                "power.larc.nasa.gov",
+                "overpass-api.de"
+            ],
             "data": {
                 "prefix": "ew_",
                 "tables": [
-                    "ew_basins"
+                    "ew_basins",
+                    "ew_forecasts",
+                    "ew_observations",
+                    "ew_exposure_summaries",
+                    "ew_public_tokens",
+                    "ew_citizen_reports",
+                    "ew_subscriptions",
+                    "ew_risk_assessments",
+                    "ew_alert_rules",
+                    "ew_alert_logs",
+                    "ew_risk_latest"
                 ],
                 "global_tables": [
-                    "ew_basins"
+                    "ew_basins",
+                    "ew_forecasts",
+                    "ew_observations",
+                    "ew_exposure_summaries"
                 ]
             }
         },

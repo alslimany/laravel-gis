@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardBoardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataImportController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\FeatureAttachmentController;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\FormController;
@@ -115,6 +116,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/relationships', [RelationshipController::class, 'builder'])->name('relationships.builder');
         Route::post('/organization/solution-packs/{slug}', [OrganizationController::class, 'installSolutionPack'])->name('organization.solution-packs.install');
         Route::post('/organization/solution-packs/{slug}/publish', [OrganizationController::class, 'publishSolutionPack'])->name('organization.solution-packs.publish');
+        Route::get('/organization/extensions', [ExtensionController::class, 'index'])->name('extensions.index');
+        Route::put('/organization/extensions/{key}', [ExtensionController::class, 'update'])->name('extensions.update');
 
         Route::middleware('role:admin')->group(function () {
             Route::get('solution-packs', [SolutionPackController::class, 'index'])->name('solution-packs.index');

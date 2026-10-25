@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import Draw from 'ol/interaction/Draw';
 import Modify from 'ol/interaction/Modify';
 import VectorLayer from 'ol/layer/Vector';
@@ -40,7 +40,9 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { IconButton } from './components/IconButton';
-import { ArrowLeft, Bot, ChartColumn, Download, Info, Layers, List, Palette, Pencil, Printer, Save, Share2, X } from 'lucide-react';
+import { ArrowLeft, Bot, ChartColumn, CloudRain, Download, Info, Layers, List, Palette, Pencil, Printer, Save, Share2, X } from 'lucide-react';
+
+const EarlyWarningPanel = lazy(() => import('@early-warning/EarlyWarningPanel'));
 
 const SKIP_DETAIL_KEYS = new Set(['geometry', 'geom', 'the_geom', 'wkb_geometry', 'geojson']);
 
@@ -80,6 +82,9 @@ const emptyProps = () => ({
 });
 
 export default function MapWorkspace({ mode = 'edit' }) {
+    const enabledPlugins = useMapStore((state) => state.plugins);
+    const earlyWarningEnabled = enabledPlugins.includes('early-warning');
+
     const viewing = mode === 'view';
     const map = useMapStore((state) => state.map);
     const layers = useMapStore((state) => state.layers);
@@ -978,8 +983,26 @@ export default function MapWorkspace({ mode = 'edit' }) {
                             icon={<Bot className="size-4" strokeWidth={1.75} />}
                             onClick={() => openPanel('assistant')}
                         />
+                        {earlyWarningEnabled ? (
+                            <IconButton
+                                variant={panel === 'early-warning' ? 'solid' : 'ghost'}
+                                aria-label="Early Warning"
+                                aria-pressed={panel === 'early-warning'}
+                                icon={<CloudRain className="size-4" strokeWidth={1.75} />}
+                                onClick={() => openPanel('early-warning')}
+                            />
+                        ) : null}
                     </>
                 )}
+                {viewing && earlyWarningEnabled ? (
+                    <IconButton
+                        variant={panel === 'early-warning' ? 'solid' : 'ghost'}
+                        aria-label="Early Warning"
+                        aria-pressed={panel === 'early-warning'}
+                        icon={<CloudRain className="size-4" strokeWidth={1.75} />}
+                        onClick={() => openPanel('early-warning')}
+                    />
+                ) : null}
             </div>
 
             {panel ? (
@@ -1017,6 +1040,11 @@ export default function MapWorkspace({ mode = 'edit' }) {
                         )}
                         {panel === 'assistant' && (
                             <GisAssistantPanel onClose={() => setPanel(null)} />
+                        )}
+                        {panel === 'early-warning' && earlyWarningEnabled && (
+                            <Suspense fallback={<p className="map-panel-empty p-3">Loading Early Warning…</p>}>
+                                <EarlyWarningPanel onClose={() => setPanel(null)} />
+                            </Suspense>
                         )}
                         {panel === 'properties' &&
                             (dockMode ? (

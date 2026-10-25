@@ -33,6 +33,9 @@ export const useMapStore = create((set, get) => ({
     identifyResult: null,
     measureResult: null,
 
+    /** Enabled plugin keys for this org (from initialMap.plugins). */
+    plugins: [],
+
     setMap: (map) => set({ map }),
 
     setActiveTool: (toolId) => set({ activeTool: toolId }),
@@ -63,6 +66,7 @@ export const useMapStore = create((set, get) => ({
             basemap: supportedBasemap(data.basemap),
             layers,
             selectedLayer: stillThere ? current : (layers[0]?.id ?? null),
+            plugins: Array.isArray(data.plugins) ? data.plugins : [],
         });
     },
 

@@ -1,6 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { useConsoleModules } from '@/lib/console-modules';
 import { count, when } from '@/lib/format';
+import { ModuleMark } from '@/components/module-switcher';
 import { Empty, GhostLink, Heading, Panel, Pill, PrimaryLink, Table, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
 
 function lonLat(center) {
@@ -138,7 +140,8 @@ function nextStep(stats, routes) {
 }
 
 export default function Dashboard({ stats, projects }) {
-    const { organization, routes } = usePage().props;
+    const { organization, routes, abilities } = usePage().props;
+    const { modules } = useConsoleModules();
     const featured = stats?.recent_maps?.[0] || null;
     const layers = stats?.recent_layers || [];
     const projectRows = projects?.data || [];
@@ -172,6 +175,38 @@ export default function Dashboard({ stats, projects }) {
                     {routes.catalog ? <GhostLink href={routes.catalog}>Browse catalog</GhostLink> : null}
                 </div>
             </div>
+
+            {modules.length > 1 ? (
+                <section aria-labelledby="modules-heading">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                        <p id="modules-heading" className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            Your modules
+                        </p>
+                        {abilities?.admin && routes.extensions ? (
+                            <Link href={routes.extensions} className="text-[13px] font-medium text-primary hover:underline">
+                                Manage extensions
+                            </Link>
+                        ) : null}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        {modules.map((module) => (
+                            <Link
+                                key={module.key}
+                                href={module.href}
+                                className="flex items-center gap-3 rounded border border-border px-3 py-3 transition-colors hover:bg-muted/50"
+                            >
+                                <ModuleMark module={module} />
+                                <span className="min-w-0">
+                                    <span className="block truncate text-[13px] font-medium">{module.label}</span>
+                                    {module.description ? (
+                                        <span className="block truncate text-[11px] text-muted-foreground">{module.description}</span>
+                                    ) : null}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            ) : null}
 
             <section
                 className="rounded border border-border bg-muted/40 px-4 py-4"

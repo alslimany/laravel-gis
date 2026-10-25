@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Events\LayerCreated;
+use App\Events\LayerDeleted;
+use App\Events\LayerUpdated;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +14,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Layer extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::created(fn (Layer $layer) => LayerCreated::dispatch($layer));
+        static::updated(fn (Layer $layer) => LayerUpdated::dispatch($layer));
+        static::deleted(fn (Layer $layer) => LayerDeleted::dispatch($layer));
+    }
 
     /**
      * The attributes that are mass assignable.

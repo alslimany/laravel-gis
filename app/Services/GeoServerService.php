@@ -31,8 +31,11 @@ class GeoServerService
             Config::get('geoserver.admin_password'),
         ];
 
+        $timeout = (float) Config::get('geoserver.timeout', 30);
         $this->client = new Client([
-            'timeout' => Config::get('geoserver.timeout', 30),
+            'timeout' => $timeout,
+            // Fail fast when GeoServer is unreachable (publish previously hung on connect).
+            'connect_timeout' => min(5.0, $timeout),
             'http_errors' => false,
         ]);
     }
@@ -293,6 +296,112 @@ class GeoServerService
             );
         } catch (GuzzleException $e) {
             throw GeoServerException::layerPublishFailed($tableName, $e);
+        }
+    }
+
+    /**
+     * Publish a JDBC SQL View (virtual table) feature type.
+     * SQL must be built by trusted code only — never from user input (ADR §10).
+     *
+     * @param  array{
+     *     title?: string,
+     *     abstract?: string,
+     *     srs?: string,
+     *     geometryName?: string,
+     *     geometryType?: string,
+     *     srid?: int,
+     *     keyColumn?: string,
+     *     defaultStyle?: string
+     * }  $options
+     *
+     * @throws GeoServerException
+     */
+    public function publishSqlView(
+        string $workspace,
+        string $datastore,
+        string $layerName,
+        string $sql,
+        array $options = []
+    ): bool {
+        $sql = trim($sql);
+        if (str_ends_with($sql, ';')) {
+            $sql = rtrim($sql, "; \t\n\r");
+        }
+
+        $geometryName = $options['geometryName'] ?? 'geom';
+        $virtualTable = [
+            'name' => $layerName,
+            'sql' => $sql,
+            'escapeSql' => false,
+            'geometry' => [
+                'name' => $geometryName,
+                'type' => $options['geometryType'] ?? 'MultiPolygon',
+                'srid' => (int) ($options['srid'] ?? 4326),
+            ],
+        ];
+        if (! empty($options['keyColumn'])) {
+            $virtualTable['keyColumn'] = $options['keyColumn'];
+        }
+
+        $payload = [
+            'featureType' => [
+                'name' => $layerName,
+                'nativeName' => $layerName,
+                'title' => $options['title'] ?? $layerName,
+                'abstract' => $options['abstract'] ?? "SQL view {$layerName}",
+                'enabled' => true,
+                'srs' => $options['srs'] ?? 'EPSG:4326',
+                'projectionPolicy' => 'FORCE_DECLARED',
+                'metadata' => [
+                    'entry' => [
+                        [
+                            '@key' => 'JDBC_VIRTUAL_TABLE',
+                            'virtualTable' => $virtualTable,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        try {
+            $exists = $this->layerExists($workspace, $layerName);
+            if ($exists) {
+                $response = $this->client->put(
+                    "{$this->restUrl}/workspaces/{$workspace}/datastores/{$datastore}/featuretypes/{$layerName}.json",
+                    [
+                        'auth' => $this->auth,
+                        'headers' => ['Content-Type' => 'application/json'],
+                        'json' => $payload,
+                    ]
+                );
+                $ok = in_array($response->getStatusCode(), [200, 201], true);
+            } else {
+                $response = $this->client->post(
+                    "{$this->restUrl}/workspaces/{$workspace}/datastores/{$datastore}/featuretypes",
+                    [
+                        'auth' => $this->auth,
+                        'headers' => ['Content-Type' => 'application/json'],
+                        'json' => $payload,
+                    ]
+                );
+                $ok = $response->getStatusCode() === 201;
+            }
+
+            if ($ok) {
+                Log::info("SQL view layer {$layerName} published in workspace {$workspace}");
+                if (isset($options['defaultStyle'])) {
+                    $this->applyStyleToLayer($workspace, $layerName, $options['defaultStyle']);
+                }
+
+                return true;
+            }
+
+            throw GeoServerException::layerPublishFailed(
+                $layerName,
+                new \Exception("Status code: {$response->getStatusCode()}, Body: {$response->getBody()}")
+            );
+        } catch (GuzzleException $e) {
+            throw GeoServerException::layerPublishFailed($layerName, $e);
         }
     }
 

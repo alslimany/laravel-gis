@@ -20,7 +20,7 @@ export function NavMain({
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>{label}</SidebarGroupLabel>
+            {label ? <SidebarGroupLabel>{label}</SidebarGroupLabel> : null}
             <SidebarMenu>
                 {items.map((item) => {
                     const active =

@@ -144,6 +144,27 @@ services:
       - laravel-app
       - redis
 
+  # Laravel scheduler (plugin jobs via PluginManager::registerSchedules — ADR-0001 A4)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: laravel-scheduler-prod
+    restart: always
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - ./storage:/var/www/html/storage
+      - app-logs:/var/www/html/storage/logs
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    networks:
+      - webgis-network
+    depends_on:
+      - laravel-app
+      - redis
+
   # Database Backup Service
   db-backup:
     image: postgres:13

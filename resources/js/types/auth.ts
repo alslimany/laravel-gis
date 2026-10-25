@@ -24,12 +24,27 @@ export type Organization = {
     description?: string | null;
 };
 
-export type NavEntry = {
+export type ConsoleModuleItem = {
     label: string;
     href: string;
     icon: string;
-    group: string;
     match?: string;
+};
+
+export type ConsoleModuleSection = {
+    label: string;
+    items: ConsoleModuleItem[];
+};
+
+export type ConsoleModule = {
+    key: string;
+    label: string;
+    description?: string | null;
+    icon: string;
+    accent: string;
+    kind: 'core' | 'extension' | 'admin';
+    href: string;
+    sections: ConsoleModuleSection[];
 };
 
 export type ConsoleRoutes = Record<string, string | null | undefined>;

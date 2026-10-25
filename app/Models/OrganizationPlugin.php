@@ -20,7 +20,8 @@ class OrganizationPlugin extends Model
     {
         return [
             'enabled' => 'boolean',
-            'settings' => 'array',
+            /** PII / delivery targets (emails, phones, chat IDs) — encrypted at rest (A5). */
+            'settings' => 'encrypted:array',
             'enabled_at' => 'datetime',
             'disabled_at' => 'datetime',
         ];

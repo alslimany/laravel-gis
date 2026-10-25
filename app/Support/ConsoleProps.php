@@ -23,6 +23,8 @@ class ConsoleProps
         $membership = $user?->organization;
         $brandOrganization = $membership ?: self::guestOrganization($user);
         $primary = $brandOrganization?->primary_color ?: '#000000';
+        $consoleModules = app(ConsoleModules::class);
+        $modules = $user ? $consoleModules->for($user) : [];
 
         return [
             'page' => $page,
@@ -51,7 +53,8 @@ class ConsoleProps
                 'success' => session('success'),
                 'error' => session('error'),
             ],
-            'nav' => self::nav($user),
+            'modules' => $modules,
+            'activeModule' => $modules ? $consoleModules->activeKey($modules, request()->route()?->getName()) : null,
             'routes' => self::routes(),
             'abilities' => [
                 'edit' => (bool) ($user && $user->hasAnyRole(['admin', 'editor'])),
@@ -73,77 +76,6 @@ class ConsoleProps
         $candidates = Organization::query()->orderBy('id')->limit(2)->get();
 
         return $candidates->count() === 1 ? $candidates->first() : null;
-    }
-
-    /**
-     * @return list<array{label: string, href: string, icon: string, group: string, match?: string}>
-     */
-    protected static function nav($user): array
-    {
-        if (! $user) {
-            return [];
-        }
-
-        $items = [
-            self::navItem('Dashboard', route('dashboard'), 'dashboard', 'workspace'),
-        ];
-
-        if ($user->organization_id) {
-            // Apps portal first, then the editor loop: import → publish → map; projects sit beside the loop.
-            $items = array_merge($items, array_filter([
-                Route::has('apps.index')
-                    ? self::navItem('Apps', route('apps.index'), 'apps', 'workspace', '/apps')
-                    : null,
-                self::navItem('Data imports', route('imports.index'), 'imports', 'workspace'),
-                self::navItem('Layers', route('layers.index'), 'layers', 'workspace'),
-                self::navItem('Maps', route('maps.index'), 'maps', 'workspace', '/maps'),
-                self::navItem('Projects', route('projects.index'), 'projects', 'workspace'),
-                Route::has('catalog.index')
-                    ? self::navItem('Catalog', route('catalog.index'), 'catalog', 'organize')
-                    : null,
-                Route::has('dashboards.index')
-                    ? self::navItem('Dashboards', route('dashboards.index'), 'dashboards', 'organize')
-                    : null,
-                Route::has('forms.index')
-                    ? self::navItem('Forms', route('forms.index'), 'forms', 'organize')
-                    : null,
-                Route::has('groups.index')
-                    ? self::navItem('Groups', route('groups.index'), 'groups', 'organize')
-                    : null,
-                Route::has('api-tokens.index')
-                    ? self::navItem('API tokens', route('api-tokens.index'), 'tokens', 'organize')
-                    : null,
-                $user->isAdmin() && Route::has('solution-packs.index')
-                    ? self::navItem('Solution packs', route('solution-packs.index'), 'packs', 'organize', '/solution-packs')
-                    : null,
-                self::navItem('Organization', route('organization.settings'), 'organization', 'organize'),
-            ]));
-        }
-
-        if ($user->isAdmin()) {
-            $items[] = self::navItem('Users', route('users.index'), 'users', 'organize');
-        }
-
-        return array_values($items);
-    }
-
-    /**
-     * @return array{label: string, href: string, icon: string, group: string, match?: string}
-     */
-    protected static function navItem(string $label, string $href, string $icon, string $group, ?string $match = null): array
-    {
-        $item = [
-            'label' => $label,
-            'href' => $href,
-            'icon' => $icon,
-            'group' => $group,
-        ];
-
-        if ($match) {
-            $item['match'] = $match;
-        }
-
-        return $item;
     }
 
     /**
@@ -173,6 +105,7 @@ class ConsoleProps
             'forms' => Route::has('forms.index') ? route('forms.index') : null,
             'organization' => Route::has('organization.settings') ? route('organization.settings') : null,
             'users' => Route::has('users.index') ? route('users.index') : null,
+            'extensions' => Route::has('extensions.index') ? route('extensions.index') : null,
         ];
     }
 }

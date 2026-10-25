@@ -111,6 +111,27 @@ services:
       - postgis
       - redis
 
+  # Laravel scheduler (plugin jobs via PluginManager::registerSchedules — ADR-0001 A4)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - webgis-network
+    depends_on:
+      - laravel-app
+      - postgis
+      - redis
+
 networks:
   webgis-network:
     driver: bridge

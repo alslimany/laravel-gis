@@ -7,8 +7,10 @@ use App\Models\Organization;
 use App\Models\OrganizationPlugin;
 use App\Models\PluginEvent;
 use App\Models\User;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Plugin registry and gating lookups (ADR-0001 §2, §5).
@@ -142,6 +144,51 @@ class PluginManager
         }
 
         return app()->getProvider($class) ?? new $class(app());
+    }
+
+    /**
+     * Invoke schedule() on every installed plugin provider (ADR-0001 §4 / A4).
+     * Uninstalled plugins contribute nothing.
+     */
+    public function registerSchedules(Schedule $schedule): void
+    {
+        foreach ($this->installedKeys() as $key) {
+            $this->provider($key)?->schedule($schedule);
+        }
+    }
+
+    /**
+     * Register Gate abilities from each plugin manifest's permissions list (ADR §5 / A5).
+     * Default mapping: *.manage → org admin; *.view (and other) → any org member.
+     */
+    public function registerPermissionGates(): void
+    {
+        // Read the composer registry file directly — avoid Cache during boot
+        // (artisan / Herd may use a DB cache store before the app is ready).
+        foreach ($this->readRegistry() as $manifest) {
+            $permissions = $manifest['permissions'] ?? [];
+            if (! is_array($permissions)) {
+                continue;
+            }
+
+            foreach ($permissions as $permission) {
+                if (! is_string($permission) || $permission === '' || Gate::has($permission)) {
+                    continue;
+                }
+
+                Gate::define($permission, function (User $user) use ($permission): bool {
+                    if ($user->organization_id === null) {
+                        return false;
+                    }
+
+                    if (str_ends_with($permission, '.manage')) {
+                        return $user->hasRole('admin');
+                    }
+
+                    return true;
+                });
+            }
+        }
     }
 
     /**

@@ -69,7 +69,8 @@
         viewport: @json($seedViewport),
         basemap: @json($seedBasemap),
         @endif
-        layers: @json($initialLayers)
+        layers: @json($initialLayers),
+        plugins: @json(array_keys(app(\App\Plugins\PluginManager::class)->enabledFor(auth()->user()?->organization_id)))
     };
 </script>
 @endpush

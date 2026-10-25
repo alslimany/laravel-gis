@@ -2,6 +2,7 @@
 
 namespace Lumina\EarlyWarning\Tests;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Lumina\EarlyWarning\Providers\EarlyWarningServiceProvider;
 use Tests\TestCase;
@@ -36,10 +37,14 @@ class PostgisGeometryTest extends TestCase
         config(['database.connections.ew_pgsql' => ['driver' => 'pgsql', 'url' => $url, 'charset' => 'utf8', 'prefix' => '', 'search_path' => 'public', 'sslmode' => 'disable']]);
         config(['database.default' => 'ew_pgsql']);
         DB::purge('ew_pgsql');
-        DB::statement('DROP TABLE IF EXISTS ew_basins');
+        DB::statement('DROP TABLE IF EXISTS ew_basins CASCADE');
         DB::statement('DROP TABLE IF EXISTS migrations');
         $this->app->register(EarlyWarningServiceProvider::class);
-        $this->artisan('migrate', ['--path' => EarlyWarningServiceProvider::migrationsPath(), '--realpath' => true])->assertExitCode(0);
+        // Geometry tests only need ew_basins; phase-1 tables FK to organizations.
+        $this->artisan('migrate', [
+            '--path' => EarlyWarningServiceProvider::migrationsPath().'/2026_10_23_000000_create_ew_basins_table.php',
+            '--realpath' => true,
+        ])->assertExitCode(0);
     }
 
     public static function databaseName(string $url): ?string
@@ -53,7 +58,7 @@ class PostgisGeometryTest extends TestCase
     protected function tearDown(): void
     {
         if (config('database.default') === 'ew_pgsql') {
-            DB::statement('DROP TABLE IF EXISTS ew_basins');
+            DB::statement('DROP TABLE IF EXISTS ew_basins CASCADE');
             DB::statement('DROP TABLE IF EXISTS migrations');
             DB::disconnect('ew_pgsql');
         }
@@ -66,7 +71,7 @@ class PostgisGeometryTest extends TestCase
         $this->assertSame(4326, (int) DB::scalar("SELECT srid FROM geometry_columns WHERE f_table_name='ew_basins'"));
         $this->assertSame(1, (int) DB::scalar("SELECT count(*) FROM pg_indexes WHERE tablename='ew_basins' AND indexdef ILIKE '%USING gist%'"));
 
-        $this->expectException(\Illuminate\Database\QueryException::class); // CHECK ST_IsValid
+        $this->expectException(QueryException::class); // CHECK ST_IsValid
         DB::insert("INSERT INTO ew_basins (basin_code, name, region, geom) VALUES ('BAD','bad','t', ST_Multi(ST_GeomFromText('POLYGON((0 0,1 1,1 0,0 1,0 0))',4326)))");
     }
 
@@ -92,7 +97,7 @@ class PostgisGeometryTest extends TestCase
 
     public function test_check_rejects_empty_geometry(): void
     {
-        $this->expectException(\Illuminate\Database\QueryException::class); // CHECK NOT ST_IsEmpty
+        $this->expectException(QueryException::class); // CHECK NOT ST_IsEmpty
         DB::insert("INSERT INTO ew_basins (basin_code, name, region, geom) VALUES ('EMPTY','empty','t', ST_GeomFromText('MULTIPOLYGON EMPTY',4326))");
     }
 
@@ -110,7 +115,10 @@ class PostgisGeometryTest extends TestCase
 
     public function test_down_drops_table(): void
     {
-        $this->artisan('migrate:rollback', ['--path' => EarlyWarningServiceProvider::migrationsPath(), '--realpath' => true])->assertExitCode(0);
+        $this->artisan('migrate:rollback', [
+            '--path' => EarlyWarningServiceProvider::migrationsPath().'/2026_10_23_000000_create_ew_basins_table.php',
+            '--realpath' => true,
+        ])->assertExitCode(0);
         $this->assertNull(DB::scalar("SELECT to_regclass('public.ew_basins')"));
     }
 }

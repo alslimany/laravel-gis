@@ -1,9 +1,78 @@
-# Early Warning plugin: pilot basins (#59, Tripoli wadis)
+# Early Warning plugin (v0.9.1)
 
-First-party plugin package (ADR `docs/adr/0001-plugin-architecture.md`). This slice adds the
-global `ew_basins` table, an offline DEM → basin pipeline, and a command that links imported
-basins to the table. The plugin registry/`plugin:install` arrive in #54; until then run the
-migration by path.
+First-party plugin package (ADR `docs/adr/0001-plugin-architecture.md`).
+
+**Shipped**
+- **#59** Global `ew_basins` + offline DEM → basin pipeline (`tools/`) + `early-warning:link-basins`
+- **#58** Phase 1 schema: `ew_forecasts` (global), `ew_subscriptions` / `ew_risk_assessments` /
+  `ew_alert_rules` / `ew_alert_logs` (org-scoped), config, routes under `/x/early-warning`
+- **#60** Open-Meteo hourly precipitation ingest (`FetchForecastsJob`, hourly schedule when installed)
+- **#61** Risk calculator (`RiskCalculator` + `ComputeRiskJob`) → `ew_risk_assessments`;
+  `ew_risk_latest` view; `early-warning:publish-risk-layer` publishes an org Layer + GeoServer
+  SQL View (`ew_basin_risk`) with green/yellow/orange/red SLD. Wording is advisory only.
+- **#62** Map builder panel: `GET /x/early-warning/warnings` + `EarlyWarningPanel` (basin list +
+  forecast-hour slider). Shown when the plugin is enabled for the org (`initialMap.plugins`).
+- **Phase 2 AlertRule** Org-editable thresholds (`/x/early-warning/alert-rules`), Tripoli-calibrated
+  defaults on enable, `EvaluateAlertsJob` → `ew_alert_logs`,
+  `early-warning:suggest-thresholds` from local forecast history.
+- **Phase 2 channels** `DispatchAlertsJob` delivers pending logs via `log` / `email` / `telegram`
+  (`EW_TELEGRAM_BOT_TOKEN` + org `notify_emails` / `telegram_chat_ids`).
+- **Phase 2 IMERG/soil** `ew_observations` + NASA POWER bridge (`PRECTOTCORR` / `GWETROOT`) via
+  `FetchObservationsJob` (every 6h). Risk uses observed soil saturation and strengthens antecedent
+  when observation coverage is sufficient. GES DISC granules can replace this later.
+- **Phase 3 exposure** `ew_exposure_summaries` from OSM Overpass (building count + road km per
+  basin). `ComputeExposureJob` daily; shown on console overview and warnings API.
+- **Phase 3 public / citizen reports** Hashed `ew_public_tokens`, `ew_citizen_reports` (photo +
+  location), public page `/ew/public/{token}`, SMS channel (`EW_SMS_WEBHOOK_URL` or log-only).
+- **Advisory wording** Central `AdvisoryCopy` + config; every console/public/API/alert surface
+  states forecast-based decision support. Optional official authority via
+  `EW_ADVISORY_AUTHORITY_NAME` / `EW_ADVISORY_AUTHORITY_URL`.
+- **Core contracts (Phase 0)** Risk layer publish goes through `App\Contracts\LayerPublisher`
+  (not raw GeoServer). Listens to Core `LayerUpdated` / `LayerDeleted` for EW-tagged layers.
+  `ew_basins` remains a transitional global index (linked via `layer_id`); geometry ownership
+  migrating fully onto Core layers is a follow-up.
+
+Install / upgrade via `php artisan plugin:install|upgrade early-warning` (D15).
+
+### Risk compute + publish
+```bash
+php artisan early-warning:compute-risk --sync
+php artisan early-warning:publish-risk-layer --organization=1
+# Layer only (no GeoServer): --no-geoserver
+```
+Schedule (when installed): fetch forecasts hourly; fetch observations every 6h; compute risk at :05;
+evaluate alerts at :10; dispatch channels at :15; compute exposure daily at 02:30. Enabling the
+plugin for an org seeds `ew_subscriptions` and default AlertRules for all global basins.
+
+### Exposure (OSM)
+```bash
+php artisan early-warning:compute-exposure --sync
+php artisan early-warning:compute-exposure --sync --basin=TRP-HIRA
+```
+
+### Public feed + citizen reports
+Issue a token under **Citizen reports** in the console (shown once). Public URLs:
+- `/ew/public/{token}` — alert page + report form
+- `/ew/public/{token}/feed` — JSON
+- `POST /ew/public/{token}/reports` — photo + lat/lon
+
+SMS: set `notify_phones` on Alert rules channels; optional `EW_SMS_WEBHOOK_URL`.
+
+### Observations (IMERG / soil bridge)
+```bash
+# Earthdata bearer for future GES DISC granule downloads (local .env only):
+# EW_EARTHDATA_TOKEN=…   # https://urs.earthdata.nasa.gov/ → Generate Token
+php artisan early-warning:fetch-observations --sync
+# Disable: EW_OBSERVATIONS_ENABLED=false
+```
+
+### Alert rules + channels
+```bash
+php artisan early-warning:seed-alert-rules
+php artisan early-warning:suggest-thresholds --days=30
+php artisan early-warning:evaluate-alerts --sync
+php artisan early-warning:dispatch-alerts --sync
+```
 
 ## Decisions
 - `ew_basins` is **global** (no `organization_id`); orgs subscribe to areas later (ADR D12).

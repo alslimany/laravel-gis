@@ -1570,3 +1570,46 @@
     height: 1rem;
     flex: none;
 }
+
+/* Early Warning plugin panel (#62) */
+.early-warning-panel .ew-advisory {
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.35rem;
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.early-warning-panel .ew-basin-list {
+    max-height: min(50vh, 28rem);
+    overflow: auto;
+}
+
+.early-warning-panel .ew-basin-row {
+    display: grid;
+    grid-template-columns: 0.65rem 1fr auto;
+    gap: 0.55rem;
+    align-items: start;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.early-warning-panel .ew-basin-row:last-child {
+    border-bottom: 0;
+}
+
+.early-warning-panel .ew-level-dot {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    margin-top: 0.35rem;
+}
+
+.early-warning-panel .ew-basin-name {
+    font-weight: 500;
+    color: #0f172a;
+}
+
+.early-warning-panel .panel-header h4 {
+    display: inline-flex;
+    align-items: center;
+}
