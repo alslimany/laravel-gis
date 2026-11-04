@@ -86,14 +86,20 @@ class DataImportService
 
     /**
      * Import spatial file to PostGIS database.
+     *
+     * When DG-0.2 promote helpers are available, ogr2ogr writes into schema
+     * `staging` (lumina_app CREATE). Callers must then {@see FeatureTableProvisioner::promoteLayerTable}.
+     * Without roles/functions, behaviour is unchanged (direct public/default schema).
      */
     public function importToPostGIS(
         string $filePath,
         string $tableName,
         string $fileType,
-        ?int $targetSrid = null
+        ?int $targetSrid = null,
+        ?bool $useStaging = null
     ): bool {
         $targetSrid = $targetSrid ?? Config::get('dataimport.default_srid');
+        $useStaging ??= app(FeatureTableProvisioner::class)->isPromoteAvailable();
 
         $dbConfig = Config::get('database.connections.pgsql');
         $connectionString = sprintf(
@@ -120,6 +126,11 @@ class DataImportService
             '-progress',
         ];
 
+        if ($useStaging) {
+            $command[] = '-lco';
+            $command[] = 'SCHEMA=staging';
+        }
+
         // Add specific options for different file types
         if ($fileType === 'csv') {
             $command[] = '-oo';
@@ -130,7 +141,10 @@ class DataImportService
             $command[] = 'KEEP_GEOM_COLUMNS=NO';
         }
 
-        Log::info('Running ogr2ogr command', ['command' => implode(' ', $command)]);
+        Log::info('Running ogr2ogr command', [
+            'command' => implode(' ', $command),
+            'staging' => $useStaging,
+        ]);
 
         $process = new Process($command);
         $process->setTimeout($this->timeout);
@@ -146,6 +160,7 @@ class DataImportService
 
         Log::info('Successfully imported data', [
             'table' => $tableName,
+            'staging' => $useStaging,
             'output' => $process->getOutput(),
         ]);
 
@@ -199,9 +214,15 @@ class DataImportService
         $fileInfo = $this->getFileInfo($source, $fileType);
 
         $tableName = $this->generateTableName($import->file_name, $import->organization_id);
+        $provisioner = app(FeatureTableProvisioner::class);
+        $useStaging = $provisioner->isPromoteAvailable();
 
         $import->updateProgress(40);
-        $this->importToPostGIS($source, $tableName, $fileType);
+        $this->importToPostGIS($source, $tableName, $fileType, useStaging: $useStaging);
+
+        if ($useStaging) {
+            $provisioner->promoteLayerTable($tableName, $tableName);
+        }
 
         $import->updateProgress(80);
         $geometryType = $this->getTableGeometryType($tableName);

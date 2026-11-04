@@ -59,7 +59,11 @@ class ExcelImportService
             ARRAY_FILTER_USE_BOTH
         );
 
-        $this->createTable($tableName, $attributeHeaders);
+        $provisioner = app(FeatureTableProvisioner::class);
+        $useStaging = $provisioner->isPromoteAvailable();
+        $qualifiedTable = $useStaging ? 'staging.'.$tableName : $tableName;
+
+        $this->createTable($qualifiedTable, $attributeHeaders);
 
         $srid = (int) Config::get('dataimport.default_srid', 4326);
         $inserted = 0;
@@ -84,21 +88,25 @@ class ExcelImportService
             $batch[] = ['attributes' => $attributes, 'wkt' => $wkt];
 
             if (count($batch) >= $chunkSize) {
-                $inserted += $this->insertBatch($tableName, $attributeHeaders, $batch, $srid);
+                $inserted += $this->insertBatch($qualifiedTable, $attributeHeaders, $batch, $srid);
                 $batch = [];
             }
         }
 
         if ($batch !== []) {
-            $inserted += $this->insertBatch($tableName, $attributeHeaders, $batch, $srid);
+            $inserted += $this->insertBatch($qualifiedTable, $attributeHeaders, $batch, $srid);
         }
 
         if ($inserted === 0) {
-            DB::statement("DROP TABLE IF EXISTS {$tableName} CASCADE");
+            DB::statement("DROP TABLE IF EXISTS {$qualifiedTable} CASCADE");
             throw new Exception('No valid rows with geometry were found in the Excel file.');
         }
 
-        DB::statement("CREATE INDEX IF NOT EXISTS {$tableName}_geom_idx ON {$tableName} USING GIST (geom)");
+        DB::statement("CREATE INDEX IF NOT EXISTS {$tableName}_geom_idx ON {$qualifiedTable} USING GIST (geom)");
+
+        if ($useStaging) {
+            $provisioner->promoteLayerTable($tableName, $tableName);
+        }
 
         $geometryType = $dataImportService->getTableGeometryType($tableName) ?? 'Point';
         $featureCount = $dataImportService->getTableFeatureCount($tableName);
@@ -202,7 +210,7 @@ class ExcelImportService
     }
 
     /**
-     * @param  list<string>  $attributeHeaders keyed by column letter
+     * @param  list<string>  $attributeHeaders  keyed by column letter
      */
     protected function createTable(string $tableName, array $attributeHeaders): void
     {
