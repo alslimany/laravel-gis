@@ -34,7 +34,9 @@ class LayerApiController extends Controller
                     $layer->id,
                     $layer->organization_id
                 )
-            )->values()
+            )->values()->each(
+                fn (Layer $layer) => $layer->forPublicApi($user)
+            )
         );
 
         return response()->json($layers);
@@ -44,7 +46,9 @@ class LayerApiController extends Controller
     {
         $this->authorizeLayerView($request, $layer);
 
-        return response()->json(['data' => $layer]);
+        return response()->json([
+            'data' => $layer->forPublicApi($request->user()),
+        ]);
     }
 
     public function geojson(Request $request, Layer $layer)

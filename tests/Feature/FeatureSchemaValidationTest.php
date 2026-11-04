@@ -40,9 +40,9 @@ class FeatureSchemaValidationTest extends TestCase
     public function test_api_create_rejects_schema_violations_with_422(): void
     {
         $layer = $this->makeLayerWithTable($this->schema());
-        Sanctum::actingAs($this->editor);
+        Sanctum::actingAs($this->editor, ['*']);
 
-        $this->postJson("/api/v1/layers/{$layer->id}/features", [
+        $this->postJson("/api/v1/layers/{$layer->public_id}/features", [
             'attributes' => ['depth' => 'abc', 'status' => 'pending'],
         ])
             ->assertStatus(422)
@@ -58,9 +58,9 @@ class FeatureSchemaValidationTest extends TestCase
     public function test_api_create_coerces_valid_values(): void
     {
         $layer = $this->makeLayerWithTable($this->schema());
-        Sanctum::actingAs($this->editor);
+        Sanctum::actingAs($this->editor, ['*']);
 
-        $this->postJson("/api/v1/layers/{$layer->id}/features", [
+        $this->postJson("/api/v1/layers/{$layer->public_id}/features", [
             'attributes' => [
                 'name' => 'Pit A',
                 'depth' => '42',
@@ -166,15 +166,15 @@ class FeatureSchemaValidationTest extends TestCase
             'name' => 'Old',
             'depth' => 'garbage',
         ]);
-        Sanctum::actingAs($this->editor);
+        Sanctum::actingAs($this->editor, ['*']);
 
-        $this->putJson("/api/v1/layers/{$layer->id}/features/{$featureId}", [
+        $this->putJson("/api/v1/layers/{$layer->public_id}/features/{$featureId}", [
             'attributes' => ['depth' => 'abc'],
         ])
             ->assertStatus(422)
             ->assertJsonPath('errors.depth', 'The Depth field must be a whole number.');
 
-        $this->putJson("/api/v1/layers/{$layer->id}/features/{$featureId}", [
+        $this->putJson("/api/v1/layers/{$layer->public_id}/features/{$featureId}", [
             'attributes' => ['name' => 'Renamed'],
         ])->assertOk();
 
@@ -272,8 +272,8 @@ class FeatureSchemaValidationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('field.type', 'number');
 
-        Sanctum::actingAs($this->editor);
-        $this->postJson("/api/v1/layers/{$layer->id}/features", [
+        Sanctum::actingAs($this->editor, ['*']);
+        $this->postJson("/api/v1/layers/{$layer->public_id}/features", [
             'attributes' => ['depth' => '7'],
         ])->assertCreated();
 
@@ -286,15 +286,15 @@ class FeatureSchemaValidationTest extends TestCase
             'depth' => ['type' => 'integer', 'required' => true],
             'total' => ['type' => 'float', 'calculated' => 'depth * 2'],
         ]);
-        Sanctum::actingAs($this->editor);
+        Sanctum::actingAs($this->editor, ['*']);
 
-        $this->postJson("/api/v1/layers/{$layer->id}/features", [
+        $this->postJson("/api/v1/layers/{$layer->public_id}/features", [
             'attributes' => [],
         ])
             ->assertStatus(422)
             ->assertJsonPath('errors.depth', 'The depth field is required.');
 
-        $this->postJson("/api/v1/layers/{$layer->id}/features", [
+        $this->postJson("/api/v1/layers/{$layer->public_id}/features", [
             'attributes' => ['depth' => '5'],
         ])->assertCreated();
 

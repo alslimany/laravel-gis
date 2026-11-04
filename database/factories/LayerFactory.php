@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Layer;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Layer>
+ * @extends Factory<Layer>
  */
 class LayerFactory extends Factory
 {
@@ -16,10 +18,14 @@ class LayerFactory extends Factory
      */
     public function definition(): array
     {
+        $name = fake()->words(3, true);
+
         return [
-            'name' => fake()->words(3, true),
+            'name' => $name,
+            'public_id' => (string) Str::ulid(),
+            'alias' => 'layer_'.fake()->unique()->numerify('########'),
             'description' => fake()->sentence(),
-            'table_name' => 'layer_' . fake()->unique()->slug(2),
+            'table_name' => 'layer_'.fake()->unique()->slug(2),
             'geometry_type' => fake()->randomElement(['Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon']),
             'feature_count' => fake()->numberBetween(0, 10000),
             'style_config' => [
@@ -44,7 +50,7 @@ class LayerFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'published' => true,
             'geoserver_layer_name' => $attributes['table_name'],
-            'geoserver_workspace' => 'org_' . fake()->numberBetween(1, 100),
+            'geoserver_workspace' => 'org_'.fake()->numberBetween(1, 100),
             'published_at' => fake()->dateTimeBetween('-1 month', 'now'),
         ]);
     }

@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Webhook;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -84,14 +85,14 @@ class ContentAccessAndApiGapsTest extends TestCase
             'visibility' => 'organization',
         ]);
 
-        Sanctum::actingAs($this->owner);
+        Sanctum::actingAs($this->owner, ['*']);
 
-        if (\Illuminate\Support\Facades\DB::connection()->getDriverName() !== 'pgsql') {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
             $this->markTestSkipped('PostGIS required for feature create webhook test.');
         }
 
         $table = $this->layer->table_name;
-        \Illuminate\Support\Facades\DB::statement("
+        DB::statement("
             CREATE TABLE IF NOT EXISTS {$table} (
                 id serial PRIMARY KEY,
                 name text,
@@ -99,7 +100,7 @@ class ContentAccessAndApiGapsTest extends TestCase
             )
         ");
 
-        $response = $this->postJson("/api/v1/layers/{$this->layer->id}/features", [
+        $response = $this->postJson("/api/v1/layers/{$this->layer->public_id}/features", [
             'wkt' => 'POINT(1 2)',
             'attributes' => ['name' => 'hooked'],
         ]);
