@@ -6,12 +6,15 @@ use App\Http\Middleware\EnsurePluginEnabled;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasOrganization;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SetLocale;
 use App\Plugins\PluginManager;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,7 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            SetLocale::class,
             HandleInertiaRequests::class,
+        ]);
+
+        // API: same resolution (user → session → Accept-Language → config). Appended, so it
+        // runs after the stateful session middleware that statefulApi() prepends.
+        $middleware->api(append: [
+            SetLocale::class,
         ]);
 
         $middleware->alias([
@@ -33,6 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'organization' => EnsureUserHasOrganization::class,
             'plugin' => EnsurePluginEnabled::class,
             'super-admin' => EnsureSuperAdmin::class,
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
         ]);
 
         $middleware->statefulApi();
