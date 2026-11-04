@@ -1,0 +1,108 @@
+# DG-0.1 / DG-0.2 — opt-in privilege + provisioning suite on throwaway PostGIS 17.
+# Default tests.yml stays on sqlite and does NOT set DB_ROLES_TEST (matrix tests skip).
+# This job applies docker/postgres/roles.sql only inside the ephemeral GHA service
+# container — never against Abdullah's local demo volume (gate DG-0.7 / G1).
+name: DB roles (opt-in)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - '*.x'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  db-roles:
+    name: PostGIS 17 roles + privilege suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgis:
+        # Pin major.minor; digest pins stay in the DG-0.6 runbook for cutover.
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: lumina_roles_ci
+          POSTGRES_USER: postgres
+          # Throwaway CI password only — not a real secret.
+          POSTGRES_PASSWORD: ci_roles_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lumina_roles_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_ROLES_TEST: '1'
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: lumina_roles_ci
+      DB_USERNAME: postgres
+      DB_PASSWORD: ci_roles_only
+      DB_URL: ''
+      APP_ENV: testing
+      GEOSERVER_ADMIN_USER: admin
+      GEOSERVER_ADMIN_PASSWORD: ci_geoserver_only
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, pgsql
+          coverage: none
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Wait for PostGIS and enable extension
+        env:
+          PGPASSWORD: ci_roles_only
+        run: |
+          for i in $(seq 1 30); do
+            if psql -h 127.0.0.1 -U postgres -d lumina_roles_ci -c 'SELECT 1' >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          psql -h 127.0.0.1 -U postgres -d lumina_roles_ci -v ON_ERROR_STOP=1 \
+            -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+          psql -h 127.0.0.1 -U postgres -d lumina_roles_ci -tAc \
+            "SELECT default_version FROM pg_available_extensions WHERE name = 'postgis';"
+
+      - name: Apply roles.sql (throwaway CI DB only)
+        env:
+          PGPASSWORD: ci_roles_only
+        run: |
+          psql -h 127.0.0.1 -U postgres -d lumina_roles_ci -v ON_ERROR_STOP=1 \
+            -f docker/postgres/roles.sql
+          psql -h 127.0.0.1 -U postgres -d lumina_roles_ci -tAc \
+            "SELECT rolname FROM pg_roles WHERE rolname LIKE 'lumina_%' ORDER BY 1;"
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare Laravel env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          # Override host/password for the GHA service (phpunit.xml has no force on DB_*).
+          php artisan config:clear
+
+      - name: Migrate (creates DG-0.2 provisioning functions when roles exist)
+        run: php artisan migrate --force --no-interaction
+
+      - name: Run DB roles + layer provisioning suite
+        run: >
+          php artisan test
+          --filter='DbRolesPrivilegeMatrixTest|LayerTableProvisioningTest'
