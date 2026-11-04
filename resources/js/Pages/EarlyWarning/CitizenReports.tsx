@@ -1,4 +1,6 @@
 import { Link, useForm } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Empty, Field, PageHeader, Panel, PrimaryButton, TextInput } from '@/components/gis';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +48,7 @@ export default function CitizenReports({
     public_base,
     issue_token_url,
 }: Props) {
+    const { t } = useTranslation();
     const tokenForm = useForm({ label: 'Public feed' });
 
     function issueToken(event: React.FormEvent) {
@@ -55,13 +58,13 @@ export default function CitizenReports({
 
     return (
         <AppLayout
-            title="Citizen reports"
+            title={t('early_warning.citizen_reports')}
             breadcrumbs={[
-                { title: 'Early Warning', href: '/x/early-warning' },
-                { title: 'Citizen reports', href: '/x/early-warning/citizen-reports' },
+                { title: t('early_warning.title'), href: '/x/early-warning' },
+                { title: t('early_warning.citizen_reports'), href: '/x/early-warning/citizen-reports' },
             ]}
         >
-            <PageHeader title="Citizen reports" />
+            <PageHeader title={t('early_warning.citizen_reports')} />
             <AdvisoryBanner
                 advisory={advisory}
                 authority={authority}
@@ -70,10 +73,10 @@ export default function CitizenReports({
 
             {plain_token ? (
                 <Panel className="mb-6 border-amber-500/40 bg-amber-500/5 p-3">
-                    <p className="text-sm font-medium">Copy this public token now</p>
+                    <p className="text-sm font-medium">{t('disaster.copy_public_token')}</p>
                     <code className="mt-2 block break-all text-xs">{plain_token}</code>
                     <p className="mt-2 text-xs text-muted-foreground">
-                        Public URL: {public_base}/{plain_token}
+                        {__('ew.public_url')} {public_base}/{plain_token}
                     </p>
                 </Panel>
             ) : null}
@@ -81,11 +84,11 @@ export default function CitizenReports({
             <div className="mb-8 grid gap-6 lg:grid-cols-2">
                 <Panel>
                     <div className="border-b border-border px-3 py-2">
-                        <h2 className="text-sm font-semibold">Public tokens</h2>
+                        <h2 className="text-sm font-semibold">{t('disaster.public_tokens_short')}</h2>
                     </div>
                     <form onSubmit={issueToken} className="flex flex-wrap items-end gap-2 p-3">
                         <div className="min-w-[12rem] flex-1">
-                            <Field label="Label">
+                            <Field label={t('forms.label')}>
                                 <TextInput
                                     value={tokenForm.data.label}
                                     onChange={(e) => tokenForm.setData('label', e.target.value)}
@@ -93,11 +96,11 @@ export default function CitizenReports({
                             </Field>
                         </div>
                         <PrimaryButton type="submit" disabled={tokenForm.processing}>
-                            Issue token
+                            {__('ew.issue_token')}
                         </PrimaryButton>
                     </form>
                     {tokens.length === 0 ? (
-                        <Empty>No tokens yet.</Empty>
+                        <Empty>{__('ew.no_tokens')}</Empty>
                     ) : (
                         <ul className="divide-y divide-border">
                             {tokens.map((token) => (
@@ -115,7 +118,7 @@ export default function CitizenReports({
                                                 as="button"
                                                 preserveScroll
                                             >
-                                                Revoke
+                                                {__('ew.revoke')}
                                             </Link>
                                         </Button>
                                     ) : (
@@ -131,23 +134,23 @@ export default function CitizenReports({
 
                 <Panel>
                     <div className="border-b border-border px-3 py-2">
-                        <h2 className="text-sm font-semibold">Incoming reports</h2>
+                        <h2 className="text-sm font-semibold">{__('ew.incoming_reports')}</h2>
                     </div>
                     {reports.length === 0 ? (
-                        <Empty>No citizen reports yet.</Empty>
+                        <Empty>{__('ew.no_citizen_reports')}</Empty>
                     ) : (
                         <ul className="divide-y divide-border">
                             {reports.map((report) => (
                                 <li key={report.id} className="px-3 py-3 text-sm">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <Badge variant="secondary" className="capitalize">
-                                            {report.status}
+                                            {enumLabel(report.status)}
                                         </Badge>
-                                        <span className="font-mono text-xs text-muted-foreground">
+                                        <span dir="ltr" className="font-mono text-xs text-muted-foreground">
                                             {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}
                                         </span>
                                         <span className="ms-auto text-xs text-muted-foreground">
-                                            {report.reported_at ? when(report.reported_at) : '—'}
+                                            {report.reported_at ? when(report.reported_at) : t('common.em_dash')}
                                         </span>
                                     </div>
                                     {report.note ? <p className="mt-1 text-muted-foreground">{report.note}</p> : null}
@@ -158,7 +161,7 @@ export default function CitizenReports({
                                             rel="noreferrer"
                                             className="mt-1 inline-block text-xs text-primary hover:underline"
                                         >
-                                            Photo
+                                            {__('ew.photo')}
                                         </a>
                                     ) : null}
                                     <div className="mt-2 flex gap-2">

@@ -108,8 +108,8 @@ class AppGalleryController extends Controller
 
             $workspaces[] = [
                 'slug' => $pack->slug(),
-                'name' => $pack->name(),
-                'description' => $pack->description(),
+                'name' => $pack->displayName(),
+                'description' => $pack->displayDescription(),
                 'contents' => $pack->contentsSummary(),
                 'items' => $items,
                 'workflow' => app(WorkflowResolver::class)->resolve($pack, $organization),

@@ -1,9 +1,11 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { GhostLink, PageHeader, PrimaryButton } from '@/components/gis';
 
 export default function Share({ project }) {
+    const { t } = useTranslation();
     const form = useForm({ name: project.name, description: project.description || '', is_public: Boolean(project.is_public) });
     const [copied, setCopied] = useState('');
     const shareUrl = project.share_token ? `${window.location.origin}/projects/shared/${project.share_token}` : '';
@@ -16,7 +18,7 @@ export default function Share({ project }) {
 
     return (
         <AppLayout title={`Share ${project.name}`}>
-            <PageHeader title={`Share ${project.name}`} action={<GhostLink href={`/projects/${project.id}`}>Back</GhostLink>} />
+            <PageHeader title={`Share ${project.name}`} action={<GhostLink href={`/projects/${project.id}`}>{t('actions.back')}</GhostLink>} />
             <label className="flex items-center gap-2">
                 <input type="checkbox" checked={Boolean(project.is_public)} onChange={toggle} />
                 Make this project public

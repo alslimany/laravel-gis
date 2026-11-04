@@ -50,7 +50,7 @@ export default function AppShell({
 
             <div
                 className={`flex min-h-full min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
-                    collapsed ? 'lg:ml-[72px]' : 'lg:ml-64'
+                    collapsed ? 'lg:ms-[72px]' : 'lg:ms-64'
                 }`}
             >
                 <Topbar

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EDXLResourceMessage xmlns="urn:oasis:names:tc:emergency:EDXL:RM:1.0" schemaVersion="1.0-lite">
+  <messageContentType>RequestResource</messageContentType>
+  <originatingMessageID>dm-req-1</originatingMessageID>
+  <incidentID>INC-FLOOD-1</incidentID>
+  <organizationID>1</organizationID>
+  <Requester>
+    <UserID>10</UserID>
+    <Name>Ops Desk</Name>
+  </Requester>
+  <ResourceInformation>
+    <ResourceType>
+      <Name>Bottled water</Name>
+      <Category>relief</Category>
+      <Capability>hydration</Capability>
+      <Unit>case</Unit>
+    </ResourceType>
+    <Quantity>50</Quantity>
+    <Priority>high</Priority>
+    <DateTimeNeeded>2026-10-28T18:00:00+00:00</DateTimeNeeded>
+    <Status>requested</Status>
+    <Notes>Sector 3 staging</Notes>
+  </ResourceInformation>
+  <AssignmentInformation/>
+</EDXLResourceMessage>

@@ -1,36 +1,38 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { when } from '@/lib/format';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
 
 export default function Index({ dashboards }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props;
     const rows = dashboards?.data || [];
 
     return (
-        <AppLayout title="Dashboards">
+        <AppLayout title={t('dashboards.title')}>
             <PageHeader
-                title="Dashboards"
+                title={t('dashboards.title')}
                 action={
                     abilities?.edit ? (
                         <PrimaryLink href="/dashboards/create">
-                            New dashboard
+                            {t('dash.new')}
                         </PrimaryLink>
                     ) : null
                 }
             />
             <Panel>
                 {rows.length === 0 ? (
-                    <Empty>No dashboards yet.</Empty>
+                    <Empty>{t('dash.empty')}</Empty>
                 ) : (
                     <DataTable>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head className={`${thClass}`}>Name</Table.Head>
-                                <Table.Head className={`${thClass}`}>Widgets</Table.Head>
-                                <Table.Head className={`${thClass}`}>Visibility</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Updated</Table.Head>
-                                <Table.Head className={`${thClass}`}>Actions</Table.Head>
+                                <Table.Head className={`${thClass}`}>{t('forms.name')}</Table.Head>
+                                <Table.Head className={`${thClass}`}>{t('dash.widgets')}</Table.Head>
+                                <Table.Head className={`${thClass}`}>{t('dash.visibility')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('layers.updated')}</Table.Head>
+                                <Table.Head className={`${thClass}`}>{t('forms.actions')}</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -43,14 +45,14 @@ export default function Index({ dashboards }) {
                                     </Table.Cell>
                                     <Table.Cell className={tdMono}>{Array.isArray(board.widgets) ? board.widgets.length : 0}</Table.Cell>
                                     <Table.Cell className={tdClass}>
-                                        <Pill live={board.is_public}>{board.is_public ? 'Public' : 'Private'}</Pill>
+                                        <Pill live={board.is_public}>{board.is_public ? t('common.public') : t('common.private')}</Pill>
                                     </Table.Cell>
                                     <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{when(board.updated_at)}</Table.Cell>
                                     <Table.Cell className={tdClass}>
                                         <RowActions>
-                                            <ActionLink href={`/dashboards/${board.id}`}>View</ActionLink>
-                                            <ActionLink href={`/dashboards/${board.id}/edit`}>Edit</ActionLink>
-                                            <DangerButton onClick={() => destroyResource(`/dashboards/${board.id}`, 'Delete this dashboard?')}>Delete</DangerButton>
+                                            <ActionLink href={`/dashboards/${board.id}`}>{t('actions.view')}</ActionLink>
+                                            <ActionLink href={`/dashboards/${board.id}/edit`}>{t('actions.edit')}</ActionLink>
+                                            <DangerButton onClick={() => destroyResource(`/dashboards/${board.id}`, t('dash.confirm_delete'))}>{t('actions.delete')}</DangerButton>
                                         </RowActions>
                                     </Table.Cell>
                                 </Table.Row>

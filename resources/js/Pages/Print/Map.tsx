@@ -1,10 +1,14 @@
+import { whenTime } from '@/lib/format';
+import { __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
+import { useTranslation } from '@/lib/i18n';
 import { GhostLink, Heading, PageHeader } from '@/components/gis';
 
 export default function Map({ map, printTitle, legend = [], mapImage, scaleDenominator, printedAt, logoDataUri }) {
+    const { t } = useTranslation();
     return (
         <AppLayout title={printTitle || map.name}>
-            <PageHeader title={printTitle || map.name} action={<GhostLink href={`/maps/${map.id}`}>Back</GhostLink>} />
+            <PageHeader title={printTitle || map.name} action={<GhostLink href={`/maps/${map.id}`}>{t('actions.back')}</GhostLink>} />
             <article className="mx-auto max-w-4xl border border-border bg-card p-6">
                 <header className="mb-4 flex items-center justify-between">
                     <div>
@@ -23,7 +27,7 @@ export default function Map({ map, printTitle, legend = [], mapImage, scaleDenom
                     ))}
                 </ul>
                 <p className="mt-4 font-mono text-muted-foreground">
-                    {scaleDenominator ? `1:${scaleDenominator}` : 'Scale from the map builder'} · {printedAt}
+                    {scaleDenominator ? `1:${scaleDenominator}` : __('maps.scale_from_builder')} · {printedAt ? whenTime(printedAt) : ''}
                 </p>
             </article>
         </AppLayout>

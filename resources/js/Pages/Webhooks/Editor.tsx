@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, PrimaryButton, TextInput } from '@/components/gis';
 
 export default function Editor({ webhook = null, eventOptions = [] }) {
+    const { t } = useTranslation();
     const editing = Boolean(webhook);
     const form = useForm({
         name: webhook?.name || '',
@@ -29,10 +31,10 @@ export default function Editor({ webhook = null, eventOptions = [] }) {
         <AppLayout title={editing ? `Edit ${webhook.name}` : 'New webhook'}>
             <PageHeader title={editing ? `Edit ${webhook.name}` : 'New webhook'} />
             <form onSubmit={submit} className="max-w-xl space-y-4">
-                <Field label="Name" error={form.errors.name}>
+                <Field label={t('forms.name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Endpoint URL" error={form.errors.url}>
+                <Field label={t('webhooks.endpoint_url')} error={form.errors.url}>
                     <TextInput type="url" value={form.data.url} required placeholder="https://example.com/hooks" onChange={(event) => form.setData('url', event.target.value)} />
                 </Field>
                 <fieldset>
@@ -41,7 +43,7 @@ export default function Editor({ webhook = null, eventOptions = [] }) {
                         {eventOptions.map((option) => (
                             <label key={option} className="flex items-center gap-2">
                                 <input type="checkbox" checked={form.data.events.includes(option)} onChange={() => toggleEvent(option)} />
-                                <span className="font-mono">{option}</span>
+                                <span dir="ltr" className="font-mono">{option}</span>
                             </label>
                         ))}
                     </div>
@@ -54,7 +56,7 @@ export default function Editor({ webhook = null, eventOptions = [] }) {
                     Active
                 </label>
                 <div className="flex gap-3">
-                    <GhostLink href="/webhooks">Cancel</GhostLink>
+                    <GhostLink href="/webhooks">{t('actions.cancel')}</GhostLink>
                     <PrimaryButton type="submit" disabled={form.processing}>
                         {editing ? 'Update webhook' : 'Create webhook'}
                     </PrimaryButton>

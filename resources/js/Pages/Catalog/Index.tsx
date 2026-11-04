@@ -1,4 +1,5 @@
 import { Link, router } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { count } from '@/lib/format';
@@ -31,11 +32,12 @@ function ResultList({ title, items, hrefFor }) {
 }
 
 export default function Index({ q = '', layers = [], maps = [], forms = [], dashboards = [] }) {
+    const { t } = useTranslation();
     const [query, setQuery] = useState(q);
 
     return (
-        <AppLayout title="Catalog">
-            <PageHeader title="Catalog" />
+        <AppLayout title={t('catalog.title')}>
+            <PageHeader title={t('catalog.title')} />
             <form
                 className="mb-4 flex max-w-xl gap-2"
                 onSubmit={(event) => {
@@ -44,13 +46,13 @@ export default function Index({ q = '', layers = [], maps = [], forms = [], dash
                 }}
             >
                 <TextInput value={query} placeholder="Search layers, maps, forms, dashboards" onChange={(event) => setQuery(event.target.value)} />
-                <PrimaryButton type="submit">Search</PrimaryButton>
+                <PrimaryButton type="submit">{t('actions.search')}</PrimaryButton>
             </form>
             <div className="grid gap-4 lg:grid-cols-2">
-                <ResultList title="Layers" items={layers} hrefFor={(item) => `/layers/${item.id}`} />
-                <ResultList title="Maps" items={maps} hrefFor={(item) => `/maps/${item.id}`} />
-                <ResultList title="Forms" items={forms} hrefFor={(item) => `/forms/${item.id}`} />
-                <ResultList title="Dashboards" items={dashboards} hrefFor={(item) => `/dashboards/${item.id}`} />
+                <ResultList title={t('layers.title')} items={layers} hrefFor={(item) => `/layers/${item.id}`} />
+                <ResultList title={t('maps.title')} items={maps} hrefFor={(item) => `/maps/${item.id}`} />
+                <ResultList title={t('forms_page.title')} items={forms} hrefFor={(item) => `/forms/${item.id}`} />
+                <ResultList title={t('dashboards.title')} items={dashboards} hrefFor={(item) => `/dashboards/${item.id}`} />
             </div>
             <p className="sr-only">{count(layers.length + maps.length)}</p>
         </AppLayout>

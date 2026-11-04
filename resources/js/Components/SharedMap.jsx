@@ -1,3 +1,4 @@
+import { localizedControls } from '@/lib/ol-controls';
 import { useEffect, useRef } from 'react';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -61,6 +62,7 @@ export default function SharedMap({ map: mapRecord, onViewChange = null }) {
         const center = viewport.center;
         const viewCenter = Array.isArray(center) && Math.abs(center[0]) <= 180 ? fromLonLat(center) : center || fromLonLat([0, 20]);
         const map = new Map({
+            controls: localizedControls(),
             target: target.current,
             layers: [new TileLayer({ source: basemapSource(mapRecord.basemap) })],
             view: new View({

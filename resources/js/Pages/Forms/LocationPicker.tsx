@@ -10,6 +10,8 @@ import VectorSource from 'ol/source/Vector';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/lib/i18n';
+import { localizedControls } from '@/lib/ol-controls';
 import 'ol/ol.css';
 
 const DEFAULT_CENTER = fromLonLat([13.1913, 32.8872]);
@@ -38,6 +40,7 @@ function place(source, longitude, latitude) {
 }
 
 export default function LocationPicker({ latitude, longitude, onPick }) {
+    const { t } = useTranslation();
     const host = useRef(null);
     const mapRef = useRef(null);
     const sourceRef = useRef(null);
@@ -48,6 +51,7 @@ export default function LocationPicker({ latitude, longitude, onPick }) {
         const source = new VectorSource();
         sourceRef.current = source;
         const map = new Map({
+            controls: localizedControls(),
             target: host.current,
             layers: [
                 new TileLayer({ source: new OSM() }),
@@ -110,15 +114,15 @@ export default function LocationPicker({ latitude, longitude, onPick }) {
             <div
                 ref={host}
                 role="application"
-                aria-label="Map. Click to choose a location."
+                aria-label={t('forms.location_map_aria')}
                 className="h-64 w-full overflow-hidden rounded-md border border-border"
             />
             <div>
                 <Button type="button" variant="outline" onClick={locate}>
-                    Use my location
+                    {t('forms.use_my_location')}
                 </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Click the map to drop a point, or enter latitude and longitude.</p>
+            <p className="text-xs text-muted-foreground">{t('forms.location_picker_hint')}</p>
         </div>
     );
 }

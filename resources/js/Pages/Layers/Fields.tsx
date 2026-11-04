@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import { useState, type FormEvent } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import {
@@ -43,22 +44,22 @@ type LayerRecord = {
 };
 
 const typeLabels: Record<string, string> = {
-    string: 'Text',
-    integer: 'Whole number',
-    float: 'Decimal',
-    number: 'Decimal',
-    boolean: 'Yes / No',
-    date: 'Date',
-    datetime: 'Date & time',
+    string: 'sp.opt.text',
+    integer: 'sp.opt.integer',
+    float: 'sp.opt.decimal',
+    number: 'sp.opt.decimal',
+    boolean: 'sp.opt.boolean',
+    date: 'sp.opt.date',
+    datetime: 'sp.opt.datetime',
 };
 
 const typeOptions: Array<[string, string]> = [
-    ['string', 'Text'],
-    ['integer', 'Whole number'],
-    ['float', 'Decimal'],
-    ['boolean', 'Yes / No'],
-    ['date', 'Date'],
-    ['datetime', 'Date & time'],
+    ['string', 'sp.opt.text'],
+    ['integer', 'sp.opt.integer'],
+    ['float', 'sp.opt.decimal'],
+    ['boolean', 'sp.opt.boolean'],
+    ['date', 'sp.opt.date'],
+    ['datetime', 'sp.opt.datetime'],
 ];
 
 const emptyForm = {
@@ -80,9 +81,11 @@ function domainOf(field: FieldRecord): string[] {
         .filter((value) => value !== '');
 }
 
-export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fields?: FieldRecord[] }) {
+export default function Fields({ layer, fields = [], readOnly = false }: { layer: LayerRecord; fields?: FieldRecord[]; readOnly?: boolean }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props as { abilities?: { edit?: boolean } };
-    const canEdit = Boolean(abilities?.edit);
+    // SQL-view layers are read-only: hide add/edit/delete (the server refuses them too).
+    const canEdit = Boolean(abilities?.edit) && !readOnly;
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editing, setEditing] = useState<FieldRecord | null>(null);
@@ -173,7 +176,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                     next[key] = Array.isArray(value) ? (value as string[]) : [String(value)];
                 });
                 if (Object.keys(next).length === 0) {
-                    next.name = [String(data.message || 'Could not save the field.')];
+                    next.name = [String(data.message || __('fields.save_failed'))];
                 }
                 setErrors(next);
                 return;
@@ -182,7 +185,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
             setDialogOpen(false);
             router.reload({ only: ['fields'] });
         } catch (error) {
-            setErrors({ name: [error instanceof Error ? error.message : 'Could not save the field.'] });
+            setErrors({ name: [error instanceof Error ? error.message : __('fields.save_failed')] });
         } finally {
             setSaving(false);
         }
@@ -190,7 +193,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
 
     async function remove(field: FieldRecord) {
         const confirmed = window.confirm(
-            `Delete the "${field.alias || field.name}" field definition? The column and its data stay in the table.`,
+            __('fields.confirm_delete', { name: field.alias || field.name }),
         );
         if (!confirmed) {
             return;
@@ -202,7 +205,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
         });
         if (!response.ok) {
             const data = await response.json().catch(() => ({}) as Record<string, unknown>);
-            window.alert(String(data.error || 'Could not delete the field.'));
+            window.alert(String(data.error || __('fields.delete_failed')));
             return;
         }
         router.reload({ only: ['fields'] });
@@ -213,46 +216,45 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
         : [...typeOptions, [form.type, typeLabels[form.type] || form.type]];
 
     return (
-        <AppLayout title={`Fields — ${layer.name}`}>
+        <AppLayout title={__('fields.title', { name: layer.name })}>
             <PageHeader
-                title="Fields"
+                title={t('layers.fields')}
                 action={
                     <div className="flex flex-wrap gap-2">
-                        <GhostLink href={`/layers/${layer.id}`}>Back to layer</GhostLink>
-                        {canEdit ? <PrimaryButton onClick={openCreate}>Add field</PrimaryButton> : null}
+                        <GhostLink href={`/layers/${layer.id}`}>{t('layers.back_layer')}</GhostLink>
+                        {canEdit ? <PrimaryButton onClick={openCreate}>{t('layers.add_field')}</PrimaryButton> : null}
+                        {readOnly ? <span className="text-sm text-muted-foreground">{t('layers.read_only_notice')}</span> : null}
                     </div>
                 }
             />
             <Panel>
                 <p className="max-w-prose text-sm text-muted-foreground">
-                    Fields describe the columns of <span className="font-medium text-foreground">{layer.name}</span>
+                    {__('fields.intro')} <span className="font-medium text-foreground">{layer.name}</span>
                     {layer.table_name ? (
                         <>
                             {' '}
-                            (<span className="font-mono">{layer.table_name}</span>)
+                            (<span dir="ltr" className="font-mono">{layer.table_name}</span>)
                         </>
                     ) : null}
-                    . Labels, allowed values and formulas apply everywhere the layer is edited; required and type rules
-                    are enforced on every write.
+                    {__('fields.intro_rules')}
                 </p>
 
                 <div className="mt-4">
                     {fields.length === 0 ? (
                         <Empty>
-                            No fields defined yet. Add a field to label a column, restrict its allowed values, or make
-                            it required.
+                            {__('fields.empty')}
                         </Empty>
                     ) : (
                         <DataTable>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.Head className={thClass}>Name</Table.Head>
-                                    <Table.Head className={thClass}>Label</Table.Head>
-                                    <Table.Head className={thClass}>Type</Table.Head>
-                                    <Table.Head className={thClass}>Required</Table.Head>
-                                    <Table.Head className={thClass}>Allowed values</Table.Head>
-                                    <Table.Head className={thClass}>Formula</Table.Head>
-                                    {canEdit ? <Table.Head className={thClass}>Actions</Table.Head> : null}
+                                    <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('forms.label')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('forms.type')}</Table.Head>
+                                    <Table.Head className={thClass}>{__('fields.required')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('solution_packs.allowed_values')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('common.formula')}</Table.Head>
+                                    {canEdit ? <Table.Head className={thClass}>{t('forms.actions')}</Table.Head> : null}
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -261,18 +263,18 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                                     return (
                                         <Table.Row key={field.id}>
                                             <Table.Cell className={tdMono}>{field.name}</Table.Cell>
-                                            <Table.Cell className={tdClass}>{field.alias || '—'}</Table.Cell>
+                                            <Table.Cell className={tdClass}>{field.alias || t('common.em_dash')}</Table.Cell>
                                             <Table.Cell className={tdClass}>
-                                                {typeLabels[field.type || ''] || field.type || '—'}
+                                                {typeLabels[field.type || ''] ? __(typeLabels[field.type || '']) : field.type || t('common.em_dash')}
                                             </Table.Cell>
-                                            <Table.Cell className={tdClass}>{field.required ? 'Yes' : '—'}</Table.Cell>
+                                            <Table.Cell className={tdClass}>{field.required ? __('fields.yes') : t('common.em_dash')}</Table.Cell>
                                             <Table.Cell className={`${tdClass} max-w-xs`}>
                                                 <span className="block truncate">
-                                                    {domain.length > 0 ? domain.join(', ') : '—'}
+                                                    {domain.length > 0 ? domain.join(', ') : t('common.em_dash')}
                                                 </span>
                                             </Table.Cell>
                                             <Table.Cell className={tdMono}>
-                                                {field.calculated_expression || '—'}
+                                                {field.calculated_expression || t('common.em_dash')}
                                             </Table.Cell>
                                             {canEdit ? (
                                                 <Table.Cell className={tdClass}>
@@ -283,10 +285,10 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                                                             size="sm"
                                                             onClick={() => openEdit(field)}
                                                         >
-                                                            Edit
+                                                            {__('fields.edit')}
                                                         </Button>
                                                         <DangerButton onClick={() => remove(field)}>
-                                                            Delete
+                                                            {__('fields.delete')}
                                                         </DangerButton>
                                                     </RowActions>
                                                 </Table.Cell>
@@ -303,57 +305,57 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{editing ? `Edit ${editing.name}` : 'Add field'}</DialogTitle>
+                        <DialogTitle>{editing ? __('fields.edit_name', { name: editing.name }) : t('layers.add_field')}</DialogTitle>
                         <DialogDescription>
                             {editing
-                                ? 'Update how this field is labelled, validated, and offered in editors.'
-                                : 'Define a column of this layer. The column is created when it does not exist yet.'}
+                                ? __('fields.edit_help')
+                                : __('fields.new_help')}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submit} className="grid gap-4">
                         <Field
-                            label="Name"
+                            label={t('forms.name')}
                             error={errors.name}
-                            hint={editing ? undefined : 'Letters, numbers and underscores; cannot be changed later.'}
+                            hint={editing ? undefined : __('fields.name_hint')}
                         >
                             <TextInput
                                 value={form.name}
                                 disabled={Boolean(editing)}
-                                placeholder="e.g. depth"
+                                placeholder={__('fields.ph_name')}
                                 onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                             />
                         </Field>
 
-                        <Field label="Label" error={errors.alias} hint="Shown in the attribute table and inspectors.">
+                        <Field label={t('forms.label')} error={errors.alias} hint={__('fields.hint_alias')}>
                             <TextInput
                                 value={form.alias}
-                                placeholder="e.g. Depth (m)"
+                                placeholder={__('fields.ph_alias')}
                                 onChange={(event) => setForm((current) => ({ ...current, alias: event.target.value }))}
                             />
                         </Field>
 
-                        <Field label="Type" error={errors.type}>
+                        <Field label={t('forms.type')} error={errors.type}>
                             <Select
                                 value={form.type}
                                 onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
                             >
                                 {selectTypeOptions.map(([value, label]) => (
                                     <option key={value} value={value}>
-                                        {label}
+                                        {__(label)}
                                     </option>
                                 ))}
                             </Select>
                         </Field>
 
                         <Field
-                            label="Allowed values"
+                            label={t('solution_packs.allowed_values')}
                             error={errors.domain_values}
-                            hint="Optional. When set, editors offer these choices instead of free text."
+                            hint={__('fields.hint_domain')}
                         >
                             <div className="flex gap-2">
                                 <TextInput
                                     value={domainInput}
-                                    placeholder="Add a value"
+                                    placeholder={__('fields.ph_value')}
                                     onChange={(event) => setDomainInput(event.target.value)}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter') {
@@ -363,7 +365,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                                     }}
                                 />
                                 <Button type="button" variant="outline" onClick={addDomain}>
-                                    Add
+                                    {__('fields.add')}
                                 </Button>
                             </div>
                             {form.domain.length > 0 ? (
@@ -376,7 +378,7 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                                             {value}
                                             <button
                                                 type="button"
-                                                aria-label={`Remove ${value}`}
+                                                aria-label={__('fields.remove_value', { value })}
                                                 className="text-muted-foreground hover:text-destructive"
                                                 onClick={() => removeDomain(value)}
                                             >
@@ -389,9 +391,9 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                         </Field>
 
                         <Field
-                            label="Formula"
+                            label={t('common.formula')}
                             error={errors.calculated_expression}
-                            hint="Optional. Arithmetic over other fields, e.g. depth * 2."
+                            hint={__('fields.hint_formula')}
                         >
                             <TextInput
                                 value={form.expression}
@@ -409,10 +411,10 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
                                     setForm((current) => ({ ...current, required: checked === true }))
                                 }
                             />
-                            Required
+                            {__('fields.required')}
                         </label>
 
-                        <Field label="Sort order" error={errors.sort_order}>
+                        <Field label={__('fields.sort_order')} error={errors.sort_order}>
                             <TextInput
                                 type="number"
                                 className="w-24"
@@ -425,10 +427,10 @@ export default function Fields({ layer, fields = [] }: { layer: LayerRecord; fie
 
                         <div className="flex justify-end gap-2 border-t pt-3">
                             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                                Cancel
+                                {__('fields.cancel')}
                             </Button>
                             <PrimaryButton type="submit" disabled={saving}>
-                                {saving ? 'Saving…' : editing ? 'Save field' : 'Add field'}
+                                {saving ? __('fields.saving') : editing ? __('fields.save') : t('layers.add_field')}
                             </PrimaryButton>
                         </div>
                     </form>

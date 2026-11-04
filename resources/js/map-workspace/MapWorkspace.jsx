@@ -8,7 +8,7 @@ import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
 import WKT from 'ol/format/WKT';
 import { toLonLat } from 'ol/proj';
 import { useMapStore } from './store/mapStore';
-import MapView from './map/MapView';
+import MapView, { ANALYSIS_LAYER_ID } from './map/MapView';
 import LayerPanel from './panels/LayerPanel';
 import ToolPanel from './panels/ToolPanel';
 import StyleEditor from './panels/StyleEditor';
@@ -40,24 +40,87 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { IconButton } from './components/IconButton';
+import { useTranslation } from '@/lib/i18n';
 import { ArrowLeft, Bot, ChartColumn, CloudRain, Download, Info, Layers, List, Palette, Pencil, Printer, Save, Share2, X } from 'lucide-react';
+
+function basemapLabel(id, t) {
+    if (id === 'osm') {
+        return t('maps.basemap_street');
+    }
+    if (id === 'imagery') {
+        return t('maps.basemap_satellite');
+    }
+
+    return id;
+}
 
 const EarlyWarningPanel = lazy(() => import('@early-warning/EarlyWarningPanel'));
 
-const SKIP_DETAIL_KEYS = new Set(['geometry', 'geom', 'the_geom', 'wkb_geometry', 'geojson']);
+const SKIP_DETAIL_KEYS = new Set(['geometry', 'geom', 'the_geom', 'wkb_geometry', 'geojson', 'properties']);
+const DRAW_LAYER_ID = '__draw__';
+const HIGHLIGHT_LAYER_ID = '__highlight__';
+
+/**
+ * Normalize API / spatial-query / GeoJSON payloads into a GeoJSON Feature.
+ * Spatial query returns DB rows with a `geojson` string, not Feature objects.
+ */
+function toGeoJsonFeature(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    if (raw.type === 'Feature' && raw.geometry) {
+        return raw;
+    }
+
+    let geometry = raw.geometry && typeof raw.geometry === 'object' ? raw.geometry : null;
+    if (!geometry && raw.geojson) {
+        try {
+            const parsed = typeof raw.geojson === 'string' ? JSON.parse(raw.geojson) : raw.geojson;
+            if (parsed?.type === 'Feature') {
+                geometry = parsed.geometry;
+            } else if (parsed?.type) {
+                geometry = parsed;
+            }
+        } catch {
+            geometry = null;
+        }
+    }
+
+    if (!geometry) {
+        return null;
+    }
+
+    const properties =
+        raw.properties && typeof raw.properties === 'object'
+            ? { ...raw.properties }
+            : Object.fromEntries(
+                  Object.entries(raw).filter(([key]) => !SKIP_DETAIL_KEYS.has(String(key).toLowerCase())),
+              );
+
+    return {
+        type: 'Feature',
+        id: raw.id ?? properties.id ?? null,
+        geometry,
+        properties,
+    };
+}
 
 function featureAttributes(feature) {
     if (!feature || typeof feature !== 'object') {
         return { properties: {}, geojson: null };
     }
 
-    const source = feature.properties && typeof feature.properties === 'object'
-        ? feature.properties
-        : feature;
-    const geojson = feature.geojson || source.geojson || null;
+    const normalized = toGeoJsonFeature(feature);
+    const source = normalized?.properties
+        || (feature.properties && typeof feature.properties === 'object' ? feature.properties : feature);
+    const geojson = normalized?.geometry
+        || feature.geojson
+        || (typeof source === 'object' ? source.geojson : null)
+        || null;
     const properties = {};
 
-    Object.entries(source).forEach(([key, value]) => {
+    Object.entries(source || {}).forEach(([key, value]) => {
         if (SKIP_DETAIL_KEYS.has(key.toLowerCase()) || value == null || value === '') {
             return;
         }
@@ -74,6 +137,28 @@ function featureAttributes(feature) {
     return { properties, geojson };
 }
 
+function clickBufferWkt(lon, lat, bufferMeters) {
+    const latRad = (lat * Math.PI) / 180;
+    const metersPerDegLat = 111_320;
+    const metersPerDegLon = Math.max(metersPerDegLat * Math.cos(latRad), 1_000);
+    const dLat = bufferMeters / metersPerDegLat;
+    const dLon = bufferMeters / metersPerDegLon;
+
+    return `POLYGON((${lon - dLon} ${lat - dLat}, ${lon + dLon} ${lat - dLat}, ${lon + dLon} ${lat + dLat}, ${lon - dLon} ${lat + dLat}, ${lon - dLon} ${lat - dLat}))`;
+}
+
+function resolveStoreLayer(storeLayers, layerId) {
+    if (layerId == null) {
+        return null;
+    }
+
+    return (
+        storeLayers.find((layer) => layer.id === layerId)
+        || storeLayers.find((layer) => String(layer.id) === String(layerId))
+        || null
+    );
+}
+
 const emptyProps = () => ({
     name: '',
     description: '',
@@ -82,10 +167,14 @@ const emptyProps = () => ({
 });
 
 export default function MapWorkspace({ mode = 'edit' }) {
+    const { t } = useTranslation();
     const enabledPlugins = useMapStore((state) => state.plugins);
     const earlyWarningEnabled = enabledPlugins.includes('early-warning');
 
     const viewing = mode === 'view';
+    const layerMode = mode === 'layer';
+    const backHref = layerMode ? '/layers' : '/maps';
+    const backLabel = layerMode ? t('layers.title') : t('maps.title');
     const map = useMapStore((state) => state.map);
     const layers = useMapStore((state) => state.layers);
     const selectedLayerId = useMapStore((state) => state.selectedLayer);
@@ -139,6 +228,8 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 }),
                 zIndex: 999,
             });
+            drawLayerRef.current.set('id', DRAW_LAYER_ID);
+            drawLayerRef.current.set('gisLayerId', DRAW_LAYER_ID);
             map.addLayer(drawLayerRef.current);
         }
         return drawLayerRef.current;
@@ -228,7 +319,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
 
             const attributes = featureAttributes(hit.feature);
             setFeatureDetails({
-                layerName: hit.layer?.name || 'Feature',
+                layerName: hit.layer?.name || t('maps.feature'),
                 properties: attributes.properties,
                 geojson: attributes.geojson,
             });
@@ -254,6 +345,8 @@ export default function MapWorkspace({ mode = 'edit' }) {
             }),
             zIndex: 40,
         });
+        layer.set('id', HIGHLIGHT_LAYER_ID);
+        layer.set('gisLayerId', HIGHLIGHT_LAYER_ID);
         map.addLayer(layer);
         highlightSourceRef.current = source;
 
@@ -308,19 +401,24 @@ export default function MapWorkspace({ mode = 'edit' }) {
 
     const loadFeatureOntoMap = (featurePayload) => {
         const layer = ensureDrawLayer();
-        if (!layer || !featurePayload) {
+        const feature = toGeoJsonFeature(featurePayload);
+        if (!layer || !feature?.geometry) {
             return null;
         }
-        const source = layer.getSource();
-        source.clear();
-        const format = new GeoJSON();
-        const olFeature = format.readFeature(featurePayload, {
-            dataProjection: 'EPSG:4326',
-            featureProjection: 'EPSG:3857',
-        });
-        source.addFeature(olFeature);
-        currentFeatureRef.current = olFeature;
-        return olFeature;
+        try {
+            const source = layer.getSource();
+            source.clear();
+            const olFeature = new GeoJSON().readFeature(feature, {
+                dataProjection: 'EPSG:4326',
+                featureProjection: 'EPSG:3857',
+            });
+            source.addFeature(olFeature);
+            currentFeatureRef.current = olFeature;
+            return olFeature;
+        } catch (error) {
+            console.error('Failed to load feature onto map:', error);
+            return null;
+        }
     };
 
     const enableModify = () => {
@@ -341,14 +439,83 @@ export default function MapWorkspace({ mode = 'edit' }) {
         map.addInteraction(modify);
     };
 
+    const fetchFeatureById = async (layer, featureId) => {
+        if (!layer?.id || featureId == null || featureId === '') {
+            return null;
+        }
+
+        try {
+            const response = await fetch(`/api/layers/${layer.id}/features/${featureId}`, {
+                headers: jsonHeaders(),
+            });
+            const data = await response.json();
+            if (data.success && data.feature) {
+                return toGeoJsonFeature(data.feature);
+            }
+        } catch (error) {
+            console.error('Feature fetch failed:', error);
+        }
+
+        return null;
+    };
+
     const queryFeatureAtClick = async (event) => {
         const [lon, lat] = toLonLat(event.coordinate);
         const storeLayers = useMapStore.getState().layers || [];
         const selectedId = useMapStore.getState().selectedLayer;
+        const skipLayerIds = new Set([DRAW_LAYER_ID, HIGHLIGHT_LAYER_ID, ANALYSIS_LAYER_ID]);
+
+        // Prefer on-map MVT/vector hits (works for thin lines/points with hitTolerance).
+        if (map && event.pixel) {
+            let pixelHit = null;
+            map.forEachFeatureAtPixel(
+                event.pixel,
+                (olFeature, olLayer) => {
+                    const layerId = olLayer?.get?.('gisLayerId') ?? olLayer?.get?.('id');
+                    if (layerId == null || skipLayerIds.has(layerId)) {
+                        return undefined;
+                    }
+                    const featureId =
+                        olFeature.get?.('id')
+                        ?? olFeature.getId?.()
+                        ?? olFeature.getProperties?.()?.id;
+                    if (featureId == null || featureId === '') {
+                        return undefined;
+                    }
+                    pixelHit = { layerId, featureId };
+                    return true;
+                },
+                {
+                    hitTolerance: 10,
+                    layerFilter: (olLayer) => {
+                        const layerId = olLayer?.get?.('gisLayerId') ?? olLayer?.get?.('id');
+                        return layerId != null && !skipLayerIds.has(layerId);
+                    },
+                },
+            );
+
+            if (pixelHit) {
+                const layer = resolveStoreLayer(storeLayers, pixelHit.layerId);
+                if (layer) {
+                    const feature = await fetchFeatureById(layer, pixelHit.featureId);
+                    if (feature) {
+                        return { lon, lat, feature, layer };
+                    }
+                }
+            }
+        }
+
+        const resolution = map?.getView()?.getResolution() || 1;
+        const metersPerUnit = map?.getView()?.getProjection()?.getMetersPerUnit() || 1;
+        const bufferMeters = Math.max(20, resolution * metersPerUnit * 10);
+        const wkt = clickBufferWkt(lon, lat, bufferMeters);
+
         const candidates = [
             ...storeLayers.filter((layer) => layer.id === selectedId && layer.visible !== false),
-            ...storeLayers.filter((layer) => layer.id !== selectedId && layer.visible !== false && layer.id),
-        ];
+            ...storeLayers.filter(
+                (layer) => layer.id !== selectedId && layer.visible !== false && layer.id != null,
+            ),
+        ].filter((layer) => layer.type !== 'wms' && Number.isFinite(Number(layer.id)));
 
         for (const layer of candidates) {
             try {
@@ -358,12 +525,17 @@ export default function MapWorkspace({ mode = 'edit' }) {
                     body: JSON.stringify({
                         layer_id: layer.id,
                         operation: 'intersects',
-                        wkt: `POINT(${lon} ${lat})`,
+                        wkt,
                     }),
                 });
                 const data = await response.json();
                 if (data.success && data.features?.length) {
-                    return { lon, lat, feature: data.features[0], layer };
+                    const feature =
+                        toGeoJsonFeature(data.features[0])
+                        || (await fetchFeatureById(layer, data.features[0]?.id));
+                    if (feature) {
+                        return { lon, lat, feature, layer };
+                    }
                 }
             } catch (error) {
                 console.error('Spatial query failed:', error);
@@ -479,22 +651,28 @@ export default function MapWorkspace({ mode = 'edit' }) {
 
         const handler = async (event) => {
             const hit = await queryFeatureAtClick(event);
+            const feature = toGeoJsonFeature(hit.feature);
+
+            if (hit.layer?.id != null) {
+                useMapStore.getState().selectLayer(hit.layer.id);
+            }
+
             setIdentifyResult({
                 lon: Number(hit.lon.toFixed(6)),
                 lat: Number(hit.lat.toFixed(6)),
-                layerId: selectedLayer?.id ?? null,
-                feature: hit.feature,
+                layerId: hit.layer?.id ?? selectedLayer?.id ?? null,
+                feature,
             });
 
-            if (hit.feature) {
-                const id = hit.feature.id ?? hit.feature.properties?.id;
-                const attributes = featureAttributes(hit.feature);
+            if (feature) {
+                const id = feature.id ?? feature.properties?.id;
+                const attributes = featureAttributes(feature);
                 setEditingFeatureId(id ?? null);
                 setFeatureProperties(attributes.properties);
                 setDrawnGeometryWkt(null);
                 setDockMode('identify');
                 setFeatureDetails({
-                    layerName: hit.layer?.name || selectedLayer?.name || 'Feature',
+                    layerName: hit.layer?.name || selectedLayer?.name || t('maps.feature'),
                     properties: attributes.properties,
                     geojson: attributes.geojson,
                 });
@@ -514,18 +692,36 @@ export default function MapWorkspace({ mode = 'edit' }) {
 
         const handler = async (event) => {
             const hit = await queryFeatureAtClick(event);
-            if (!hit.feature) {
+            const feature = toGeoJsonFeature(hit.feature);
+            if (!feature) {
                 return;
             }
 
-            const id = hit.feature.id ?? hit.feature.properties?.id;
-            const olFeature = loadFeatureOntoMap(hit.feature);
+            if (hit.layer?.id != null) {
+                useMapStore.getState().selectLayer(hit.layer.id);
+            }
+
+            const id = feature.id ?? feature.properties?.id;
+            const hitLayer = hit.layer?.id != null ? getLayerById(hit.layer.id) : null;
+            if (hit.layer?.read_only || hitLayer?.read_only) {
+                // Read-only (SQL-view) layer: show the feature, never open the editor.
+                setEditingFeatureId(id ?? null);
+                setFeatureProperties(featureAttributes(feature).properties);
+                setDrawnGeometryWkt(null);
+                setDockMode('identify');
+                return;
+            }
+            const olFeature = loadFeatureOntoMap(feature);
             if (olFeature) {
                 setDrawnGeometryWkt(syncWktFromFeature(olFeature));
                 enableModify();
             }
             setEditingFeatureId(id ?? null);
-            setFeatureProperties(hit.feature.properties || emptyProps());
+            setFeatureProperties(
+                feature.properties && Object.keys(feature.properties).length > 0
+                    ? feature.properties
+                    : emptyProps(),
+            );
             setDockMode('edit');
         };
 
@@ -562,6 +758,22 @@ export default function MapWorkspace({ mode = 'edit' }) {
         }
     };
 
+    const handleToolSelectionRef = useRef(handleToolSelection);
+    handleToolSelectionRef.current = handleToolSelection;
+
+    // Layer builder: tools only, Select armed so features can be edited immediately.
+    useEffect(() => {
+        if (!map || !layerMode) {
+            return undefined;
+        }
+
+        useMapStore.getState().setActiveTool('select');
+        handleToolSelectionRef.current('select');
+        setLeftTab('tools');
+
+        return undefined;
+    }, [map, layerMode]);
+
     const closeDock = () => {
         setDockMode(null);
         setEditingFeatureId(null);
@@ -575,10 +787,52 @@ export default function MapWorkspace({ mode = 'edit' }) {
         setPanel((current) => (current === 'properties' ? null : current));
     };
 
-    const handleDockSaved = () => {
+    const handleDockSaved = (savedFeature) => {
+        const layerId = selectedLayer?.id;
+        const wktSnapshot = drawnGeometryWkt;
+        const geojsonGeometry = savedFeature?.geometry ?? null;
+
+        if (layerId) {
+            useMapStore.getState().refreshLayerTiles(layerId);
+        }
+
         closeDock();
         if (drawLayerRef.current) {
             drawLayerRef.current.getSource().clear();
+        }
+
+        // Zoom to the feature that was just saved so it does not look like it vanished.
+        if (!map) {
+            return;
+        }
+
+        try {
+            let extent = null;
+            if (geojsonGeometry) {
+                extent = new GeoJSON()
+                    .readGeometry(geojsonGeometry, {
+                        dataProjection: 'EPSG:4326',
+                        featureProjection: 'EPSG:3857',
+                    })
+                    .getExtent();
+            } else if (wktSnapshot) {
+                extent = new WKT()
+                    .readGeometry(wktSnapshot, {
+                        dataProjection: 'EPSG:4326',
+                        featureProjection: 'EPSG:3857',
+                    })
+                    .getExtent();
+            }
+
+            if (extent && extent.every((value) => Number.isFinite(value))) {
+                map.getView().fit(extent, {
+                    duration: 400,
+                    padding: [60, 60, 60, 60],
+                    maxZoom: 14,
+                });
+            }
+        } catch (error) {
+            console.warn('Could not zoom to saved feature', error);
         }
     };
 
@@ -677,7 +931,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
 
     const printMap = async () => {
         if (!mapId) {
-            alert('Save the map before printing.');
+            alert(t('maps.save_before_print'));
             return;
         }
         try {
@@ -688,7 +942,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 body: JSON.stringify(payload),
             });
             if (!response.ok) {
-                throw new Error('Print failed');
+                throw new Error(t('maps.print_failed'));
             }
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
@@ -699,13 +953,13 @@ export default function MapWorkspace({ mode = 'edit' }) {
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error(error);
-            alert(error.message || 'Print failed');
+            alert(error.message || t('maps.print_failed'));
         }
     };
 
     const saveMap = async () => {
         try {
-            const name = prompt('Enter a name for your map:', mapName || 'My Map');
+            const name = prompt(t('maps.enter_map_name'), mapName || t('maps.my_map'));
             if (!name) {
                 return;
             }
@@ -723,7 +977,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 ? await window.axios.put(`/api/maps/${mapId}`, mapData)
                 : await window.axios.post('/api/maps', mapData);
 
-            alert('Map saved successfully! Redirecting...');
+            alert(t('maps.saved_redirect'));
 
             const savedId = response.data?.map?.id || mapId;
             if (savedId) {
@@ -733,12 +987,14 @@ export default function MapWorkspace({ mode = 'edit' }) {
             console.error('Error saving map:', error);
             if (error.response) {
                 alert(
-                    `Failed to save map: ${error.response.data.message || error.response.statusText}`
+                    t('maps.save_failed', {
+                        message: error.response.data.message || error.response.statusText,
+                    }),
                 );
             } else if (error.request) {
-                alert('Failed to save map: No response from server. Please check your connection.');
+                alert(t('maps.save_failed_no_response'));
             } else {
-                alert(`Failed to save map: ${error.message}`);
+                alert(t('maps.save_failed', { message: error.message }));
             }
         }
     };
@@ -757,18 +1013,18 @@ export default function MapWorkspace({ mode = 'edit' }) {
     };
 
     const drawerTitle = dockMode === 'create'
-        ? 'New feature'
+        ? t('maps.new_feature')
         : dockMode === 'edit'
-          ? 'Edit feature'
+          ? t('maps.edit_feature')
           : dockMode === 'identify'
-            ? 'Identified feature'
-            : 'Attributes';
+            ? t('maps.identified_feature')
+            : t('maps.attributes');
 
     const statusLabel = measureResult?.type
-        ? 'Measure'
+        ? t('common.measure')
         : dockMode
           ? drawerTitle
-          : 'Ready';
+          : t('common.ready');
 
     return (
         <div className="map-builder map-stage">
@@ -778,7 +1034,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 {featureDetails && (
                     <Card className="map-feature-details gap-0 py-0 shadow-lg">
                         <div className="flex items-center justify-between border-b px-4 py-3">
-                            <p className="text-xs font-semibold tracking-wide text-muted-foreground">DETAILS</p>
+                            <p className="text-xs font-semibold tracking-wide text-muted-foreground">{t('common.details').toUpperCase()}</p>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -787,7 +1043,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                                 onClick={() => setFeatureDetails(null)}
                             >
                                 <X className="size-4" />
-                                <span className="sr-only">Close details</span>
+                                <span className="sr-only">{t('common.close_details')}</span>
                             </Button>
                         </div>
                         <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-medium">
@@ -798,15 +1054,15 @@ export default function MapWorkspace({ mode = 'edit' }) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="px-4">Field Name</TableHead>
-                                        <TableHead className="px-4">Value</TableHead>
+                                        <TableHead className="px-4">{t('common.field_name')}</TableHead>
+                                        <TableHead className="px-4">{t('common.value')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {Object.entries(featureDetails.properties).length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={2} className="px-4 text-muted-foreground">
-                                                No attributes
+                                                {t('maps.no_attributes')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -828,14 +1084,14 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 <CardContent className="map-topbar-inner p-2 px-2.5">
                     <div className="map-topbar-start">
                         <Button asChild variant="ghost" size="sm" className="h-9 gap-1.5 px-2 text-foreground hover:text-accent-foreground no-underline hover:no-underline">
-                            <a href="/maps">
-                                <ArrowLeft className="size-4" />
-                                Maps
+                            <a href={backHref}>
+                                <ArrowLeft className="size-4 rtl:rotate-180" />
+                                {backLabel}
                             </a>
                         </Button>
                         <Separator orientation="vertical" className="hidden h-5 sm:block" />
                         <p className="map-title truncate text-sm font-semibold tracking-tight">
-                            {mapName || 'Map'}
+                            {mapName || (layerMode ? t('layers.builder') : t('maps.map'))}
                         </p>
                     </div>
                     <div className="map-topbar-center">
@@ -844,14 +1100,14 @@ export default function MapWorkspace({ mode = 'edit' }) {
                             <SelectTrigger
                                 size="sm"
                                 className="map-basemap h-9 w-[11.5rem] shrink-0 bg-background shadow-xs"
-                                aria-label="Basemap"
+                                aria-label={t('maps.basemap')}
                             >
-                                <SelectValue placeholder="Basemap" />
+                                <SelectValue placeholder={t('maps.basemap')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {availableBasemaps.map((item) => (
                                     <SelectItem key={item.id} value={item.id}>
-                                        {item.name}
+                                        {basemapLabel(item.id, t)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -863,71 +1119,82 @@ export default function MapWorkspace({ mode = 'edit' }) {
                                 <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
                                     <a href={`/maps/${mapId}/share`}>
                                         <Share2 className="size-4" />
-                                        Share
+                                        {t('actions.share')}
                                     </a>
                                 </Button>
                                 <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
                                     <a href={`/maps/builder/${mapId}`}>
                                         <Pencil className="size-4" />
-                                        Edit
+                                        {t('actions.edit')}
                                     </a>
                                 </Button>
                             </>
                         ) : null}
-                        {viewing ? null : (
+                        {viewing || layerMode ? null : (
                             <Button size="sm" className="h-9 gap-1.5" onClick={saveMap}>
                                 <Save className="size-4" />
-                                Save
+                                {t('actions.save')}
                             </Button>
                         )}
-                        <ButtonGroup>
-                            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={exportMap}>
-                                <Download className="size-4" />
-                                Export
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-9 gap-1.5"
-                                onClick={printMap}
-                                disabled={!mapId}
-                                title={!mapId ? 'Save the map before printing' : 'Print'}
-                            >
-                                <Printer className="size-4" />
-                                Print
-                            </Button>
-                        </ButtonGroup>
+                        {layerMode ? null : (
+                            <ButtonGroup>
+                                <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={exportMap}>
+                                    <Download className="size-4" />
+                                    {t('actions.export')}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 gap-1.5"
+                                    onClick={printMap}
+                                    disabled={!mapId}
+                                    title={!mapId ? t('maps.save_before_print_hint') : t('actions.print')}
+                                >
+                                    <Printer className="size-4" />
+                                    {t('actions.print')}
+                                </Button>
+                            </ButtonGroup>
+                        )}
                     </div>
                 </CardContent>
             </Card>
 
             {viewing ? null : (
-            <aside className="map-side" data-tab={leftTab} aria-label="Map workspace">
-                <div className="map-side-tabs" role="tablist" aria-label="Workspace">
-                    <button
-                        type="button"
-                        role="tab"
-                        className="map-side-tab"
-                        aria-selected={leftTab === 'tools'}
-                        onClick={() => setLeftTab('tools')}
-                    >
-                        Tools
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        className="map-side-tab"
-                        aria-selected={leftTab === 'layers'}
-                        onClick={() => setLeftTab('layers')}
-                    >
-                        Layers
-                    </button>
-                </div>
+            <aside className="map-side" data-tab={layerMode ? 'tools' : leftTab} aria-label={t('maps.workspace')}>
+                {layerMode ? null : (
+                    <div className="map-side-tabs" role="tablist" aria-label={t('maps.workspace')}>
+                        <button
+                            type="button"
+                            role="tab"
+                            className="map-side-tab"
+                            aria-selected={leftTab === 'tools'}
+                            onClick={() => setLeftTab('tools')}
+                        >
+                            {t('maps.tools')}
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            className="map-side-tab"
+                            aria-selected={leftTab === 'layers'}
+                            onClick={() => setLeftTab('layers')}
+                        >
+                            {t('nav.layers')}
+                        </button>
+                    </div>
+                )}
                 <div className="map-side-body" role="tabpanel">
-                    {leftTab === 'tools' ? (
-                        <ToolPanel map={map} mode={mode} onToolSelected={handleToolSelection} />
+                    {layerMode || leftTab === 'tools' ? (
+                        <ToolPanel
+                            map={map}
+                            mode={mode}
+                            geometryType={layerMode ? selectedLayer?.geometry_type : null}
+                            readOnly={Boolean(selectedLayer?.read_only)}
+                            onToolSelected={handleToolSelection}
+                        />
                     ) : (
                         <LayerPanel
+                            lockComposition={layerMode}
                             onLayerSelected={() => setPanel(viewing ? 'legend' : 'style')}
                         />
                     )}
@@ -935,11 +1202,11 @@ export default function MapWorkspace({ mode = 'edit' }) {
             </aside>
             )}
 
-            <div className="map-inspector-dock" role="group" aria-label="Inspector">
+            <div className="map-inspector-dock" role="group" aria-label={t('maps.inspector')}>
                 {viewing ? (
                     <IconButton
                         variant={panel === 'layers' ? 'solid' : 'ghost'}
-                        aria-label="Layers"
+                        aria-label={t('nav.layers')}
                         aria-pressed={panel === 'layers'}
                         icon={<Layers className="size-4" strokeWidth={1.75} />}
                         onClick={() => openPanel('layers')}
@@ -947,14 +1214,14 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 ) : null}
                 <IconButton
                     variant={panel === 'legend' ? 'solid' : 'ghost'}
-                    aria-label="Legend"
+                    aria-label={t('maps.legend')}
                     aria-pressed={panel === 'legend'}
                     icon={<List className="size-4" strokeWidth={1.75} />}
                     onClick={() => openPanel('legend')}
                 />
                 <IconButton
                     variant={panel === 'properties' ? 'solid' : 'ghost'}
-                    aria-label="Properties"
+                    aria-label={t('maps.properties')}
                     aria-pressed={panel === 'properties'}
                     icon={<Info className="size-4" strokeWidth={1.75} />}
                     onClick={() => openPanel('properties')}
@@ -964,21 +1231,21 @@ export default function MapWorkspace({ mode = 'edit' }) {
                         <div className="dock-divider" aria-hidden="true" />
                         <IconButton
                             variant={panel === 'style' ? 'solid' : 'ghost'}
-                            aria-label="Style"
+                            aria-label={t('layers.style')}
                             aria-pressed={panel === 'style'}
                             icon={<Palette className="size-4" strokeWidth={1.75} />}
                             onClick={() => openPanel('style')}
                         />
                         <IconButton
                             variant={panel === 'analysis' ? 'solid' : 'ghost'}
-                            aria-label="Analysis"
+                            aria-label={t('maps.analysis')}
                             aria-pressed={panel === 'analysis'}
                             icon={<ChartColumn className="size-4" strokeWidth={1.75} />}
                             onClick={() => openPanel('analysis')}
                         />
                         <IconButton
                             variant={panel === 'assistant' ? 'solid' : 'ghost'}
-                            aria-label="Assistant"
+                            aria-label={t('maps.assistant')}
                             aria-pressed={panel === 'assistant'}
                             icon={<Bot className="size-4" strokeWidth={1.75} />}
                             onClick={() => openPanel('assistant')}
@@ -986,7 +1253,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                         {earlyWarningEnabled ? (
                             <IconButton
                                 variant={panel === 'early-warning' ? 'solid' : 'ghost'}
-                                aria-label="Early Warning"
+                                aria-label={t('early_warning.title')}
                                 aria-pressed={panel === 'early-warning'}
                                 icon={<CloudRain className="size-4" strokeWidth={1.75} />}
                                 onClick={() => openPanel('early-warning')}
@@ -997,7 +1264,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 {viewing && earlyWarningEnabled ? (
                     <IconButton
                         variant={panel === 'early-warning' ? 'solid' : 'ghost'}
-                        aria-label="Early Warning"
+                        aria-label={t('early_warning.title')}
                         aria-pressed={panel === 'early-warning'}
                         icon={<CloudRain className="size-4" strokeWidth={1.75} />}
                         onClick={() => openPanel('early-warning')}
@@ -1006,14 +1273,14 @@ export default function MapWorkspace({ mode = 'edit' }) {
             </div>
 
             {panel ? (
-                <aside className="map-float-panel" aria-label="Map panel" data-panel={panel}>
+                <aside className="map-float-panel" aria-label={t('maps.map_panel')} data-panel={panel}>
                     <div className="map-float-panel-body">
                         {panel === 'layers' && viewing ? <LayerPanel readOnly /> : null}
                         {panel === 'legend' && (
                             <>
                                 <div className="panel-header">
-                                    <h5>Legend</h5>
-                                    <button type="button" className="btn-close" onClick={closeRightPanel} aria-label="Close" />
+                                    <h5>{t('maps.legend')}</h5>
+                                    <button type="button" className="btn-close" onClick={closeRightPanel} aria-label={t('actions.close')} />
                                 </div>
                                 <Legend />
                             </>
@@ -1024,10 +1291,10 @@ export default function MapWorkspace({ mode = 'edit' }) {
                             ) : (
                                 <>
                                     <div className="panel-header">
-                                        <h5>Style</h5>
-                                        <button type="button" className="btn-close" onClick={closeRightPanel} aria-label="Close" />
+                                        <h5>{t('layers.style')}</h5>
+                                        <button type="button" className="btn-close" onClick={closeRightPanel} aria-label={t('actions.close')} />
                                     </div>
-                                    <p className="map-panel-empty">Select a layer to edit its style.</p>
+                                    <p className="map-panel-empty">{t('maps.select_layer_style')}</p>
                                 </>
                             ))}
                         {panel === 'analysis' && (
@@ -1042,7 +1309,7 @@ export default function MapWorkspace({ mode = 'edit' }) {
                             <GisAssistantPanel onClose={() => setPanel(null)} />
                         )}
                         {panel === 'early-warning' && earlyWarningEnabled && (
-                            <Suspense fallback={<p className="map-panel-empty p-3">Loading Early Warning…</p>}>
+                            <Suspense fallback={<p className="map-panel-empty p-3">{t('maps.loading_early_warning')}</p>}>
                                 <EarlyWarningPanel onClose={() => setPanel(null)} />
                             </Suspense>
                         )}
@@ -1062,12 +1329,15 @@ export default function MapWorkspace({ mode = 'edit' }) {
                                 <>
                                     <div className="panel-header">
                                         <h5>{drawerTitle}</h5>
-                                        <button type="button" className="btn-close" onClick={closeRightPanel} aria-label="Close" />
+                                        <button type="button" className="btn-close" onClick={closeRightPanel} aria-label={t('actions.close')} />
                                     </div>
                                     <p className="map-panel-empty">
                                         {identifyResult
-                                            ? `No feature at ${identifyResult.lat}, ${identifyResult.lon}. Choose a layer, then identify again.`
-                                            : 'Identify or select a feature to see its attributes here.'}
+                                            ? t('maps.identify_no_feature', {
+                                                  lat: identifyResult.lat,
+                                                  lon: identifyResult.lon,
+                                              })
+                                            : t('maps.identify_empty')}
                                     </p>
                                 </>
                             ))}
@@ -1075,8 +1345,8 @@ export default function MapWorkspace({ mode = 'edit' }) {
                 </aside>
             ) : null}
 
-            <Card className="map-status-bar-card gap-0 py-0 shadow-sm" aria-label="Map status">
-                <CardContent className="map-status-bar flex items-center gap-2 p-2 pr-3 pl-3">
+            <Card className="map-status-bar-card gap-0 py-0 shadow-sm" aria-label={t('maps.map_status')}>
+                <CardContent className="map-status-bar flex items-center gap-2 p-2 pe-3 ps-3">
                     <Badge variant="secondary" className="shrink-0 rounded-md font-medium">
                         {statusLabel}
                     </Badge>

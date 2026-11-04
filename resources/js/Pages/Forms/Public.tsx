@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import { useForm } from '@inertiajs/react';
 import PublicLayout from '@/layouts/public-layout';
 import { Field, Flash, Heading, PrimaryButton, Select, TextArea, TextInput } from '@/components/gis';
 import LocationPicker from '@/Pages/Forms/LocationPicker';
 
 export default function Public({ form, requiresGeometry = false }) {
+    const { t } = useTranslation();
     const fields = form.schema || [];
     const [includeLocation, setIncludeLocation] = useState(Boolean(requiresGeometry));
     const formState = useForm({
@@ -125,14 +127,14 @@ export default function Public({ form, requiresGeometry = false }) {
                                 }
                             />
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <Field label="Latitude" error={formState.errors.latitude}>
+                                <Field label={t('forms.latitude')} error={formState.errors.latitude}>
                                     <TextInput
                                         value={formState.data.latitude}
                                         inputMode="decimal"
                                         onChange={(event) => formState.setData('latitude', event.target.value)}
                                     />
                                 </Field>
-                                <Field label="Longitude" error={formState.errors.longitude}>
+                                <Field label={t('forms.longitude')} error={formState.errors.longitude}>
                                     <TextInput
                                         value={formState.data.longitude}
                                         inputMode="decimal"
@@ -150,7 +152,7 @@ export default function Public({ form, requiresGeometry = false }) {
                         </div>
                     </Field>
                 ) : null}
-                <Field label="Attachment">
+                <Field label={t('common.attachment')}>
                     <input type="file" onChange={(event) => formState.setData('attachment', event.target.files?.[0] || null)} />
                 </Field>
                 <PrimaryButton type="submit" disabled={formState.processing}>

@@ -1,4 +1,6 @@
+import { enumLabel } from '@/lib/enum-labels';
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { count, when } from '@/lib/format';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
@@ -14,27 +16,28 @@ type LayerRow = {
 };
 
 export default function Index({ layers }: { layers?: { data?: LayerRow[]; links?: Array<{ url: string | null; label: string; active: boolean }> } }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props as { abilities?: { edit?: boolean; admin?: boolean } };
     const rows = layers?.data || [];
 
     return (
-        <AppLayout title="Layers">
+        <AppLayout title={t('layers.title')}>
             <PageHeader
-                title="Layers"
+                title={t('layers.title')}
                 action={
                     <div className="flex flex-wrap items-center gap-4">
-                        <ActionLink href="/relationships">Relationship builder</ActionLink>
-                        {abilities?.edit ? <PrimaryLink href="/layers/create">New layer</PrimaryLink> : null}
+                        <ActionLink href="/relationships">{t('relationships.builder')}</ActionLink>
+                        {abilities?.edit ? <PrimaryLink href="/layers/create">{t('layers.new')}</PrimaryLink> : null}
                     </div>
                 }
             />
             <Panel>
                 {rows.length === 0 ? (
                     <Empty>
-                        No layers yet.{' '}
+                        {__('layers.idx.empty')}{' '}
                         {abilities?.edit ? (
                             <Link href="/layers/create" className="font-medium text-primary hover:underline">
-                                Create a layer
+                                {__('layers.idx.create')}
                             </Link>
                         ) : null}
                     </Empty>
@@ -42,13 +45,13 @@ export default function Index({ layers }: { layers?: { data?: LayerRow[]; links?
                     <DataTable>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head className={thClass}>Name</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Project</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Geometry</Table.Head>
-                                <Table.Head className={`${thClass} hidden lg:table-cell`}>Features</Table.Head>
-                                <Table.Head className={thClass}>Status</Table.Head>
-                                <Table.Head className={`${thClass} hidden lg:table-cell`}>Added</Table.Head>
-                                <Table.Head className={thClass}>Actions</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('layers.project')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('layers.geometry')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden lg:table-cell`}>{t('layers.features')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.status')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden lg:table-cell`}>{t('layers.added')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.actions')}</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -59,22 +62,25 @@ export default function Index({ layers }: { layers?: { data?: LayerRow[]; links?
                                             {layer.name}
                                         </Link>
                                         <p className="mt-0.5 text-xs text-muted-foreground md:hidden">
-                                            {layer.project?.name || 'No project'} · {layer.geometry_type || 'Geometry not set'}
+                                            {layer.project?.name || t('layers.no_project')} · {enumLabel(layer.geometry_type) || t('layers.geometry_not_set')}
                                         </p>
                                     </Table.Cell>
-                                    <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{layer.project?.name || '—'}</Table.Cell>
-                                    <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{layer.geometry_type || '—'}</Table.Cell>
+                                    <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{layer.project?.name || t('common.em_dash')}</Table.Cell>
+                                    <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{enumLabel(layer.geometry_type) || t('common.em_dash')}</Table.Cell>
                                     <Table.Cell className={`${tdMono} hidden lg:table-cell`}>{count(layer.feature_count)}</Table.Cell>
                                     <Table.Cell className={tdClass}>
-                                        <Pill live={layer.published}>{layer.published ? 'Published' : 'Draft'}</Pill>
+                                        <Pill live={layer.published}>{layer.published ? t('layers.published') : __('layers.idx.draft')}</Pill>
                                     </Table.Cell>
                                     <Table.Cell className={`${tdMuted} hidden lg:table-cell`}>{when(layer.created_at)}</Table.Cell>
                                     <Table.Cell className={tdClass}>
                                         <RowActions>
-                                            <ActionLink href={`/layers/${layer.id}`}>View</ActionLink>
-                                            {abilities?.edit ? <ActionLink href={`/layers/${layer.id}/edit`}>Edit</ActionLink> : null}
+                                            <ActionLink href={`/layers/${layer.id}`}>{t('actions.view')}</ActionLink>
+                                            {abilities?.edit ? <ActionLink href={`/layers/${layer.id}/edit`}>{t('actions.edit')}</ActionLink> : null}
+                                            {abilities?.edit && layer.geometry_type !== 'Raster' ? (
+                                                <ActionLink href={`/layers/${layer.id}/builder`}>{t('layers.builder')}</ActionLink>
+                                            ) : null}
                                             {abilities?.admin ? (
-                                                <DangerButton onClick={() => destroyResource(`/layers/${layer.id}`, 'Delete this layer?')}>Delete</DangerButton>
+                                                <DangerButton onClick={() => destroyResource(`/layers/${layer.id}`, __('layers.idx.confirm_delete'))}>{t('actions.delete')}</DangerButton>
                                             ) : null}
                                         </RowActions>
                                     </Table.Cell>

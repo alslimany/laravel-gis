@@ -52,6 +52,10 @@ services:
   # PostGIS Database with backup
   postgis:
     image: postgis/postgis:13-3.1
+    # DG-0.6 target (activate only after DG-0.7 + verification):
+    # image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+    # volumes:
+    #   - postgis-data-pg17:/var/lib/postgresql/data
     container_name: postgis-db-prod
     restart: always
     environment:
@@ -76,6 +80,16 @@ services:
   # GeoServer
   geoserver:
     image: kartoza/geoserver:2.21.0
+    # DG-0.6 target (activate only after DG-0.7 + verification):
+    # image: docker.osgeo.org/geoserver:2.28.6@sha256:d38f2bcae4e64516d49f7d8006384fc46708877a3ec0b386e7fa12fc525bf76c
+    # environment extras for OSGeo image (see docs/runbooks/upgrade-pg17-postgis35-geoserver228.md §5.3):
+    #   SKIP_DEMO_DATA: "true"
+    #   EXTRA_JAVA_OPTS: "-Xms2G -Xmx4G"
+    #   INSTALL_EXTENSIONS: "true"
+    #   STABLE_EXTENSIONS: "authkey"
+    # volumes:
+    #   - geoserver-data-228:/opt/geoserver_data/
+    #   - ./storage/app/imagery:/opt/imagery
     container_name: geoserver-prod
     restart: always
     environment:

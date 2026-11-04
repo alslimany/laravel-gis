@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EDXLSitRep xmlns="urn:oasis:names:tc:emergency:EDXL:SitRep:1.0" schemaVersion="1.0-lite">
+  <incidentID>INC-FLOOD-1</incidentID>
+  <incidentTitle>Flood sector 3</incidentTitle>
+  <incidentStatus>open</incidentStatus>
+  <organizationID>1</organizationID>
+  <preparedAt>2026-10-28T12:00:00+00:00</preparedAt>
+  <preparedBy>Ops Desk</preparedBy>
+  <preparedByUserId>10</preparedByUserId>
+  <Report>
+    <Summary>Waters receding; shelters at 70%.</Summary>
+    <Casualties>{"injured":12,"missing":1}</Casualties>
+    <Resources>{"water_cases":80}</Resources>
+    <LifelinesStatus>{"safety_security":"stable"}</LifelinesStatus>
+    <NextSteps>Continue pump ops overnight.</NextSteps>
+  </Report>
+</EDXLSitRep>

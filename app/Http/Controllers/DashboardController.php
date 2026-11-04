@@ -34,7 +34,7 @@ class DashboardController extends Controller
                     'id' => $project->id,
                     'name' => $project->name,
                     'description' => $project->description,
-                    'created_at_formatted' => optional($project->created_at)->format('M d, Y'),
+                    'created_at_formatted' => $project->created_at?->copy()->timezone(config('app.display_timezone'))->locale(app()->getLocale())->translatedFormat('j M Y'),
                 ])->values()->all(),
             ];
 
@@ -69,5 +69,4 @@ class DashboardController extends Controller
             'projects' => $projects,
         ]);
     }
-
 }

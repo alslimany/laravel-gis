@@ -2,6 +2,8 @@
 
 namespace Lumina\EarlyWarning\Alerts;
 
+use App\Events\WarningIssued;
+use App\Support\WarningIssuedPayload;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Lumina\EarlyWarning\Models\AlertLog;
@@ -209,8 +211,10 @@ class AlertRuleEvaluator
             : ['log'];
 
         $created = 0;
+        $primaryLog = null;
+        $advisory = AdvisoryCopy::message();
         foreach ($channels as $channel) {
-            AlertLog::query()->create([
+            $log = AlertLog::query()->create([
                 'organization_id' => $rule->organization_id,
                 'alert_rule_id' => $rule->id,
                 'risk_assessment_id' => $risk?->id,
@@ -218,7 +222,7 @@ class AlertRuleEvaluator
                 'channel' => (string) $channel,
                 'status' => 'triggered',
                 'payload' => [
-                    'advisory' => AdvisoryCopy::message(),
+                    'advisory' => $advisory,
                     'authority' => AdvisoryCopy::authority(),
                     'metric' => $rule->metric,
                     'operator' => $rule->operator,
@@ -231,9 +235,83 @@ class AlertRuleEvaluator
                 ],
                 'sent_at' => null,
             ]);
+            $primaryLog ??= $log;
             $created++;
         }
 
+        if ($primaryLog !== null) {
+            event(new WarningIssued($this->warningPayload(
+                $primaryLog,
+                $rule,
+                $basinCode,
+                $at,
+                $risk,
+                $advisory,
+            )));
+        }
+
         return $created;
+    }
+
+    protected function warningPayload(
+        AlertLog $log,
+        AlertRule $rule,
+        string $basinCode,
+        Carbon $at,
+        ?RiskAssessment $risk,
+        string $advisory,
+    ): WarningIssuedPayload {
+        $validTo = $risk?->valid_until ?? $at->copy()->addHours(6);
+
+        return new WarningIssuedPayload(
+            source: 'early-warning',
+            sourceAlertId: (string) $log->id,
+            organizationId: (int) $rule->organization_id,
+            hazardType: 'flood',
+            severity: $this->capSeverity($risk?->risk_level),
+            urgency: $this->capUrgency($at),
+            certainty: 'Likely',
+            validFrom: $risk?->valid_from ?? $at,
+            validTo: $validTo,
+            affected: [
+                [
+                    'type' => 'Feature',
+                    'properties' => [
+                        'basin_code' => $basinCode,
+                        'rule_name' => $rule->name,
+                        'metric' => $rule->metric,
+                    ],
+                    'geometry' => null,
+                ],
+            ],
+            advisoryText: $advisory,
+            isExercise: false,
+        );
+    }
+
+    protected function capSeverity(?string $riskLevel): string
+    {
+        return match ($riskLevel) {
+            'red' => 'Extreme',
+            'orange' => 'Severe',
+            'yellow' => 'Moderate',
+            'green' => 'Minor',
+            default => 'Unknown',
+        };
+    }
+
+    protected function capUrgency(Carbon $forecastAt): string
+    {
+        $hours = now()->utc()->diffInHours($forecastAt->copy()->utc(), false);
+
+        if ($hours <= 6) {
+            return 'Immediate';
+        }
+
+        if ($hours <= 24) {
+            return 'Expected';
+        }
+
+        return 'Future';
     }
 }

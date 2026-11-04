@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, PrimaryButton, TextArea, TextInput } from '@/components/gis';
 
 export default function Form({ project = null }) {
+    const { t } = useTranslation();
     const editing = Boolean(project);
     const form = useForm({
         name: project?.name || '',
@@ -26,7 +28,7 @@ export default function Form({ project = null }) {
                 <Field label="Project name" error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t('forms.description')}>
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
                 <label className="flex items-center gap-2">
@@ -34,7 +36,7 @@ export default function Form({ project = null }) {
                     Make this project public
                 </label>
                 <div className="flex gap-3">
-                    <GhostLink href={editing ? `/projects/${project.id}` : '/projects'}>Cancel</GhostLink>
+                    <GhostLink href={editing ? `/projects/${project.id}` : '/projects'}>{t('actions.cancel')}</GhostLink>
                     <PrimaryButton type="submit" disabled={form.processing}>
                         {editing ? 'Update project' : 'Create project'}
                     </PrimaryButton>

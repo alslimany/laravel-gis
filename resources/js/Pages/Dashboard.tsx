@@ -1,4 +1,6 @@
+import { enumLabel } from '@/lib/enum-labels';
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { useConsoleModules } from '@/lib/console-modules';
 import { count, when } from '@/lib/format';
@@ -42,13 +44,15 @@ function tileUrl(basemap, z, x, y) {
 }
 
 function MapFigure({ map, href }) {
+    const { t } = useTranslation();
+
     if (!map) {
         return (
             <Link
                 href={href || '/maps/builder'}
                 className="flex h-48 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[13px] text-muted-foreground"
             >
-                Open the map builder to compose a map
+                {__('dashboard.open_builder_hint')}
             </Link>
         );
     }
@@ -80,14 +84,14 @@ function MapFigure({ map, href }) {
             <figcaption className="flex items-center justify-between gap-3 border-t border-border px-3 py-2">
                 <span>
                     <span className="block text-[13px] font-medium">{map.name}</span>
-                    <span className="text-[11px] text-muted-foreground">{map.is_public ? 'Public' : 'Private'}</span>
+                    <span className="text-[11px] text-muted-foreground">{map.is_public ? t('common.public') : t('common.private')}</span>
                 </span>
                 <Link href={`/maps/builder/${map.id}`} className="text-[13px] font-medium text-primary hover:underline">
-                    Edit
+                    {__('common.edit')}
                 </Link>
             </figcaption>
             <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
-                Tiles from{' '}
+                {__('dashboard.tiles_from')}{' '}
                 <a href={creditHref} className="underline" target="_blank" rel="noreferrer">
                     {creditName}
                 </a>
@@ -96,7 +100,7 @@ function MapFigure({ map, href }) {
     );
 }
 
-function nextStep(stats, routes) {
+function nextStep(stats, routes, t) {
     const imports = Number(stats?.import_count) || 0;
     const published = Number(stats?.published_layers) || 0;
     const totalLayers = Number(stats?.total_layers) || published;
@@ -105,86 +109,87 @@ function nextStep(stats, routes) {
 
     if (imports === 0 && totalLayers === 0) {
         return {
-            title: 'Import a dataset',
-            detail: 'Bring spatial files or tables into this organization to start the loop.',
+            title: __('dashboard.import_dataset'),
+            detail: __('dashboard.import_detail'),
             href: routes.importsCreate || routes.imports || '/imports',
-            cta: 'Import data',
+            cta: __('dashboard.import_data'),
             step: 1,
         };
     }
     if (drafts > 0 || (totalLayers > 0 && published === 0)) {
         return {
-            title: 'Publish a layer',
-            detail: drafts > 0 ? `${drafts} draft layer${drafts === 1 ? '' : 's'} ready to publish.` : 'Publish a layer so maps and analysis can use it.',
+            title: __('dashboard.publish_layer'),
+            detail: drafts > 0 ? __('dashboard.drafts_ready', { count: drafts }) : __('dashboard.publish_detail'),
             href: routes.layers || '/layers',
-            cta: 'Open layers',
+            cta: __('dashboard.open_layers'),
             step: 2,
         };
     }
     if (maps === 0) {
         return {
-            title: 'Compose a map',
-            detail: 'Published layers are ready. Open the map builder and compose the first map.',
+            title: __('dashboard.compose_map'),
+            detail: __('dashboard.compose_detail'),
             href: routes.mapBuilder || '/maps/builder',
-            cta: 'Open map builder',
+            cta: t('maps.open_builder'),
             step: 3,
         };
     }
     return {
-        title: 'Continue in the map builder',
-        detail: 'Data is published. Keep editing maps, or open dashboards when you need a board.',
+        title: __('dashboard.continue_builder'),
+        detail: __('dashboard.continue_detail'),
         href: routes.mapBuilder || '/maps/builder',
-        cta: 'Open map builder',
+        cta: t('maps.open_builder'),
         step: 3,
     };
 }
 
 export default function Dashboard({ stats, projects }) {
+    const { t } = useTranslation();
     const { organization, routes, abilities } = usePage().props;
     const { modules } = useConsoleModules();
     const featured = stats?.recent_maps?.[0] || null;
     const layers = stats?.recent_layers || [];
     const projectRows = projects?.data || [];
-    const next = nextStep(stats, routes);
-    const orgName = organization?.name || 'your organization';
+    const next = nextStep(stats, routes, t);
+    const orgName = organization?.name || __('dashboard.your_org');
 
     return (
-        <AppLayout title="Dashboard">
+        <AppLayout title={t('dashboard.title')}>
             <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <Heading as="h1">{orgName}</Heading>
                     <p className="mt-1 text-[13px] text-muted-foreground">
-                        Import → publish → map. Counts stay visible while you work the next step.
+                        {__('dashboard.flow_hint')}
                     </p>
                     <p className="mt-2 font-mono text-[12px] tabular-nums text-muted-foreground">
                         <Link href={routes.imports || '/imports'} className="font-medium text-primary hover:underline">
-                            {count(stats?.import_count)} imports
+                            {__('dashboard.count_imports', { count: count(stats?.import_count) })}
                         </Link>
                         <span> · </span>
                         <Link href={routes.layers || '/layers'} className="font-medium text-primary hover:underline">
-                            {count(stats?.published_layers)} published
+                            {__('dashboard.count_published', { count: count(stats?.published_layers) })}
                         </Link>
                         <span> · </span>
                         <Link href={routes.maps || '/maps'} className="font-medium text-primary hover:underline">
-                            {count(stats?.total_maps)} maps
+                            {__('dashboard.count_maps', { count: count(stats?.total_maps) })}
                         </Link>
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {routes.apps ? <GhostLink href={routes.apps}>Browse apps</GhostLink> : null}
-                    {routes.catalog ? <GhostLink href={routes.catalog}>Browse catalog</GhostLink> : null}
+                    {routes.apps ? <GhostLink href={routes.apps}>{t('apps.browse')}</GhostLink> : null}
+                    {routes.catalog ? <GhostLink href={routes.catalog}>{t('catalog.browse')}</GhostLink> : null}
                 </div>
             </div>
 
             {modules.length > 1 ? (
                 <section aria-labelledby="modules-heading">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                        <p id="modules-heading" className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                            Your modules
+                        <p dir="ltr" id="modules-heading" className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            {__('dashboard.your_modules')}
                         </p>
                         {abilities?.admin && routes.extensions ? (
                             <Link href={routes.extensions} className="text-[13px] font-medium text-primary hover:underline">
-                                Manage extensions
+                                {__('actions.manage_extensions')}
                             </Link>
                         ) : null}
                     </div>
@@ -213,7 +218,7 @@ export default function Dashboard({ stats, projects }) {
                 aria-labelledby="next-step-heading"
             >
                 <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Next · step {next.step} of 3
+                    {__('dashboard.next_step', { step: next.step })}
                 </p>
                 <Heading as="h2" id="next-step-heading" className="mt-1">
                     {next.title}
@@ -227,19 +232,19 @@ export default function Dashboard({ stats, projects }) {
             <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
                 <Panel>
                     <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                        <Heading as="h2">Recent layers</Heading>
+                        <Heading as="h2">{__('dashboard.recent_layers')}</Heading>
                         <Link href={routes.layers || '/layers'} className="text-[13px] font-medium text-primary hover:underline">
-                            All layers
+                            {__('dashboard.all_layers')}
                         </Link>
                     </div>
                     {layers.length ? (
                         <DataTable>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.Head className={thClass}>Name</Table.Head>
-                                    <Table.Head className={`${thClass} hidden md:table-cell`}>Geometry</Table.Head>
-                                    <Table.Head className={`${thClass} hidden md:table-cell`}>Features</Table.Head>
-                                    <Table.Head className={thClass}>Status</Table.Head>
+                                    <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
+                                    <Table.Head className={`${thClass} hidden md:table-cell`}>{t('layers.geometry')}</Table.Head>
+                                    <Table.Head className={`${thClass} hidden md:table-cell`}>{t('layers.features')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('forms.status')}</Table.Head>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -250,10 +255,10 @@ export default function Dashboard({ stats, projects }) {
                                                 {layer.name}
                                             </Link>
                                         </Table.Cell>
-                                        <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{layer.geometry_type || '—'}</Table.Cell>
+                                        <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{enumLabel(layer.geometry_type) || t('common.em_dash')}</Table.Cell>
                                         <Table.Cell className={`${tdMono} hidden md:table-cell`}>{count(layer.feature_count)}</Table.Cell>
                                         <Table.Cell className={tdClass}>
-                                            <Pill live={layer.published}>{layer.published ? 'Published' : 'Draft'}</Pill>
+                                            <Pill live={layer.published}>{layer.published ? t('layers.published') : __('layers.draft')}</Pill>
                                         </Table.Cell>
                                     </Table.Row>
                                 ))}
@@ -261,9 +266,9 @@ export default function Dashboard({ stats, projects }) {
                         </DataTable>
                     ) : (
                         <Empty>
-                            No layers yet.{' '}
+                            {__('dashboard.no_layers')}{' '}
                             <Link href={routes.imports || '/imports'} className="font-medium text-primary hover:underline">
-                                Import a dataset
+                                {__('dashboard.import_dataset')}
                             </Link>
                         </Empty>
                     )}
@@ -273,9 +278,9 @@ export default function Dashboard({ stats, projects }) {
                     <MapFigure map={featured} href={routes.mapBuilder} />
                     <Panel>
                         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                            <Heading as="h2">Projects</Heading>
+                            <Heading as="h2">{t('projects.title')}</Heading>
                             <Link href={routes.projects || '/projects'} className="text-[13px] font-medium text-primary hover:underline">
-                                All projects
+                                {__('dashboard.all_projects')}
                             </Link>
                         </div>
                         {projectRows.length ? (
@@ -285,12 +290,12 @@ export default function Dashboard({ stats, projects }) {
                                         <Link href={`/projects/${project.id}`} className="truncate text-[13px] font-medium text-primary hover:underline">
                                             {project.name}
                                         </Link>
-                                        <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{project.created_at_formatted || when(project.created_at)}</span>
+                                        <span dir="ltr" className="shrink-0 font-mono text-[11px] text-muted-foreground">{project.created_at_formatted || when(project.created_at)}</span>
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <Empty>No projects in this organization.</Empty>
+                            <Empty>{__('dashboard.no_projects')}</Empty>
                         )}
                     </Panel>
                 </div>

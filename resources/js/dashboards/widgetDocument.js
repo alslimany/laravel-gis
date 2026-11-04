@@ -1,3 +1,5 @@
+import { __ } from '@/lib/i18n';
+import { fieldLabel as attributeLabel } from '@/lib/enum-labels';
 export const DEFAULT_SIZE = {
     indicator: { w: 3, h: 2 },
     serial: { w: 6, h: 4 },
@@ -9,15 +11,15 @@ export const DEFAULT_SIZE = {
     category: { w: 3, h: 2 },
 };
 
-const TITLES = {
-    indicator: 'Indicator',
-    serial: 'Chart',
-    pie: 'Pie chart',
-    table: 'Table',
-    list: 'List',
-    map: 'Map',
-    text: 'Text',
-    category: 'Filter',
+const TITLE_KEYS = {
+    indicator: 'dash.type.indicator',
+    serial: 'dash.type.serial',
+    pie: 'dash.type.pie',
+    table: 'dash.type.table',
+    list: 'dash.type.list',
+    map: 'dash.type.map',
+    text: 'dash.type.text',
+    category: 'dash.type.category',
 };
 
 export function canonicalType(type) {
@@ -35,7 +37,7 @@ export function createWidget(type, index = 0) {
     return {
         id,
         type: resolved,
-        title: TITLES[resolved],
+        title: __(TITLE_KEYS[resolved]),
         layout: { x: 0, y: Infinity, w: size.w, h: size.h },
         aggregation: 'count',
         source: resolved === 'map' ? 'layer' : undefined,
@@ -79,7 +81,7 @@ export function normalizeWidgets(widgets = []) {
             ...raw,
             id: raw.id || `w_${index}_${type}`,
             type,
-            title: raw.title || TITLES[type],
+            title: raw.title || __(TITLE_KEYS[type]),
             layout,
             aggregation: raw.aggregation || 'count',
             chart_style: raw.chart_style || (type === 'serial' ? (String(raw.type).toLowerCase() === 'line' ? 'line' : 'bar') : undefined),
@@ -113,5 +115,7 @@ export function applyGridLayout(widgets, layout) {
 
 export function fieldLabel(field) {
     if (!field) return '';
-    return field.alias || field.name;
+    // A real alias wins; an alias that is just the column name falls back to the catalog label.
+    if (field.alias && field.alias !== field.name) return field.alias;
+    return attributeLabel(field.name);
 }

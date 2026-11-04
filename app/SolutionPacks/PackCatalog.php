@@ -62,13 +62,14 @@ class PackCatalog
         return [
             'id' => $model?->id,
             'slug' => $pack->slug(),
-            'name' => $pack->name(),
-            'description' => $pack->description(),
+            'name' => $pack->displayName(),
+            'description' => $pack->displayDescription(),
             'contents' => $pack->contentsSummary(),
             'installed' => $installed,
             'custom' => $model !== null,
             'unpublished' => $unpublished,
-            'workflow' => app(WorkflowResolver::class)->resolve($pack, $organization),
+            'workflow' => $workflow = app(WorkflowResolver::class)->resolve($pack, $organization),
+            'workflow_label' => trans_choice('packs.workflow_steps', count($workflow)),
         ];
     }
 }

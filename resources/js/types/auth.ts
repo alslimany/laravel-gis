@@ -48,3 +48,37 @@ export type ConsoleModule = {
 };
 
 export type ConsoleRoutes = Record<string, string | null | undefined>;
+
+export type LocaleOption = {
+    value: string;
+    label: string;
+    native: string;
+};
+
+export type SharedLocaleProps = {
+    locale?: string;
+    localeOptions?: LocaleOption[];
+    translations?: Record<string, string>;
+    fallbackTranslations?: Record<string, string>;
+    isRtl?: boolean;
+    localeUpdateUrl?: string;
+};
+
+export type SharedPageProps = SharedLocaleProps & {
+    user?: User | null;
+    organization?: Organization | null;
+    brand?: Brand;
+    flash?: {
+        status?: string | null;
+        success?: string | null;
+        error?: string | null;
+    };
+    modules?: ConsoleModule[];
+    activeModule?: string | null;
+    routes?: ConsoleRoutes;
+    abilities?: {
+        edit?: boolean;
+        admin?: boolean;
+    };
+    errors?: Record<string, string | string[]>;
+};

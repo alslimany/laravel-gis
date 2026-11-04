@@ -21,6 +21,7 @@ use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LayerController;
 use App\Http\Controllers\LayerFieldController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MapIconController;
 use App\Http\Controllers\MvtController;
@@ -50,6 +51,8 @@ Route::get('/', function () {
 
 Auth::routes();
 
+Route::put('/locale', [LocaleController::class, 'update'])->name('locale.update');
+
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 // Public shared / public form / public dashboard
@@ -77,6 +80,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/layers/{layer}/publish', [LayerController::class, 'publish'])->name('layers.publish');
     Route::post('/layers/{layer}/unpublish', [LayerController::class, 'unpublish'])->name('layers.unpublish');
     Route::post('/layers/{layer}/style', [LayerController::class, 'updateStyle'])->name('layers.style.update');
+    Route::get('/layers/{layer}/builder', [LayerController::class, 'builder'])->name('layers.builder');
 
     Route::get('/layers/{layer}/attributes', [AttributeTableController::class, 'index'])->name('layers.attributes');
     Route::get('/layers/{layer}/fields', [LayerFieldController::class, 'page'])->name('layers.fields');

@@ -1,8 +1,10 @@
 import { Link, useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import GuestLayout from '@/layouts/guest-layout';
 import { Field, Heading, PrimaryButton, TextInput } from '@/components/gis';
 
 export default function Login() {
+    const { t } = useTranslation();
     const form = useForm({
         email: '',
         password: '',
@@ -15,10 +17,10 @@ export default function Login() {
     }
 
     return (
-        <GuestLayout title="Sign in">
+        <GuestLayout title={t('auth.sign_in')}>
             <form onSubmit={submit} className="space-y-4">
-                <Heading as="h2">Sign in</Heading>
-                <Field label="Email" error={form.errors.email}>
+                <Heading as="h2">{t('auth.sign_in')}</Heading>
+                <Field label={t('forms.email')} error={form.errors.email}>
                     <TextInput
                         id="email"
                         type="email"
@@ -30,7 +32,7 @@ export default function Login() {
                         onChange={(event) => form.setData('email', event.target.value)}
                     />
                 </Field>
-                <Field label="Password" error={form.errors.password}>
+                <Field label={t('forms.password')} error={form.errors.password}>
                     <TextInput
                         id="password"
                         type="password"

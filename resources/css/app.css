@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
+/* Self-hosted Arabic UI font (no external CDN): Arabic subset only, used for :lang(ar). */
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
 
 @source '../views';
 @source '../js';
@@ -200,4 +205,16 @@
         linear-gradient(90deg, var(--map-grid) 1px, transparent 1px);
     background-size: 100% 100%, 40px 40px, 40px 40px;
     color: var(--map-canvas-foreground);
+}
+
+/* Arabic: IBM Plex Sans Arabic first; Latin glyphs still fall through to the sans stack. */
+:lang(ar) {
+    --font-sans: 'IBM Plex Sans Arabic', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans);
+}
+
+/* Letter-spacing breaks Arabic letter joining; uppercase has no meaning in Arabic. */
+[dir='rtl'] .uppercase,
+[dir='rtl'] [class*='tracking-'] {
+    letter-spacing: normal;
 }

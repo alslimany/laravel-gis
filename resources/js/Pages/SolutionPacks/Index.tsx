@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import {
     ActionLink,
@@ -34,9 +35,11 @@ type PackRow = {
         target?: string | null;
         href?: string | null;
     }>;
+    workflow_label?: string;
 };
 
 export default function SolutionPacks({ packs = [], canManage = false }: { packs?: PackRow[]; canManage?: boolean }) {
+    const { t } = useTranslation();
     function install(slug: string) {
         router.post(`/organization/solution-packs/${slug}`, {}, { preserveScroll: true });
     }
@@ -53,39 +56,38 @@ export default function SolutionPacks({ packs = [], canManage = false }: { packs
         if (!pack.id) {
             return;
         }
-        if (window.confirm(`Delete pack "${pack.name}"? Installed layers are not removed.`)) {
+        if (window.confirm(__('packs.confirm_delete', { name: pack.name }))) {
             router.delete(`/solution-packs/${pack.id}`, { preserveScroll: true });
         }
     }
 
     return (
-        <AppLayout title="Solution packs">
+        <AppLayout title={t('solution_packs.title')}>
             <PageHeader
-                title="Solution packs"
+                title={t('solution_packs.title')}
                 action={
                     <div className="flex items-center gap-2">
-                        <GhostLink href="/apps">Open app gallery</GhostLink>
-                        <GhostLink href="/organization/settings">Back to settings</GhostLink>
-                        {canManage ? <PrimaryLink href="/solution-packs/create">New pack</PrimaryLink> : null}
+                        <GhostLink href="/apps">{__('packs.gallery')}</GhostLink>
+                        <GhostLink href="/organization/settings">{t('settings.back_settings')}</GhostLink>
+                        {canManage ? <PrimaryLink href="/solution-packs/create">{__('packs.new')}</PrimaryLink> : null}
                     </div>
                 }
             />
             <p className="max-w-2xl text-sm text-base-600">
-                Packs are blueprints of layers, relationships, and workspace items you can install into this organization.
-                Built-in packs are read-only; duplicate one to customize it, or start from scratch.
+                {__('packs.intro')}
             </p>
 
             <Panel>
                 {packs.length === 0 ? (
-                    <Empty>No solution packs yet.</Empty>
+                    <Empty>{__('packs.empty')}</Empty>
                 ) : (
                     <DataTable>
                         <thead>
                             <tr>
-                                <th className={thClass}>Pack</th>
-                                <th className={thClass}>Contents</th>
-                                <th className={thClass}>Status</th>
-                                <th className={`${thClass} text-right`}>Actions</th>
+                                <th className={thClass}>{__('packs.pack')}</th>
+                                <th className={thClass}>{t('common.contents')}</th>
+                                <th className={thClass}>{t('forms.status')}</th>
+                                <th className={`${thClass} text-end`}>{t('forms.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,15 +96,15 @@ export default function SolutionPacks({ packs = [], canManage = false }: { packs
                                     <td className={tdClass}>
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium">{pack.name}</span>
-                                            <Pill>{pack.custom ? 'Custom' : 'Built-in'}</Pill>
+                                            <Pill>{pack.custom ? __('packs.custom') : __('packs.builtin')}</Pill>
                                         </div>
                                         <p className={tdMuted}>{pack.description}</p>
                                         {pack.workflow && pack.workflow.length > 0 ? (
                                             <details className="mt-1">
                                                 <summary className="cursor-pointer text-xs text-link select-none">
-                                                    Workflow ({pack.workflow.length} steps)
+                                                    {pack.workflow_label}
                                                 </summary>
-                                                <ol className="mt-1 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                                                <ol className="mt-1 list-decimal space-y-1 ps-4 text-xs text-muted-foreground">
                                                     {pack.workflow.map((step, index) => (
                                                         <li key={index}>
                                                             {step.href ? (
@@ -123,34 +125,34 @@ export default function SolutionPacks({ packs = [], canManage = false }: { packs
                                     <td className={tdClass}>
                                         {pack.installed ? (
                                             <span className="text-sm font-medium text-emerald-600">
-                                                Installed{pack.unpublished > 0 ? ` · ${pack.unpublished} unpublished` : ''}
+                                                {__('packs.installed')}{pack.unpublished > 0 ? ` · ${__('packs.unpublished', { count: pack.unpublished })}` : ''}
                                             </span>
                                         ) : (
-                                            <span className={`text-sm ${tdMuted}`}>Not installed</span>
+                                            <span className={`text-sm ${tdMuted}`}>{__('packs.not_installed')}</span>
                                         )}
                                     </td>
-                                    <td className={`${tdClass} text-right`}>
+                                    <td className={`${tdClass} text-end`}>
                                         <RowActions>
                                             {pack.custom && pack.id && canManage ? (
-                                                <ActionLink href={`/solution-packs/${pack.id}/edit`}>Edit</ActionLink>
+                                                <ActionLink href={`/solution-packs/${pack.id}/edit`}>{t('actions.edit')}</ActionLink>
                                             ) : null}
                                             {!pack.installed && canManage ? (
                                                 <PrimaryButton type="button" size="sm" onClick={() => install(pack.slug)}>
-                                                    Install
+                                                    {__('packs.install')}
                                                 </PrimaryButton>
                                             ) : null}
                                             {pack.installed && pack.unpublished > 0 && canManage ? (
                                                 <PrimaryButton type="button" size="sm" variant="secondary" onClick={() => publish(pack.slug)}>
-                                                    Publish {pack.unpublished} {pack.unpublished === 1 ? 'layer' : 'layers'}
+                                                    {__('packs.publish')} {pack.unpublished} {pack.unpublished === 1 ? 'layer' : 'layers'}
                                                 </PrimaryButton>
                                             ) : null}
                                             {!pack.custom && canManage ? (
                                                 <Button type="button" size="sm" variant="outline" onClick={() => duplicate(pack.slug)}>
-                                                    Duplicate
+                                                    {__('packs.duplicate')}
                                                 </Button>
                                             ) : null}
                                             {pack.custom && canManage ? (
-                                                <DangerButton onClick={() => remove(pack)}>Delete</DangerButton>
+                                                <DangerButton onClick={() => remove(pack)}>{t('actions.delete')}</DangerButton>
                                             ) : null}
                                         </RowActions>
                                     </td>

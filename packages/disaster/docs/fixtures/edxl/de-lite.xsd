@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:oasis:names:tc:emergency:EDXL:DE:1.0"
+           xmlns="urn:oasis:names:tc:emergency:EDXL:DE:1.0"
+           elementFormDefault="qualified">
+    <xs:element name="EDXLDistribution">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+            </xs:sequence>
+            <xs:anyAttribute processContents="lax"/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

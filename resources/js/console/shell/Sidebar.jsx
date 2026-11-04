@@ -110,9 +110,9 @@ export default function Sidebar({
 
     return (
         <aside
-            className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/10 bg-ink text-white transition-all duration-200 ${
+            className={`fixed inset-y-0 start-0 z-40 flex flex-col border-e border-white/10 bg-ink text-white transition-all duration-200 ${
                 collapsed ? 'w-[72px]' : 'w-64'
-            } ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+            } ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full lg:translate-x-0 rtl:lg:translate-x-0'}`}
         >
             <div
                 className={`flex h-14 items-center gap-3 border-b border-white/10 px-4 ${
@@ -160,14 +160,14 @@ export default function Sidebar({
                             title={collapsed ? 'Organize' : undefined}
                         >
                             {collapsed ? (
-                                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                                <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
                             ) : (
                                 <>
                                     <span>Organize</span>
                                     {organizeShown ? (
                                         <ChevronDown className="h-4 w-4" />
                                     ) : (
-                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                                     )}
                                 </>
                             )}

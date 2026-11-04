@@ -237,15 +237,15 @@ class DashboardWidgetDocument
     public function defaultTitle(string $type): string
     {
         return match ($type) {
-            'indicator' => 'Indicator',
-            'serial' => 'Chart',
-            'pie' => 'Pie chart',
-            'table' => 'Table',
-            'list' => 'List',
-            'map' => 'Map',
-            'text' => 'Text',
-            'category' => 'Filter',
-            default => 'Widget',
+            'indicator' => __('dash.type.indicator'),
+            'serial' => __('dash.type.serial'),
+            'pie' => __('dash.type.pie'),
+            'table' => __('dash.type.table'),
+            'list' => __('dash.type.list'),
+            'map' => __('dash.type.map'),
+            'text' => __('dash.type.text'),
+            'category' => __('dash.type.category'),
+            default => __('dash.type.widget'),
         };
     }
 
@@ -255,14 +255,14 @@ class DashboardWidgetDocument
     public function catalog(): array
     {
         return [
-            ['type' => 'indicator', 'label' => 'Indicator', 'group' => 'Data', 'description' => 'Count, sum, or average from a layer or saved analysis'],
-            ['type' => 'serial', 'label' => 'Serial chart', 'group' => 'Data', 'description' => 'Bar or line from a layer or saved analysis'],
-            ['type' => 'pie', 'label' => 'Pie chart', 'group' => 'Data', 'description' => 'Share of categories'],
-            ['type' => 'table', 'label' => 'Table', 'group' => 'Data', 'description' => 'Attribute rows'],
-            ['type' => 'list', 'label' => 'List', 'group' => 'Data', 'description' => 'Title and description rows'],
-            ['type' => 'map', 'label' => 'Map', 'group' => 'Map', 'description' => 'Layer or a saved map'],
-            ['type' => 'text', 'label' => 'Text', 'group' => 'Content', 'description' => 'Heading and note'],
-            ['type' => 'category', 'label' => 'Category selector', 'group' => 'Filters', 'description' => 'Filter other widgets'],
+            ['type' => 'indicator', 'label' => __('dash.type.indicator'), 'group' => __('dash.group.data'), 'description' => __('dash.cat_desc.indicator')],
+            ['type' => 'serial', 'label' => __('dash.cat.serial'), 'group' => __('dash.group.data'), 'description' => __('dash.cat_desc.serial')],
+            ['type' => 'pie', 'label' => __('dash.type.pie'), 'group' => __('dash.group.data'), 'description' => __('dash.cat_desc.pie')],
+            ['type' => 'table', 'label' => __('dash.type.table'), 'group' => __('dash.group.data'), 'description' => __('dash.cat_desc.table')],
+            ['type' => 'list', 'label' => __('dash.type.list'), 'group' => __('dash.group.data'), 'description' => __('dash.cat_desc.list')],
+            ['type' => 'map', 'label' => __('dash.type.map'), 'group' => __('dash.type.map'), 'description' => __('dash.cat_desc.map')],
+            ['type' => 'text', 'label' => __('dash.type.text'), 'group' => __('dash.group.content'), 'description' => __('dash.cat_desc.text')],
+            ['type' => 'category', 'label' => __('dash.cat.category'), 'group' => __('dash.group.filters'), 'description' => __('dash.cat_desc.category')],
         ];
     }
 

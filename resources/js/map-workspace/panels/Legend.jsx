@@ -4,6 +4,7 @@ import { useMapStore } from '../store/mapStore';
 import { mapIconUrl } from '../icons/pointIcons';
 import { buildLegendEntries, normalizeStyleConfig } from '../utils/styleRenderers';
 
+import { __ } from '@/lib/i18n';
 /**
  * Legend for visible (or selected) layers based on style_config.
  */
@@ -31,7 +32,7 @@ export default function Legend({ showSelectedOnly = false }) {
         return (
             <div className="map-legend card border-0 shadow-sm">
                 <div className="card-body p-2">
-                    <div className="small text-muted">No legend items</div>
+                    <div className="small text-muted">{__('maps.no_legend')}</div>
                 </div>
             </div>
         );
@@ -51,7 +52,7 @@ export default function Legend({ showSelectedOnly = false }) {
         <div className="map-legend card border-0 shadow-sm">
             <div className="card-header py-1 px-2 bg-white">
                 <strong className="small">
-                    <List className="glyph" strokeWidth={1.75} aria-hidden="true" /> Legend
+                    <List className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.legend')}
                 </strong>
             </div>
             <div className="card-body p-2" style={{ maxHeight: 240, overflowY: 'auto' }}>

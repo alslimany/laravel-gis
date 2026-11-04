@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation, __ } from '@/lib/i18n';
 import { router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Field, PageHeader, PrimaryButton, TextArea, TextInput } from '@/components/gis';
 import { clearTileCache, tileCacheCount } from '@/map-workspace/cache/tileCache';
 
 export default function Settings({ organization, solutionPacks = [], canInstallPacks = false }) {
+    const { t } = useTranslation();
     const [tileCount, setTileCount] = useState(null);
     const [clearing, setClearing] = useState(false);
     const [installing, setInstalling] = useState(null);
@@ -37,53 +39,52 @@ export default function Settings({ organization, solutionPacks = [], canInstallP
     }
 
     return (
-        <AppLayout title="Organization">
-            <PageHeader title="Organization" />
+        <AppLayout title={t('organization.title')}>
+            <PageHeader title={t('organization.title')} />
             <form onSubmit={submit} className="max-w-xl space-y-4">
-                <Field label="Organization name" error={form.errors.name}>
+                <Field label={t('forms.organization_name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t('forms.description')}>
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
-                <Field label="Primary color" error={form.errors.primary_color}>
+                <Field label={t('forms.primary_color')} error={form.errors.primary_color}>
                     <TextInput value={form.data.primary_color} onChange={(event) => form.setData('primary_color', event.target.value)} />
                 </Field>
-                <Field label="Logo" error={form.errors.logo}>
+                <Field label={t('forms.logo')} error={form.errors.logo}>
                     <input type="file" accept="image/*" className="block" onChange={(event) => form.setData('logo', event.target.files?.[0] || null)} />
                 </Field>
                 {organization.logo_path ? <img src={`/storage/${organization.logo_path}`} alt="" className="h-16" /> : null}
                 <PrimaryButton type="submit" disabled={form.processing}>
-                    Save organization
+                    {__('org.save')}
                 </PrimaryButton>
             </form>
             <section className="mt-8 max-w-xl space-y-3 border-t border-border pt-6">
-                <h2 className="text-lg font-semibold">Map tile cache</h2>
+                <h2 className="text-lg font-semibold">{__('org.tile_cache')}</h2>
                 <p className="text-sm text-base-600">
-                    Basemap and imagery tiles already loaded in this browser are kept for 30 days, one store per map type.
-                    {tileCount === null ? '' : ` ${tileCount} tile${tileCount === 1 ? '' : 's'} stored.`}
+                    {__('org.tile_cache_help')}
+                    {tileCount === null ? '' : ` ${__(tileCount === 1 ? 'org.tiles_one' : 'org.tiles_many', { count: tileCount })}`}
                 </p>
                 <PrimaryButton type="button" onClick={emptyMapCache} disabled={clearing}>
-                    {clearing ? 'Emptying cache…' : 'Empty map cache'}
+                    {clearing ? __('org.emptying') : __('org.empty_cache')}
                 </PrimaryButton>
             </section>
             <section className="mt-8 max-w-xl space-y-3 border-t border-border pt-6">
                 <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold">Solution packs</h2>
+                    <h2 className="text-lg font-semibold">{t('solution_packs.title')}</h2>
                     {canInstallPacks ? (
                         <div className="flex items-center gap-4">
                             <a href="/solution-packs" className="text-sm font-medium text-primary hover:underline">
-                                Build a pack →
+                                {__('org.build_pack')}
                             </a>
                             <a href="/apps" className="text-sm font-medium text-primary hover:underline">
-                                Open app gallery →
+                                {__('org.app_gallery')}
                             </a>
                         </div>
                     ) : null}
                 </div>
                 <p className="text-sm text-base-600">
-                    Pre-built layers, fields, relationships, and sample features for a sector. Installing a pack adds
-                    content to this organization only; it never touches other organizations.
+                    {__('org.packs_help')}
                 </p>
                 <div className="space-y-3">
                     {solutionPacks.map((pack) => (
@@ -91,8 +92,8 @@ export default function Settings({ organization, solutionPacks = [], canInstallP
                             <div>
                                 <p className="font-medium">
                                     {pack.name}
-                                    <span className="ml-2 align-middle text-xs font-normal text-base-500">
-                                        {pack.custom ? 'Custom' : 'Built-in'}
+                                    <span className="ms-2 align-middle text-xs font-normal text-base-500">
+                                        {pack.custom ? __('packs.custom') : __('packs.builtin')}
                                     </span>
                                 </p>
                                 <p className="text-sm text-base-600">{pack.description}</p>
@@ -109,11 +110,11 @@ export default function Settings({ organization, solutionPacks = [], canInstallP
                                             router.post(`/organization/solution-packs/${pack.slug}/publish`, {}, { onFinish: () => setInstalling(null) });
                                         }}
                                     >
-                                        {installing === pack.slug ? 'Publishing…' : `Publish ${pack.unpublished}`}
+                                        {installing === pack.slug ? __('org.publishing') : __('org.publish_count', { count: pack.unpublished })}
                                     </PrimaryButton>
                                 ) : null}
                                 {pack.installed ? (
-                                    <span className="text-sm font-medium text-emerald-600">Installed</span>
+                                    <span className="text-sm font-medium text-emerald-600">{__('packs.installed')}</span>
                                 ) : canInstallPacks ? (
                                     <PrimaryButton
                                         type="button"
@@ -123,7 +124,7 @@ export default function Settings({ organization, solutionPacks = [], canInstallP
                                             router.post(`/organization/solution-packs/${pack.slug}`, {}, { onFinish: () => setInstalling(null) });
                                         }}
                                     >
-                                        {installing === pack.slug ? 'Installing…' : 'Install'}
+                                        {installing === pack.slug ? __('org.installing') : __('packs.install')}
                                     </PrimaryButton>
                                 ) : null}
                             </div>

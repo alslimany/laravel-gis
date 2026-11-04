@@ -1,4 +1,5 @@
 import { Style, Stroke, Fill, Circle as CircleStyle, Icon, Text } from 'ol/style';
+import Point from 'ol/geom/Point';
 import { mapIconUrl } from '../icons/pointIcons';
 
 /** Built-in color ramps for classification. */
@@ -149,12 +150,78 @@ function buildSymbolStyle(symbol, labelStyle = null) {
               stroke,
           });
 
-    return new Style({
+    const main = new Style({
         fill,
         stroke,
         image,
         text: labelStyle || undefined,
     });
+
+    // Optional casing (e.g. road closures: white halo under a dark line) for contrast on any basemap.
+    if (symbol.casingWidth) {
+        const casing = new Style({
+            stroke: new Stroke({
+                color: hexToRgba(symbol.casingColor || '#ffffff', 1),
+                width: symbol.casingWidth,
+            }),
+        });
+
+        return [casing, main];
+    }
+
+    return main;
+}
+
+/** Pixel length and midpoint of a (multi)line at this resolution; works for Feature and MVT RenderFeature. */
+export function linePixelInfo(feature, resolution) {
+    const geometry = feature?.getGeometry?.();
+    if (!geometry || !resolution) return null;
+    const type = geometry.getType();
+    if (type !== 'LineString' && type !== 'MultiLineString') return null;
+    const flat = geometry.getFlatCoordinates();
+    const stride = geometry.getStride ? geometry.getStride() : 2;
+    if (!flat || flat.length < stride * 2) return null;
+    let length = 0;
+    for (let i = stride; i < flat.length; i += stride) {
+        length += Math.hypot(flat[i] - flat[i - stride], flat[i + 1] - flat[i - stride + 1]);
+    }
+    const mid = Math.floor(flat.length / stride / 2) * stride;
+    return { px: length / resolution, mid: [flat[mid], flat[mid + 1]] };
+}
+
+const NO_ENTRY_SVG = (color) =>
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="${color}" stroke="#ffffff" stroke-width="2"/><rect x="4" y="7.5" width="10" height="3" rx="1" fill="#ffffff"/></svg>`,
+    );
+
+/**
+ * Line layers with `minLengthPx` (road closures): thicker strokes when zoomed out
+ * (`lowZoomResolution` / `lowZoomExtraWidth`), and a segment shorter than `minLengthPx` on screen
+ * gets a "no entry" marker at its middle so it never reads as a stray dot.
+ */
+function withLowZoomEmphasis(styles, symbol, feature, resolution) {
+    if (!symbol.minLengthPx && !symbol.lowZoomResolution) return styles;
+    const list = Array.isArray(styles) ? styles : [styles];
+    const zoomedOut = symbol.lowZoomResolution && resolution > symbol.lowZoomResolution;
+    if (zoomedOut) {
+        const extra = symbol.lowZoomExtraWidth ?? 2;
+        list.forEach((style) => {
+            const stroke = style.getStroke?.();
+            if (stroke) stroke.setWidth((stroke.getWidth() ?? 1) + extra);
+        });
+    }
+    const info = symbol.minLengthPx ? linePixelInfo(feature, resolution) : null;
+    if (info && info.px < symbol.minLengthPx) {
+        list.push(
+            new Style({
+                geometry: new Point(info.mid),
+                image: new Icon({ src: NO_ENTRY_SVG(symbol.strokeColor || '#991b1b'), width: 18, height: 18 }),
+                zIndex: 10,
+            }),
+        );
+    }
+    return list;
 }
 
 function buildLabelStyle(labels, feature) {
@@ -255,7 +322,7 @@ export function createStyleFunction(styleConfigOrLayer) {
         return null;
     }
 
-    return (feature) => {
+    return (feature, resolution) => {
         const color = resolveFeatureColor(config, feature);
         let icon = config.symbol.icon || null;
         if (config.renderer === 'unique' && config.field) {
@@ -278,7 +345,7 @@ export function createStyleFunction(styleConfigOrLayer) {
             ? { ...config.labels, offsetY: (symbol.size ?? 24) / 2 + 8 }
             : config.labels;
         const label = buildLabelStyle(labels, feature);
-        return buildSymbolStyle(symbol, label);
+        return withLowZoomEmphasis(buildSymbolStyle(symbol, label), symbol, feature, resolution);
     };
 }
 

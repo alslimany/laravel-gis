@@ -423,10 +423,24 @@
     filter: brightness(1.08);
 }
 
-.map-stage .ol-zoom,
 .map-stage .ol-zoomslider,
 .map-stage .ol-scale-line {
     display: none;
+}
+
+/*
+ * Builder zoom buttons: the top of the stage is taken by .map-topbar (both sides), .map-side
+ * (top-left) and .map-inspector-dock (top-right), so place zoom at the bottom inline-end corner,
+ * just above the status bar (.map-status-bar-card: bottom 0.75rem, ~2.6rem tall) and below the
+ * temporal slider (bottom 7rem). Horizontally clear of .map-float-panel (starts 4.25rem from the right). Logical insets put it bottom-right in LTR and bottom-left in RTL.
+ * lib/ol-rtl.css skips .map-stage so it doesn't override this.
+ */
+.map-stage .ol-zoom.ol-control {
+    top: auto;
+    right: auto;
+    left: auto;
+    inset-block-end: 4rem;
+    inset-inline-end: 0.75rem;
 }
 
 .sr-only {

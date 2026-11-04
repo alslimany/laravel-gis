@@ -1,4 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Empty, PageHeader, Panel, PrimaryLink } from '@/components/gis';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +29,7 @@ type Props = {
     basins?: BasinRisk[];
     mapBuilderUrl?: string;
     alertRulesUrl?: string;
+    warningsUrl?: string;
 };
 
 const LEVEL_CLASS: Record<string, string> = {
@@ -46,18 +49,22 @@ export default function Index({
     basins = [],
     mapBuilderUrl = '/maps/builder',
     alertRulesUrl = '/x/early-warning/alert-rules',
+    warningsUrl,
 }: Props) {
+    const { t } = useTranslation();
+    const isSuperAdmin = Boolean((usePage().props as { user?: { is_super_admin?: boolean } | null }).user?.is_super_admin);
     return (
         <AppLayout
-            title="Early Warning"
-            breadcrumbs={[{ title: 'Early Warning', href: '/x/early-warning' }]}
+            title={t('early_warning.title')}
+            breadcrumbs={[{ title: t('early_warning.title'), href: '/x/early-warning' }]}
         >
             <PageHeader
-                title="Early Warning"
+                title={t('early_warning.title')}
                 action={
                     <div className="flex flex-wrap gap-2">
-                        <PrimaryLink href={alertRulesUrl}>Alert rules</PrimaryLink>
-                        <PrimaryLink href={mapBuilderUrl}>Open map builder</PrimaryLink>
+                        {warningsUrl ? <PrimaryLink href={warningsUrl}>{t('ew.warnings.open')}</PrimaryLink> : null}
+                        <PrimaryLink href={alertRulesUrl}>{t('early_warning.alert_rules')}</PrimaryLink>
+                        <PrimaryLink href={mapBuilderUrl}>{t('maps.open_builder')}</PrimaryLink>
                     </div>
                 }
             />
@@ -65,22 +72,25 @@ export default function Index({
             <AdvisoryBanner advisory={advisory} authority={authority} />
 
             <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Stat label="Basins" value={String(basin_count)} />
-                <Stat label="Subscriptions" value={String(subscriptions)} />
-                <Stat label="Forecast rows" value={String(forecast_rows)} />
-                <Stat label="Last fetch" value={latest_fetch_at ? when(latest_fetch_at) : '—'} />
+                <Stat label={t('early_warning.basins')} value={String(basin_count)} />
+                <Stat label={t('early_warning.subscriptions')} value={String(subscriptions)} />
+                <Stat label={t('early_warning.forecast_rows')} value={String(forecast_rows)} />
+                <Stat label={t('early_warning.last_fetch')} value={latest_fetch_at ? when(latest_fetch_at) : t('common.em_dash')} />
             </div>
 
             <Panel>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-                    <h2 className="text-sm font-semibold">Current basin risk</h2>
+                    <h2 className="text-sm font-semibold">{t('early_warning.current_basin_risk')}</h2>
                     <Link href={mapBuilderUrl} className="text-sm font-medium text-primary hover:underline">
-                        Timeline in map builder
+                        {__('ew.timeline_in_builder')}
                     </Link>
                 </div>
 
                 {basins.length === 0 ? (
-                    <Empty>No basins linked yet. Run early-warning:link-basins, then refresh.</Empty>
+                    <Empty>
+                        {__('ew.no_basins')}
+                        {isSuperAdmin ? ` ${__('ew.no_basins_ops')}` : null}
+                    </Empty>
                 ) : (
                     <ul className="divide-y divide-border">
                         {basins.map((basin) => (
@@ -99,15 +109,15 @@ export default function Index({
                                     variant="secondary"
                                     className={`capitalize ${LEVEL_CLASS[basin.risk_level] ?? ''}`}
                                 >
-                                    {basin.risk_level}
+                                    {enumLabel(basin.risk_level)}
                                 </Badge>
-                                <span className="w-16 text-right font-mono text-sm tabular-nums text-muted-foreground">
-                                    {basin.score != null ? basin.score.toFixed(0) : '—'}
+                                <span dir="ltr" className="w-16 text-end font-mono text-sm tabular-nums text-muted-foreground">
+                                    {basin.score != null ? basin.score.toFixed(0) : t('common.em_dash')}
                                 </span>
-                                <span className="w-28 text-right text-xs text-muted-foreground">
+                                <span className="w-28 text-end text-xs text-muted-foreground">
                                     {basin.buildings != null || basin.road_km != null
-                                        ? `${basin.buildings ?? '—'} bld · ${basin.road_km != null ? basin.road_km.toFixed(1) : '—'} km`
-                                        : 'no exposure'}
+                                        ? __('ew.exposure_summary', { buildings: basin.buildings ?? t('common.em_dash'), km: basin.road_km != null ? basin.road_km.toFixed(1) : t('common.em_dash') })
+                                        : __('ew.no_exposure')}
                                 </span>
                             </li>
                         ))}
@@ -124,7 +134,7 @@ function Stat({ label, value }: { label: string; value: string }) {
             <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 {label}
             </p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
+            <p dir="ltr" className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
         </Panel>
     );
 }

@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libpq-dev \
@@ -23,7 +25,9 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip
+# GD with JPEG + FreeType (local dev: UploadedFile::fake()->image() needs imagejpeg)
+RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
+    && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip
 
 # Install Redis extension (optional, skipping if network issues occur)
 # RUN pecl install redis && docker-php-ext-enable redis

@@ -1,3 +1,4 @@
+import { __ } from '@/lib/i18n';
 import { useEffect, useRef, useState } from 'react';
 import {
     Chart,
@@ -107,7 +108,7 @@ export default function DashboardBoard({ dataUrl }) {
                 });
                 const data = await response.json();
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to load widgets');
+                    throw new Error(data.error || __('dash.load_failed'));
                 }
                 if (!cancelled) {
                     setWidgets(data.widgets || []);
@@ -128,13 +129,13 @@ export default function DashboardBoard({ dataUrl }) {
     }, [dataUrl]);
 
     if (loading) {
-        return <p className="text-muted">Loading widgets…</p>;
+        return <p className="text-muted">{__('dash.loading')}</p>;
     }
     if (error) {
         return <div className="alert alert-danger">{error}</div>;
     }
     if (!widgets.length) {
-        return <div className="alert alert-info">No widgets configured.</div>;
+        return <div className="alert alert-info">{__('dash.none_configured')}</div>;
     }
 
     return (

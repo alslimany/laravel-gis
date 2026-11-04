@@ -1,4 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Empty, Field, GhostLink, PageHeader, Panel, PrimaryButton, TextInput } from '@/components/gis';
@@ -8,7 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 type LayerNode = {
     id: number;
     name: string;
-    table_name: string;
     geometry_type?: string | null;
     feature_count: number;
     key_stem: string;
@@ -120,6 +121,7 @@ function suggestName(parent: LayerNode, child: LayerNode, relationships: Relatio
 }
 
 export default function Builder({ layers = [], relationships = [] }: { layers?: LayerNode[]; relationships?: RelationshipRecord[] }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props as { abilities?: { edit?: boolean } };
     const canEdit = Boolean(abilities?.edit);
 
@@ -241,10 +243,10 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
 
         const nextErrors: Record<string, string[]> = {};
         if (name.trim() === '') {
-            nextErrors.name = ['Give the relationship a name.'];
+            nextErrors.name = [__('relb.name_required')];
         }
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(foreignKey)) {
-            nextErrors.foreign_key = ['Use letters, numbers, and underscores, starting with a letter or underscore.'];
+            nextErrors.foreign_key = [__('relb.fk_invalid')];
         }
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
@@ -270,7 +272,7 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                     mapped[key] = Array.isArray(value) ? (value as string[]) : [String(value)];
                 });
                 if (Object.keys(mapped).length === 0) {
-                    mapped.name = [String(data.message || 'Could not save the relationship.')];
+                    mapped.name = [String(data.message || __('relb.save_failed'))];
                 }
                 setErrors(mapped);
                 return;
@@ -279,7 +281,7 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
             setPending(null);
             router.reload({ only: ['relationships'] });
         } catch (error) {
-            setErrors({ name: [error instanceof Error ? error.message : 'Could not save the relationship.'] });
+            setErrors({ name: [error instanceof Error ? error.message : __('relb.save_failed')] });
         } finally {
             setSaving(false);
         }
@@ -289,31 +291,30 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
     const dragFrom = drag ? positions.get(drag.fromId) : undefined;
 
     return (
-        <AppLayout title="Relationship builder">
+        <AppLayout title={t('relationships.builder')}>
             <PageHeader
-                title="Relationship builder"
-                action={<GhostLink href="/layers">Back to layers</GhostLink>}
+                title={t('relationships.builder')}
+                action={<GhostLink href="/layers">{t('layers.back_layers')}</GhostLink>}
             />
 
             <Panel>
                 <p className="max-w-prose text-sm text-muted-foreground">
                     {canEdit
-                        ? 'Drag from one layer card onto another to connect them. The name and key column are filled in for you — edit them if you need to.'
-                        : 'Layers in this organization and the relationships between them. Editing relationships requires an editor or admin role.'}
+                        ? __('relb.help_edit')
+                        : __('relb.help_view')}
                 </p>
 
                 {armed ? (
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
                         <span>
-                            Connecting from <span className="font-medium text-foreground">{armed.name}</span> — drag this
-                            card onto the layer that should hold the key column.
+                            {__('relb.connecting_from')} <span className="font-medium text-foreground">{armed.name}</span> {__('relb.connecting_hint')}
                         </span>
                         <button
                             type="button"
                             className="text-muted-foreground hover:text-foreground"
                             onClick={() => setArmedId(null)}
                         >
-                            Dismiss
+                            {__('relb.dismiss')}
                         </button>
                     </div>
                 ) : null}
@@ -321,9 +322,9 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                 {layers.length === 0 ? (
                     <div className="mt-4">
                         <Empty>
-                            No layers with a table yet. Import data or create a layer first.
+                            {__('relb.no_layers')}
                             <GhostLink href="/imports" className="ml-2">
-                                Go to imports
+                                {__('relb.go_imports')}
                             </GhostLink>
                         </Empty>
                     </div>
@@ -388,7 +389,7 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                                 const a = centerOf(from);
                                 const b = centerOf(to);
                                 return (
-                                    <span
+                                    <span dir="ltr"
                                         key={`label-${relationship.id}`}
                                         className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
                                         style={{ left: (a.x + b.x) / 2, top: (a.y + b.y) / 2 }}
@@ -420,11 +421,8 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                                     >
                                         <p className="truncate font-medium leading-tight">{item.node.name}</p>
                                         <p className="mt-1 truncate text-xs text-muted-foreground">
-                                            {item.node.geometry_type || 'Attributes only'} · {item.node.feature_count}{' '}
-                                            features
-                                        </p>
-                                        <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-                                            {item.node.table_name}
+                                            {item.node.geometry_type ? enumLabel(item.node.geometry_type) : __('relb.attributes_only')} ·{' '}
+                                            {__('relb.features_count', { count: item.node.feature_count })}
                                         </p>
                                         {canEdit ? (
                                             <span className="pointer-events-none absolute -right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border border-primary bg-background" />
@@ -438,7 +436,7 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
 
                 {layers.length === 1 ? (
                     <p className="mt-3 text-sm text-muted-foreground">
-                        At least two layers are needed to create a relationship.
+                        {__('relb.need_two')}
                     </p>
                 ) : null}
             </Panel>
@@ -446,9 +444,9 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
             <Dialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
                 <DialogContent className="max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Connect layers</DialogTitle>
+                        <DialogTitle>{t('layers.connect_layers')}</DialogTitle>
                         <DialogDescription>
-                            The key column stores the parent feature id on the child table and is created when missing.
+                            {__('relb.key_help')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -467,13 +465,13 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                     {duplicate ? (
                         <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
                             These layers are already connected as &ldquo;{duplicate.name}&rdquo; (
-                            <span className="font-mono">{duplicate.foreign_key}</span>). Delete that relationship first
+                            <span dir="ltr" className="font-mono">{duplicate.foreign_key}</span>). Delete that relationship first
                             if you want a different key.
                         </p>
                     ) : null}
 
                     <form onSubmit={submit} className="grid gap-4">
-                        <Field label="Name" error={errors.name} hint="How the relationship reads, e.g. Parcel buildings.">
+                        <Field label={t('forms.name')} error={errors.name} hint={__('relb.name_hint')}>
                             <TextInput
                                 value={name}
                                 onChange={(event) => setName(event.target.value)}
@@ -482,9 +480,9 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
                         </Field>
 
                         <Field
-                            label="Key column"
+                            label={t('common.key_column')}
                             error={errors.foreign_key}
-                            hint="Column on the child table holding the parent feature id, e.g. parcel_id."
+                            hint={__('relb.fk_hint')}
                         >
                             <TextInput
                                 value={foreignKey}
@@ -495,10 +493,10 @@ export default function Builder({ layers = [], relationships = [] }: { layers?: 
 
                         <div className="flex justify-end gap-2 border-t pt-3">
                             <Button type="button" variant="outline" onClick={() => setPending(null)}>
-                                Cancel
+                                {__('relb.cancel')}
                             </Button>
                             <PrimaryButton type="submit" disabled={saving || Boolean(duplicate)}>
-                                {saving ? 'Saving…' : 'Connect'}
+                                {saving ? __('relb.saving') : __('relb.connect')}
                             </PrimaryButton>
                         </div>
                     </form>

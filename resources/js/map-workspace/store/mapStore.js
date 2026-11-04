@@ -136,6 +136,19 @@ export const useMapStore = create((set, get) => ({
             ),
         })),
 
+    /**
+     * Bust vector-tile cache for a layer so newly saved features appear.
+     * OpenLayers + browsers keep empty tiles after the first fetch.
+     */
+    refreshLayerTiles: (layerId) =>
+        set((state) => ({
+            layers: state.layers.map((layer) =>
+                String(layer.id) === String(layerId)
+                    ? { ...layer, tileRevision: Date.now() }
+                    : layer
+            ),
+        })),
+
     toggleLayerVisibility: (layerId) =>
         set((state) => ({
             layers: state.layers.map((layer) =>

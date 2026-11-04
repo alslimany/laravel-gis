@@ -88,6 +88,7 @@ export default defineConfig({
         alias: {
             '@': path.resolve(__dirname, 'resources/js'),
             '@early-warning': path.resolve(__dirname, 'packages/early-warning/resources/js'),
+            '@disaster': path.resolve(__dirname, 'packages/disaster/resources/js'),
         },
     },
 });

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { enumLabel } from '@/lib/enum-labels';
+import { Direction } from 'radix-ui';
 import {
     DndContext,
     closestCenter,
@@ -36,9 +38,19 @@ import {
 } from '@/components/ui/select';
 import { useMapStore } from '../store/mapStore';
 
-function SortableLayerItem({ layer, selectedLayerId, onSelect, onToggleVisibility, onRemove, readOnly = false }) {
+import { __ } from '@/lib/i18n';
+function SortableLayerItem({
+    layer,
+    selectedLayerId,
+    onSelect,
+    onToggleVisibility,
+    onRemove,
+    readOnly = false,
+    lockComposition = false,
+}) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
         id: layer.id,
+        disabled: readOnly || lockComposition,
     });
 
     const style = {
@@ -46,14 +58,16 @@ function SortableLayerItem({ layer, selectedLayerId, onSelect, onToggleVisibilit
         transition,
     };
 
+    const canReorder = !readOnly && !lockComposition;
+
     return (
         <div
             ref={setNodeRef}
             style={style}
             className={`layer-item${layer.id === selectedLayerId ? ' active' : ''}`}
             onClick={() => onSelect(layer.id)}
-            {...(readOnly ? {} : attributes)}
-            {...(readOnly ? {} : listeners)}
+            {...(canReorder ? attributes : {})}
+            {...(canReorder ? listeners : {})}
         >
             <div className="layer-info">
                 <Button
@@ -66,7 +80,7 @@ function SortableLayerItem({ layer, selectedLayerId, onSelect, onToggleVisibilit
                         event.stopPropagation();
                         onToggleVisibility(layer.id);
                     }}
-                    aria-label={layer.visible ? 'Hide layer' : 'Show layer'}
+                    aria-label={layer.visible ? __('maps.hide_layer') : __('maps.show_layer')}
                 >
                     {layer.visible ? (
                         <Eye className="size-4" strokeWidth={1.75} aria-hidden="true" />
@@ -76,7 +90,7 @@ function SortableLayerItem({ layer, selectedLayerId, onSelect, onToggleVisibilit
                 </Button>
                 <span className="layer-name">{layer.name}</span>
             </div>
-            {readOnly ? null : (
+            {readOnly || lockComposition ? null : (
             <div className="layer-actions">
                 <Button
                     type="button"
@@ -88,7 +102,7 @@ function SortableLayerItem({ layer, selectedLayerId, onSelect, onToggleVisibilit
                         event.stopPropagation();
                         onRemove(layer.id);
                     }}
-                    aria-label="Remove layer"
+                    aria-label={__('maps.remove_layer')}
                 >
                     <Trash2 className="size-4" strokeWidth={1.75} aria-hidden="true" />
                 </Button>
@@ -105,7 +119,8 @@ const emptyLayerForm = {
     layers: '',
 };
 
-export default function LayerPanel({ onClose, onLayerSelected, readOnly = false }) {
+export default function LayerPanel({ onClose, onLayerSelected, readOnly = false, lockComposition = false }) {
+    const isRtlDir = Direction.useDirection() === 'rtl';
     const layers = useMapStore((state) => state.layers);
     const selectedLayerId = useMapStore((state) => state.selectedLayer);
     const availableBasemaps = useMapStore((state) => state.availableBasemaps);
@@ -275,16 +290,16 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
     return (
         <div className="layer-panel">
             <div className="panel-header">
-                <h5>Layers</h5>
+                <h5>{__('maps.layers')}</h5>
                 <div className="flex items-center gap-1">
-                    {readOnly ? null : (
+                    {readOnly || lockComposition ? null : (
                     <Button type="button" size="sm" className="h-8 gap-1.5" onClick={() => setShowModal(true)}>
                         <Plus className="size-3.5" strokeWidth={1.75} />
-                        Add Layer
+                        {__('maps.add_layer')}
                     </Button>
                     )}
                     {onClose ? (
-                        <Button type="button" variant="ghost" size="icon" className="size-8" onClick={onClose} aria-label="Close">
+                        <Button type="button" variant="ghost" size="icon" className="size-8" onClick={onClose} aria-label={__('common.close')}>
                             <X className="size-4" />
                         </Button>
                     ) : null}
@@ -293,7 +308,7 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
 
             {readOnly ? null : (
             <div className="basemap-selector">
-                <Label className="mb-2">Base Map</Label>
+                <Label className="mb-2">{__('maps.base_map')}</Label>
                 <Select
                     value={selectedBasemap}
                     onValueChange={(value) => {
@@ -301,13 +316,13 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                         setBasemap(value);
                     }}
                 >
-                    <SelectTrigger className="w-full bg-background" aria-label="Base map">
-                        <SelectValue placeholder="Base map" />
+                    <SelectTrigger className="w-full bg-background" aria-label={__('maps.base_map')}>
+                        <SelectValue placeholder={__('maps.base_map')} />
                     </SelectTrigger>
                     <SelectContent>
                         {availableBasemaps.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
-                                {item.name}
+                                {__(`maps.basemap.${item.id}`, undefined, item.name)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -319,10 +334,10 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                 {layers.length === 0 ? (
                     <div className="empty-state">
                         <Layers className="glyph lg" strokeWidth={1.5} aria-hidden="true" />
-                        <p>No layers on this map.</p>
-                        {readOnly ? null : (
+                        <p>{__('maps.no_layers_on_map')}</p>
+                        {readOnly || lockComposition ? null : (
                         <a href="/imports/create" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-                            Import data
+                            {__('dashboard.import_data')}
                         </a>
                         )}
                     </div>
@@ -330,7 +345,7 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
+                        onDragEnd={lockComposition ? undefined : handleDragEnd}
                     >
                         <SortableContext
                             items={layers.map((layer) => layer.id)}
@@ -343,6 +358,7 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                                         layer={layer}
                                         selectedLayerId={selectedLayerId}
                                         readOnly={readOnly}
+                                        lockComposition={lockComposition}
                                         onSelect={(id) => {
                                             selectLayer(id);
                                             onLayerSelected?.(id);
@@ -365,20 +381,20 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                 }}
             >
                 <SheetContent
-                    side="right"
+                    side={isRtlDir ? 'left' : 'right'}
                     showOverlay={false}
                     onInteractOutside={(event) => event.preventDefault()}
                     onPointerDownOutside={(event) => event.preventDefault()}
                     onFocusOutside={(event) => event.preventDefault()}
-                    className="inset-y-auto top-[4.25rem] right-[1.65rem] bottom-auto z-40 h-auto max-h-[calc(100vh-7.5rem)] w-[min(22rem,calc(100vw-7rem))] gap-0 overflow-hidden rounded-xl border p-0 shadow-lg sm:max-w-none"
+                    className={`inset-y-auto top-[4.25rem] ${isRtlDir ? 'left-[1.65rem]' : 'right-[1.65rem]'} bottom-auto z-40 h-auto max-h-[calc(100vh-7.5rem)] w-[min(22rem,calc(100vw-7rem))] gap-0 overflow-hidden rounded-xl border p-0 shadow-lg sm:max-w-none`}
                 >
                     <SheetHeader className="border-b">
-                        <SheetTitle>Add Layer</SheetTitle>
-                        <SheetDescription>Add a custom service or a published GeoServer layer. The map stays usable.</SheetDescription>
+                        <SheetTitle>{__('maps.add_layer')}</SheetTitle>
+                        <SheetDescription>{__('maps.add_layer_hint')}</SheetDescription>
                     </SheetHeader>
                     <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="layer-source">Layer source</Label>
+                            <Label htmlFor="layer-source">{__('maps.layer_source')}</Label>
                             <Select
                                 value={layerSource}
                                 onValueChange={(value) => {
@@ -392,44 +408,44 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="z-[90]">
-                                    <SelectItem value="custom">Custom URL</SelectItem>
-                                    <SelectItem value="geoserver">From GeoServer</SelectItem>
+                                    <SelectItem value="custom">{__('maps.custom_url')}</SelectItem>
+                                    <SelectItem value="geoserver">{__('maps.from_geoserver')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         {layerSource === 'geoserver' ? (
                             <div className="grid gap-2">
-                                <Label htmlFor="published-layers">Published layers</Label>
+                                <Label htmlFor="published-layers">{__('maps.published_layers')}</Label>
                                 <Select
                                     value={selectedGeoServerLayer || undefined}
                                     onValueChange={onGeoServerLayerSelect}
                                 >
                                     <SelectTrigger id="published-layers" className="w-full">
-                                        <SelectValue placeholder="Select a published layer..." />
+                                        <SelectValue placeholder={__('maps.select_published')} />
                                     </SelectTrigger>
                                     <SelectContent className="z-[90]">
                                         {publishedLayers.map((layer) => (
                                             <SelectItem key={layer.id} value={String(layer.id)}>
-                                                {layer.name} ({layer.geometry_type})
+                                                {layer.name} ({enumLabel(layer.geometry_type)})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                                 {publishedLayers.length === 0 ? (
                                     <p className="text-xs text-muted-foreground">
-                                        No published layers yet.{' '}
+                                        {__('maps.no_published')}{' '}
                                         <a href="/layers" className="font-medium text-primary underline-offset-4 hover:underline">
-                                            Publish a layer
+                                            {__('dashboard.publish_layer')}
                                         </a>
                                         {' '}or{' '}
                                         <a href="/imports/create" className="font-medium text-primary underline-offset-4 hover:underline">
-                                            import a dataset
+                                            {__('maps.import_dataset_lc')}
                                         </a>
                                         .
                                     </p>
                                 ) : (
-                                    <p className="text-xs text-muted-foreground">Only published layers are shown.</p>
+                                    <p className="text-xs text-muted-foreground">{__('maps.only_published')}</p>
                                 )}
                             </div>
                         ) : null}
@@ -437,7 +453,7 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                         {layerSource === 'custom' ? (
                             <>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="layer-type">Layer type</Label>
+                                    <Label htmlFor="layer-type">{__('maps.layer_type')}</Label>
                                     <Select
                                         value={newLayer.type}
                                         onValueChange={(value) =>
@@ -448,21 +464,21 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="z-[90]">
-                                            <SelectItem value="wms">WMS Layer</SelectItem>
-                                            <SelectItem value="wfs">WFS Layer</SelectItem>
-                                            <SelectItem value="vector">Vector Layer (GeoJSON)</SelectItem>
+                                            <SelectItem value="wms">{__('maps.wms_layer')}</SelectItem>
+                                            <SelectItem value="wfs">{__('maps.wfs_layer')}</SelectItem>
+                                            <SelectItem value="vector">{__('maps.vector_layer')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="layer-name">Layer name</Label>
+                                    <Label htmlFor="layer-name">{__('maps.layer_name')}</Label>
                                     <Input
                                         id="layer-name"
                                         value={newLayer.name}
                                         onChange={(event) =>
                                             setNewLayer((prev) => ({ ...prev, name: event.target.value }))
                                         }
-                                        placeholder="Enter layer name"
+                                        placeholder={__('maps.enter_layer_name')}
                                     />
                                 </div>
                                 <div className="grid gap-2">
@@ -473,12 +489,12 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                                         onChange={(event) =>
                                             setNewLayer((prev) => ({ ...prev, url: event.target.value }))
                                         }
-                                        placeholder="Enter layer URL"
+                                        placeholder={__('maps.enter_layer_url')}
                                     />
                                 </div>
                                 {newLayer.type === 'wms' ? (
                                     <div className="grid gap-2">
-                                        <Label htmlFor="layer-names">Layer names</Label>
+                                        <Label htmlFor="layer-names">{__('maps.layer_names')}</Label>
                                         <Input
                                             id="layer-names"
                                             value={newLayer.layers}
@@ -495,15 +511,15 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                         {layerSource === 'geoserver' && selectedGeoServerLayer ? (
                             <>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="gs-name">Layer name</Label>
+                                    <Label htmlFor="gs-name">{__('maps.layer_name')}</Label>
                                     <Input id="gs-name" value={newLayer.name} readOnly />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="gs-url">GeoServer URL</Label>
+                                    <Label htmlFor="gs-url">{__('maps.geoserver_url')}</Label>
                                     <Input id="gs-url" value={newLayer.url} readOnly />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="gs-layer">Layer</Label>
+                                    <Label htmlFor="gs-layer">{__('maps.layer')}</Label>
                                     <Input id="gs-layer" value={newLayer.layers} readOnly />
                                 </div>
                             </>
@@ -511,10 +527,10 @@ export default function LayerPanel({ onClose, onLayerSelected, readOnly = false 
                     </div>
                     <SheetFooter className="flex-row justify-end border-t">
                         <Button type="button" variant="outline" onClick={closeModal}>
-                            Cancel
+                            {__('common.cancel')}
                         </Button>
                         <Button type="button" onClick={handleAddLayer}>
-                            Add Layer
+                            {__('maps.add_layer')}
                         </Button>
                     </SheetFooter>
                 </SheetContent>

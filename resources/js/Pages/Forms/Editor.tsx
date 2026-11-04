@@ -1,4 +1,6 @@
 import { useForm } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, Heading, PageHeader, PrimaryButton, Select, TextArea, TextInput } from '@/components/gis';
 
@@ -14,6 +16,7 @@ function layerIsSpatial(layer) {
 }
 
 export default function Editor({ form: record = null, layers = [] }) {
+    const { t } = useTranslation();
     const editing = Boolean(record);
     const form = useForm({
         name: record?.name || '',
@@ -65,19 +68,19 @@ export default function Editor({ form: record = null, layers = [] }) {
     }
 
     return (
-        <AppLayout title={editing ? `Edit ${record.name}` : 'New form'}>
-            <PageHeader title={editing ? `Edit ${record.name}` : 'New form'} />
+        <AppLayout title={editing ? __('forms.ed.edit_name', { name: record.name }) : __('forms.ed.new')}>
+            <PageHeader title={editing ? __('forms.ed.edit_name', { name: record.name }) : __('forms.ed.new')} />
             <form onSubmit={submit} className="max-w-3xl space-y-4">
-                <Field label="Form name" error={form.errors.name}>
+                <Field label={t('solution_packs.form_name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t('forms.description')}>
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
                 <Field
-                    label="Layer"
+                    label={__('forms.ed.layer')}
                     error={form.errors.layer_id || form.errors.schema}
-                    hint="A layer is optional. Standalone forms still store every submission. Link a layer, or create one from these fields, when you want submissions on the map."
+                    hint={__('forms.ed.layer_hint')}
                 >
                     <Select
                         value={form.data.layer_mode}
@@ -90,13 +93,13 @@ export default function Editor({ form: record = null, layers = [] }) {
                             });
                         }}
                     >
-                        <option value="none">Standalone (no layer)</option>
-                        <option value="link">Link to an existing layer</option>
-                        <option value="create">Create a layer from these fields</option>
+                        <option value="none">{__('forms.ed.standalone')}</option>
+                        <option value="link">{__('forms.ed.link_layer')}</option>
+                        <option value="create">{t('layers.create_from_fields')}</option>
                     </Select>
                 </Field>
                 {form.data.layer_mode === 'link' ? (
-                    <Field label="Existing layer" error={form.errors.layer_id}>
+                    <Field label={t('imports.existing_layer')} error={form.errors.layer_id}>
                         <Select
                             value={form.data.layer_id}
                             onChange={(event) => {
@@ -109,11 +112,11 @@ export default function Editor({ form: record = null, layers = [] }) {
                                 });
                             }}
                         >
-                            <option value="">Choose a layer</option>
+                            <option value="">{t('layers.choose_layer')}</option>
                             {layers.map((layer) => (
                                 <option key={layer.id} value={layer.id}>
                                     {layer.name}
-                                    {layer.geometry_type ? ` (${layer.geometry_type})` : ''}
+                                    {layer.geometry_type ? ` (${enumLabel(layer.geometry_type)})` : ''}
                                 </option>
                             ))}
                         </Select>
@@ -126,21 +129,21 @@ export default function Editor({ form: record = null, layers = [] }) {
                         disabled={spatialLink}
                         onChange={(event) => form.setData('collect_geometry', event.target.checked)}
                     />
-                    Collect a location
+                    {__('forms.ed.collect_location')}
                 </label>
                 <p className="text-xs text-muted-foreground">
                     {spatialLink
-                        ? 'This layer stores geometry, so each submission needs a point.'
+                        ? __('forms.ed.geom_required')
                         : form.data.layer_mode === 'create'
-                          ? 'Turn this on to create a point layer. Leave it off for an attribute-only layer.'
-                          : 'Leave this off for a non-spatial form. Submissions can still include a location later.'}
+                          ? __('forms.ed.geom_create')
+                          : __('forms.ed.geom_off')}
                 </p>
                 <label className="flex items-center gap-2">
                     <input type="checkbox" checked={form.data.is_public} onChange={(event) => form.setData('is_public', event.target.checked)} />
-                    Public shareable link
+                    {__('forms.ed.public_link')}
                 </label>
-                <Heading as="h2">Fields</Heading>
-                <p className="text-xs text-muted-foreground">Each field can show or hide from one other answer. A layer is still optional.</p>
+                <Heading as="h2">{t('layers.fields')}</Heading>
+                <p className="text-xs text-muted-foreground">{__('forms.ed.visibility_help')}</p>
                 {form.data.schema.map((field, index) => {
                     const otherFields = form.data.schema.filter((candidate, candidateIndex) => candidateIndex !== index && candidate.name);
                     const visibility = field.visibility?.action === 'hide' || field.visibility?.action === 'show' ? field.visibility : null;
@@ -148,32 +151,34 @@ export default function Editor({ form: record = null, layers = [] }) {
                     return (
                         <div key={index} className="grid gap-2 border border-border p-3">
                             <div className="grid gap-2 sm:grid-cols-4">
-                                <TextInput placeholder="column" value={field.name || ''} onChange={(event) => updateField(index, 'name', event.target.value)} />
-                                <TextInput placeholder="Label" value={field.label || ''} onChange={(event) => updateField(index, 'label', event.target.value)} />
+                                <TextInput placeholder={__('forms.ed.column')} value={field.name || ''} onChange={(event) => updateField(index, 'name', event.target.value)} />
+                                <TextInput placeholder={__('forms.ed.label')} value={field.label || ''} onChange={(event) => updateField(index, 'label', event.target.value)} />
                                 <Select value={field.type || 'text'} onChange={(event) => updateField(index, 'type', event.target.value)}>
                                     {TYPES.map((type) => (
-                                        <option key={type}>{type}</option>
+                                        <option key={type} value={type}>
+                                            {__(`forms.type.${type}`)}
+                                        </option>
                                     ))}
                                 </Select>
                                 <label className="flex items-center gap-2">
                                     <input type="checkbox" checked={Boolean(field.required)} onChange={(event) => updateField(index, 'required', event.target.checked)} />
-                                    Required
+                                    {__('forms.ed.required')}
                                 </label>
                             </div>
                             <div className="grid gap-2 sm:grid-cols-4">
-                                <Select value={visibility?.action || 'always'} onChange={(event) => setVisibility(index, event.target.value)} aria-label="Visibility">
-                                    <option value="always">Always visible</option>
-                                    <option value="show">Show when</option>
-                                    <option value="hide">Hide when</option>
+                                <Select value={visibility?.action || 'always'} onChange={(event) => setVisibility(index, event.target.value)} aria-label={__('forms.ed.visibility')}>
+                                    <option value="always">{t('disaster.always_visible')}</option>
+                                    <option value="show">{__('forms.ed.show_when')}</option>
+                                    <option value="hide">{__('forms.ed.hide_when')}</option>
                                 </Select>
                                 {visibility ? (
                                     <>
                                         <Select
                                             value={visibility.field || ''}
-                                            aria-label="Condition field"
+                                            aria-label={t('common.condition_field')}
                                             onChange={(event) => updateField(index, 'visibility', { ...visibility, field: event.target.value })}
                                         >
-                                            <option value="">Field</option>
+                                            <option value="">{t('common.field')}</option>
                                             {otherFields.map((candidate) => (
                                                 <option key={candidate.name} value={candidate.name}>
                                                     {candidate.label || candidate.name}
@@ -182,15 +187,15 @@ export default function Editor({ form: record = null, layers = [] }) {
                                         </Select>
                                         <Select
                                             value={visibility.operator || 'equals'}
-                                            aria-label="Condition"
+                                            aria-label={t('common.condition')}
                                             onChange={(event) => updateField(index, 'visibility', { ...visibility, operator: event.target.value })}
                                         >
-                                            <option value="equals">equals</option>
-                                            <option value="not_equals">does not equal</option>
+                                            <option value="equals">{__('forms.ed.equals')}</option>
+                                            <option value="not_equals">{__('forms.ed.not_equals')}</option>
                                         </Select>
                                         <TextInput
-                                            placeholder="Value"
-                                            aria-label="Condition value"
+                                            placeholder={__('forms.ed.value')}
+                                            aria-label={t('common.condition_value')}
                                             value={visibility.value || ''}
                                             onChange={(event) => updateField(index, 'visibility', { ...visibility, value: event.target.value })}
                                         />
@@ -208,12 +213,12 @@ export default function Editor({ form: record = null, layers = [] }) {
                     className="font-medium text-primary hover:underline"
                     onClick={() => form.setData('schema', [...form.data.schema, { name: '', label: '', type: 'text', required: false }])}
                 >
-                    Add field
+                    {__('forms.ed.add_field')}
                 </button>
                 <div className="flex gap-3">
-                    <GhostLink href={editing ? `/forms/${record.id}` : '/forms'}>Cancel</GhostLink>
+                    <GhostLink href={editing ? `/forms/${record.id}` : '/forms'}>{t('actions.cancel')}</GhostLink>
                     <PrimaryButton type="submit" disabled={form.processing}>
-                        {editing ? 'Update form' : 'Create form'}
+                        {editing ? __('forms.ed.update') : __('forms.ed.create')}
                     </PrimaryButton>
                 </div>
             </form>

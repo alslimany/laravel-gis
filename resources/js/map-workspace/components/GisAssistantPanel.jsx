@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Send, X } from 'lucide-react';
 import { jsonHeaders } from '../utils/csrf';
 
+import { __ } from '@/lib/i18n';
 export default function GisAssistantPanel({ onClose }) {
     const [message, setMessage] = useState('');
     const [history, setHistory] = useState([]);
@@ -51,8 +52,8 @@ export default function GisAssistantPanel({ onClose }) {
     return (
         <div className="analysis-panel gis-assistant-panel">
             <div className="panel-header">
-                <h4>GIS Assistant</h4>
-                <button type="button" onClick={onClose} className="close-btn" aria-label="Close">
+                <h4>{__('maps.gis_assistant')}</h4>
+                <button type="button" onClick={onClose} className="close-btn" aria-label={__('common.close')}>
                     <X className="glyph" strokeWidth={1.75} aria-hidden="true" />
                 </button>
             </div>
@@ -81,7 +82,7 @@ export default function GisAssistantPanel({ onClose }) {
                         className="form-control form-control-sm"
                         value={message}
                         onChange={(event) => setMessage(event.target.value)}
-                        placeholder="Ask the GIS assistant…"
+                        placeholder={__('maps.ask_assistant')}
                         disabled={loading}
                     />
                     <button

@@ -1,3 +1,5 @@
+import { useTranslation } from '@/lib/i18n';
+
 type Authority = {
     name: string;
     url?: string | null;
@@ -14,13 +16,15 @@ export default function AdvisoryBanner({
     authority = null,
     className = 'mb-4 max-w-2xl rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground',
 }: Props) {
+    const { t } = useTranslation();
+
     return (
         <p className={className} role="note">
             {advisory}
             {authority ? (
                 <>
                     {' '}
-                    For official guidance, consult{' '}
+                    {t('common.advisory_consult')}{' '}
                     {authority.url ? (
                         <a
                             href={authority.url}

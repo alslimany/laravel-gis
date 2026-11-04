@@ -4,6 +4,7 @@ namespace Lumina\EarlyWarning\Tests;
 
 use App\Contracts\LayerPublisher;
 use App\Models\InstalledPlugin;
+use App\Models\Layer;
 use App\Models\Organization;
 use App\Models\OrganizationPlugin;
 use App\Models\User;
@@ -87,7 +88,7 @@ class RiskLayerPublisherTest extends TestCase
 
         $this->assertFalse($result['published']);
         $this->assertSame('early-warning', $result['layer']->metadata['plugin']);
-        $this->assertSame(RiskLayerPublisher::GEOSERVER_LAYER, $result['layer']->table_name);
+        $this->assertSame(RiskLayerPublisher::tableFor((int) $this->org->id), $result['layer']->table_name);
         $this->assertSame('MultiPolygon', $result['layer']->geometry_type);
     }
 
@@ -121,7 +122,26 @@ class RiskLayerPublisherTest extends TestCase
 
         $this->assertDatabaseHas('layers', [
             'organization_id' => $this->org->id,
-            'table_name' => RiskLayerPublisher::GEOSERVER_LAYER,
+            'table_name' => RiskLayerPublisher::tableFor((int) $this->org->id),
         ]);
+    }
+
+    public function test_each_org_gets_its_own_table_and_legacy_row_is_renamed(): void
+    {
+        $other = Organization::factory()->create();
+        $ownerId = User::factory()->create(['organization_id' => $other->id])->id;
+        // Pre-fix row for the other org on the shared name.
+        $legacy = Layer::query()->create([
+            'organization_id' => $other->id, 'user_id' => $ownerId, 'name' => 'Risk',
+            'table_name' => RiskLayerPublisher::LEGACY_TABLE, 'geometry_type' => 'MultiPolygon',
+        ]);
+
+        $mine = app(RiskLayerPublisher::class)->publish($this->org, syncGeoServer: false)['layer'];
+        $theirs = app(RiskLayerPublisher::class)->publish($other, syncGeoServer: false)['layer'];
+
+        $this->assertSame('ew_basin_risk_'.$this->org->id, $mine->table_name);
+        $this->assertSame('ew_basin_risk_'.$other->id, $theirs->table_name);
+        $this->assertSame($legacy->id, $theirs->id, 'legacy row keeps its id');
+        $this->assertSame(0, Layer::query()->where('table_name', RiskLayerPublisher::LEGACY_TABLE)->count());
     }
 }

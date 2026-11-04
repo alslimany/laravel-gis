@@ -23,13 +23,14 @@ class EarlyWarningController extends Controller
     public function index(Request $request): Response|JsonResponse
     {
         $organizationId = (int) $request->user()->organization_id;
-        $latestFetch = Forecast::query()->max('fetched_at');
+        // Live feed only: stored exercise forecasts (e.g. source ncmcd-demo) must not look like fresh data.
+        $latestFetch = Forecast::query()->where('source', 'open-meteo')->max('fetched_at');
 
         $summary = [
             'plugin' => 'early-warning',
             ...AdvisoryCopy::forUi(),
             'basin_count' => Basin::query()->count(),
-            'forecast_rows' => Forecast::query()->count(),
+            'forecast_rows' => Forecast::query()->where('source', 'open-meteo')->count(),
             'latest_fetch_at' => $latestFetch,
             'subscriptions' => Subscription::query()
                 ->where('organization_id', $organizationId)
@@ -77,7 +78,7 @@ class EarlyWarningController extends Controller
 
                 return [
                     'basin_code' => $basin->basin_code,
-                    'name' => $basin->name,
+                    'name' => (app()->getLocale() === 'ar' && $basin->name_ar) ? $basin->name_ar : $basin->name,
                     'name_ar' => $basin->name_ar,
                     'area_km2' => $basin->area_km2 !== null ? (float) $basin->area_km2 : null,
                     'risk_level' => $risk?->risk_level ?? 'green',
@@ -110,7 +111,7 @@ class EarlyWarningController extends Controller
         return response()->json([
             'ok' => true,
             'basins' => Basin::query()->count(),
-            'forecasts' => Forecast::query()->count(),
+            'forecasts' => Forecast::query()->where('source', 'open-meteo')->count(),
             'open_meteo_url' => config('early-warning.open_meteo.base_url'),
         ]);
     }

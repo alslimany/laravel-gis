@@ -94,6 +94,10 @@ SLD;
                 'fillColor' => $entry['color'] ?? $entry['fill'] ?? null,
                 'icon' => $entry['icon'] ?? ($config['symbol']['icon'] ?? null),
             ]);
+            if (str_contains($geomType, 'line') && ! empty($entry['color'])) {
+                // Lines have no fill: the category colour is the stroke (matches the MVT renderer).
+                $symbol['stroke_color'] = $entry['color'];
+            }
             $symbolizer = $this->symbolizer($symbol, $geomType);
             $property = $this->xml($field);
             $rules .= <<<RULE
@@ -279,7 +283,23 @@ SYM;
         }
 
         if (str_contains($geomType, 'line')) {
-            return <<<SYM
+            $casingWidth = (float) ($symbol['casingWidth'] ?? $symbol['casing_width'] ?? 0);
+            $casing = '';
+            if ($casingWidth > 0) {
+                $casingColor = $this->xml($symbol['casingColor'] ?? $symbol['casing_color'] ?? '#ffffff');
+                $casing = <<<SYM
+          <LineSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">{$casingColor}</CssParameter>
+              <CssParameter name="stroke-width">{$casingWidth}</CssParameter>
+              <CssParameter name="stroke-linecap">round</CssParameter>
+            </Stroke>
+          </LineSymbolizer>
+
+SYM;
+            }
+
+            return $casing.<<<SYM
           <LineSymbolizer>
             <Stroke>
               <CssParameter name="stroke">{$stroke}</CssParameter>

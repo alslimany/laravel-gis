@@ -500,6 +500,21 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment documenta
 - **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing framework and practices
 - **[MONITORING_AND_LOGGING.md](MONITORING_AND_LOGGING.md)** - Monitoring and logging setup
 
+### Architecture decisions, security, and runbooks (`docs/`)
+
+- **[docs/adr/0001-plugin-architecture.md](docs/adr/0001-plugin-architecture.md)** - Plugin host and contract
+- **[docs/adr/0002-desktop-gis-connectivity.md](docs/adr/0002-desktop-gis-connectivity.md)** - Desktop GIS connectivity (**Accepted** 2026-11-04; D1–D7 locked; A1–A4 still open PM defaults)
+- **[docs/security/db-roles.md](docs/security/db-roles.md)** - Least-privilege DB roles (DG-0.1)
+- **[docs/runbooks/upgrade-pg17-postgis35-geoserver228.md](docs/runbooks/upgrade-pg17-postgis35-geoserver228.md)** - PG17 / PostGIS 3.5 / GeoServer 2.28.6 upgrade (DG-0.6; gated by DG-0.7)
+- **[docs/core-plugin-contracts.md](docs/core-plugin-contracts.md)** - Core ↔ plugin contracts
+- **[docs/plugins-scheduler.md](docs/plugins-scheduler.md)** - Plugin scheduler notes
+
+### First-party packages
+
+- **[packages/desktop-connect/README.md](packages/desktop-connect/README.md)** - Desktop GIS Connect plugin (DG-1.4 scaffold; ADR-0002)
+- **[packages/disaster/README.md](packages/disaster/README.md)** - Disaster & Emergency Management
+- **[packages/early-warning/README.md](packages/early-warning/README.md)** - Early Warning
+
 ### Feature-Specific Documentation
 
 - **[AUTH_GUIDE.md](AUTH_GUIDE.md)** - Authentication and authorization
@@ -509,13 +524,14 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete deployment documenta
 - **[GIS_TOOLS_DOCUMENTATION.md](GIS_TOOLS_DOCUMENTATION.md)** - GIS analysis tools
 - **[MAP_BUILDER_README.md](MAP_BUILDER_README.md)** - Map builder getting started (React / Inertia)
 - **[MAP_BUILDER_DOCUMENTATION.md](MAP_BUILDER_DOCUMENTATION.md)** - Map builder interface
+- **[SOLUTION_PACKS.md](SOLUTION_PACKS.md)** - Solution packs
 
 ### Quick References
 
 - **[GIS_TOOLS_QUICK_REFERENCE.md](GIS_TOOLS_QUICK_REFERENCE.md)** - GIS tools quick reference
 - **[MAP_BUILDER_QUICK_REFERENCE.md](MAP_BUILDER_QUICK_REFERENCE.md)** - Map builder quick reference
 
-Living guides stay in the repository root. They were not moved under `docs/`.
+Living guides stay in the repository root. Architecture ADRs, security notes, and runbooks live under `docs/`. Package READMEs live under `packages/*/`.
 
 ### Historical snapshots
 

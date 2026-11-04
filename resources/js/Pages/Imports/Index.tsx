@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { bytes, count, when } from '@/lib/format';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
@@ -28,33 +29,34 @@ type ImportRow = {
 };
 
 export default function Index({ imports }: { imports?: { data?: ImportRow[]; links?: Array<{ url: string | null; label: string; active: boolean }> } }) {
+    const { t } = useTranslation();
     const rows = imports?.data || [];
 
     return (
-        <AppLayout title="Data imports">
+        <AppLayout title={t('imports.title')}>
             <PageHeader
-                title="Data imports"
-                action={<PrimaryLink href="/imports/create">New import</PrimaryLink>}
+                title={t('imports.title')}
+                action={<PrimaryLink href="/imports/create">{__('imports.new_import')}</PrimaryLink>}
             />
             <Panel>
                 {rows.length === 0 ? (
                     <Empty>
-                        No imports yet.{' '}
+                        {__('imports.none_yet')}{' '}
                         <Link href="/imports/create" className="font-medium text-primary hover:underline">
-                            Import a dataset
+                            {__('dashboard.import_dataset')}
                         </Link>
                     </Empty>
                 ) : (
                     <DataTable>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head className={thClass}>File</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Type</Table.Head>
-                                <Table.Head className={`${thClass} hidden lg:table-cell`}>Size</Table.Head>
-                                <Table.Head className={thClass}>Status</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Progress</Table.Head>
-                                <Table.Head className={`${thClass} hidden lg:table-cell`}>Added</Table.Head>
-                                <Table.Head className={thClass}>Actions</Table.Head>
+                                <Table.Head className={thClass}>{__('imports.file')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('forms.type')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden lg:table-cell`}>{__('imports.size')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.status')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{__('imports.progress')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden lg:table-cell`}>{t('layers.added')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.actions')}</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -72,7 +74,7 @@ export default function Index({ imports }: { imports?: { data?: ImportRow[]; lin
                                                 {String(item.file_type || '').toUpperCase()} · {bytes(item.file_size)}
                                             </p>
                                         </Table.Cell>
-                                        <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{String(item.file_type || '').toUpperCase() || '—'}</Table.Cell>
+                                        <Table.Cell className={`${tdMuted} hidden md:table-cell`}>{String(item.file_type || '').toUpperCase() || t('common.em_dash')}</Table.Cell>
                                         <Table.Cell className={`${tdMono} hidden lg:table-cell`}>{bytes(item.file_size)}</Table.Cell>
                                         <Table.Cell className={tdClass}>
                                             <Pill tone={TONES[item.status as keyof typeof TONES] || 'idle'}>{status}</Pill>
@@ -89,15 +91,15 @@ export default function Index({ imports }: { imports?: { data?: ImportRow[]; lin
                                                 >
                                                     <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
                                                 </div>
-                                                <span className="w-9 text-right text-xs tabular-nums text-muted-foreground">{count(progress)}%</span>
+                                                <span dir="ltr" className="w-9 text-end text-xs tabular-nums text-muted-foreground">{count(progress)}%</span>
                                             </div>
                                         </Table.Cell>
                                         <Table.Cell className={`${tdMuted} hidden lg:table-cell`}>{when(item.created_at)}</Table.Cell>
                                         <Table.Cell className={tdClass}>
                                             <RowActions>
-                                                <ActionLink href={`/imports/${item.id}`}>View</ActionLink>
+                                                <ActionLink href={`/imports/${item.id}`}>{t('actions.view')}</ActionLink>
                                                 {item.status === 'failed' || item.status === 'completed' ? (
-                                                    <DangerButton onClick={() => destroyResource(`/imports/${item.id}`, 'Delete this import?')}>Delete</DangerButton>
+                                                    <DangerButton onClick={() => destroyResource(`/imports/${item.id}`, 'Delete this import?')}>{t('actions.delete')}</DangerButton>
                                                 ) : null}
                                             </RowActions>
                                         </Table.Cell>

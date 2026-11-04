@@ -10,6 +10,7 @@ use App\Models\Map;
 use App\Services\ContentAccessService;
 use App\Services\DashboardWidgetData;
 use App\Services\DashboardWidgetDocument;
+use App\Support\LayerTable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -281,7 +282,7 @@ class DashboardBoardController extends Controller
                     'type' => $field->type,
                 ])->values()->all();
 
-                if ($fields === [] && $layer->table_name && Schema::hasTable($layer->table_name)) {
+                if ($fields === [] && $layer->table_name && LayerTable::exists($layer->table_name)) {
                     $geom = GeometryColumnHelper::resolve($layer->table_name);
                     $fields = collect(Schema::getColumnListing($layer->table_name))
                         ->reject(fn ($column) => $column === $geom)
@@ -296,6 +297,8 @@ class DashboardBoardController extends Controller
 
                 return [
                     'id' => $layer->id,
+                    'public_id' => $layer->public_id,
+                    'alias' => $layer->alias,
                     'name' => $layer->name,
                     'geometry_type' => $layer->geometry_type,
                     'published' => (bool) $layer->published,

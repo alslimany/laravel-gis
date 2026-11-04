@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import { Check, ChevronsUpDown, Puzzle } from 'lucide-react';
 import {
     DropdownMenu,
@@ -36,13 +37,16 @@ export function ModuleMark({ module, className = '' }: { module: Pick<ConsoleMod
 }
 
 export function ModuleSwitcher() {
+    const { t } = useTranslation();
     const { modules, active } = useConsoleModules();
-    const { routes, abilities } = usePage().props as {
+    const { routes, abilities, isRtl } = usePage().props as {
         routes?: { extensions?: string | null };
         abilities?: { admin?: boolean };
+        isRtl?: boolean;
     };
     const { state } = useSidebar();
     const isMobile = useIsMobile();
+    const collapsedSide = isRtl ? 'left' : 'right';
 
     if (!active) {
         return null;
@@ -55,33 +59,33 @@ export function ModuleSwitcher() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            tooltip={{ children: `Switch module (${active.label})` }}
+                            tooltip={{ children: `${t('actions.switch_module')} (${active.label})` }}
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         >
                             <ModuleMark module={active} />
-                            <span className="grid flex-1 text-left text-sm leading-tight">
+                            <span className="grid flex-1 text-start text-sm leading-tight">
                                 <span className="truncate font-semibold">{active.label}</span>
                                 {active.description ? (
                                     <span className="truncate text-xs text-muted-foreground">{active.description}</span>
                                 ) : null}
                             </span>
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className="ms-auto size-4" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                         className="w-(--radix-dropdown-menu-trigger-width) min-w-60 rounded-lg"
                         align="start"
-                        side={isMobile ? 'bottom' : state === 'collapsed' ? 'right' : 'bottom'}
+                        side={isMobile ? 'bottom' : state === 'collapsed' ? collapsedSide : 'bottom'}
                         sideOffset={4}
                     >
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">Switch module</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">{t('actions.switch_module')}</DropdownMenuLabel>
                         {modules.map((module) => (
                             <DropdownMenuItem key={module.key} asChild className="gap-2 p-2">
                                 <Link href={module.href}>
                                     <ModuleMark module={module} className="size-6 rounded-sm [&_svg]:size-3.5" />
                                     <span className="flex-1 truncate">{module.label}</span>
                                     {module.kind === 'extension' ? (
-                                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Extension</span>
+                                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('common.extension')}</span>
                                     ) : null}
                                     {module.key === active.key ? <Check className="size-4" /> : null}
                                 </Link>
@@ -93,7 +97,7 @@ export function ModuleSwitcher() {
                                 <DropdownMenuItem asChild className="gap-2 p-2">
                                     <Link href={routes.extensions}>
                                         <Puzzle className="size-4" />
-                                        Manage extensions
+                                        {t('actions.manage_extensions')}
                                     </Link>
                                 </DropdownMenuItem>
                             </>

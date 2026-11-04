@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Empty, PageHeader, Panel, Pill } from '@/components/gis';
 import { ModuleMark } from '@/components/module-switcher';
@@ -25,9 +26,10 @@ function status(extension: Extension) {
 }
 
 export default function Index({ extensions = [] }: { extensions?: Extension[] }) {
+    const { t } = useTranslation();
     return (
-        <AppLayout title="Extensions" breadcrumbs={[{ title: 'Extensions', href: '/organization/extensions' }]}>
-            <PageHeader title="Extensions" />
+        <AppLayout title={t('extensions.title')} breadcrumbs={[{ title: t('extensions.title'), href: '/organization/extensions' }]}>
+            <PageHeader title={t('extensions.title')} />
             <p className="max-w-2xl text-sm text-muted-foreground">
                 Turn extensions on to add their module to everyone's switcher in this organization. Turning one off hides
                 its module and pages; its data is kept.

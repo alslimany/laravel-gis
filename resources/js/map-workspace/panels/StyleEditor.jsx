@@ -9,6 +9,7 @@ import {
     normalizeStyleConfig,
 } from '../utils/styleRenderers';
 
+import { __ } from '@/lib/i18n';
 const defaultSymbol = {
     fillColor: '#3388ff',
     fillOpacity: 0.6,
@@ -282,12 +283,12 @@ export default function StyleEditor() {
 
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(text || `Style save failed (${response.status})`);
+                throw new Error(text || __('style.save_failed', { status: response.status }));
             }
 
             updateLayerStyle(selectedLayer.id, style_config);
             updateLayer(selectedLayer.id, { opacity: form.opacity, style_config });
-            setStatus({ type: 'success', message: 'Style applied successfully.' });
+            setStatus({ type: 'success', message: __('style.applied') });
         } catch (error) {
             console.error('Failed to save layer style:', error);
             // Still update local store so the map reflects the choice immediately.
@@ -295,7 +296,7 @@ export default function StyleEditor() {
             updateLayer(selectedLayer.id, { opacity: form.opacity, style_config });
             setStatus({
                 type: 'warning',
-                message: `Saved locally; server sync failed (${error.message}). CSRF: ${getCsrfToken() ? 'ok' : 'missing'}`,
+                message: `${__('style.sync_failed', { error: error.message })} CSRF: ${getCsrfToken() ? 'ok' : 'missing'}`,
             });
         } finally {
             setSaving(false);
@@ -316,11 +317,11 @@ export default function StyleEditor() {
         return (
             <div className="style-editor">
                 <div className="panel-header">
-                    <h5>Style Editor</h5>
+                    <h5>{__('maps.style_editor')}</h5>
                 </div>
                 <div className="empty-state">
                     <Palette className="glyph lg" strokeWidth={1.5} aria-hidden="true" />
-                    <p>Select a layer to edit its style</p>
+                    <p>{__('maps.select_layer_style')}</p>
                 </div>
             </div>
         );
@@ -335,12 +336,12 @@ export default function StyleEditor() {
     return (
         <div className="style-editor">
             <div className="panel-header">
-                <h5>Style Editor</h5>
+                <h5>{__('maps.style_editor')}</h5>
             </div>
 
             <div className="style-form">
                 <div className="mb-3">
-                    <label className="form-label">Layer Name:</label>
+                    <label className="form-label">{__('maps.layer_name_colon')}</label>
                     <input
                         value={selectedLayer.name || ''}
                         type="text"
@@ -351,7 +352,7 @@ export default function StyleEditor() {
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">Opacity:</label>
+                    <label className="form-label">{__('maps.opacity_colon')}</label>
                     <input
                         value={form.opacity}
                         type="range"
@@ -367,7 +368,7 @@ export default function StyleEditor() {
                 {showVectorControls && (
                     <>
                         <div className="mb-3">
-                            <label className="form-label">Renderer:</label>
+                            <label className="form-label">{__('maps.renderer_colon')}</label>
                             <select
                                 className="form-select form-select-sm"
                                 value={form.renderer}
@@ -375,7 +376,7 @@ export default function StyleEditor() {
                             >
                                 {RENDERERS.map((r) => (
                                     <option key={r.id} value={r.id}>
-                                        {r.label}
+                                        {__(`maps.renderer.${r.id}`, undefined, r.label)}
                                     </option>
                                 ))}
                             </select>
@@ -385,7 +386,7 @@ export default function StyleEditor() {
                             form.renderer === 'graduated' ||
                             form.renderer === 'heatmap') && (
                             <div className="mb-3">
-                                <label className="form-label">Classification field:</label>
+                                <label className="form-label">{__('maps.class_field_colon')}</label>
                                 <select
                                     className="form-select form-select-sm"
                                     value={form.field}
@@ -393,7 +394,7 @@ export default function StyleEditor() {
                                         patchForm({ field: event.target.value, uniqueValues: [] })
                                     }
                                 >
-                                    <option value="">— select —</option>
+                                    <option value="">{__('common.select_dash')}</option>
                                     {attributeFields.map((name) => (
                                         <option key={name} value={name}>
                                             {name}
@@ -405,7 +406,7 @@ export default function StyleEditor() {
 
                         {(form.renderer === 'unique' || form.renderer === 'graduated') && (
                             <div className="mb-3">
-                                <label className="form-label">Color ramp:</label>
+                                <label className="form-label">{__('maps.color_ramp_colon')}</label>
                                 <select
                                     className="form-select form-select-sm"
                                     value={form.colorRamp}
@@ -437,7 +438,7 @@ export default function StyleEditor() {
                             <div className="border rounded p-2 mb-3">
                                 <div className="row g-2 mb-2">
                                     <div className="col-4">
-                                        <label className="form-label small">Classes</label>
+                                        <label className="form-label small">{__('maps.classes')}</label>
                                         <input
                                             type="number"
                                             min="2"
@@ -450,7 +451,7 @@ export default function StyleEditor() {
                                         />
                                     </div>
                                     <div className="col-4">
-                                        <label className="form-label small">Min</label>
+                                        <label className="form-label small">{__('maps.min')}</label>
                                         <input
                                             type="number"
                                             className="form-control form-control-sm"
@@ -461,7 +462,7 @@ export default function StyleEditor() {
                                         />
                                     </div>
                                     <div className="col-4">
-                                        <label className="form-label small">Max</label>
+                                        <label className="form-label small">{__('maps.max')}</label>
                                         <input
                                             type="number"
                                             className="form-control form-control-sm"
@@ -477,7 +478,7 @@ export default function StyleEditor() {
                                     className="btn btn-outline-secondary btn-sm w-100"
                                     onClick={regenerateClasses}
                                 >
-                                    <RefreshCw className="glyph" strokeWidth={1.75} aria-hidden="true" /> Generate classes
+                                    <RefreshCw className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.generate_classes')}
                                 </button>
                                 {form.classes?.length > 0 && (
                                     <ul className="list-unstyled small mt-2 mb-0">
@@ -501,7 +502,7 @@ export default function StyleEditor() {
 
                         {form.renderer === 'unique' && form.field && (
                             <div className="mb-3">
-                                <label className="form-label">Values</label>
+                                <label className="form-label">{__('maps.values')}</label>
                                 {fieldValues.length ? (
                                     <div className="border rounded p-2" style={{ maxHeight: 180, overflowY: 'auto' }}>
                                         {fieldValues.map((value) => {
@@ -522,7 +523,7 @@ export default function StyleEditor() {
                                         })}
                                     </div>
                                 ) : (
-                                    <p className="small text-muted mb-0">No values in this field.</p>
+                                    <p className="small text-muted mb-0">{__('maps.no_values')}</p>
                                 )}
                             </div>
                         )}
@@ -530,7 +531,7 @@ export default function StyleEditor() {
                         {form.renderer === 'heatmap' && (
                             <div className="border rounded p-2 mb-3">
                                 <div className="mb-2">
-                                    <label className="form-label small">Blur</label>
+                                    <label className="form-label small">{__('maps.blur')}</label>
                                     <input
                                         type="range"
                                         min="1"
@@ -543,7 +544,7 @@ export default function StyleEditor() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <label className="form-label small">Radius</label>
+                                    <label className="form-label small">{__('maps.radius')}</label>
                                     <input
                                         type="range"
                                         min="1"
@@ -556,7 +557,7 @@ export default function StyleEditor() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="form-label small">Weight field (optional)</label>
+                                    <label className="form-label small">{__('maps.weight_field')}</label>
                                     <input
                                         type="text"
                                         className="form-control form-control-sm"
@@ -571,7 +572,7 @@ export default function StyleEditor() {
 
                         {showPointSymbols && (
                             <div className="mb-3">
-                                <label className="form-label">Point symbol</label>
+                                <label className="form-label">{__('maps.point_symbol')}</label>
                                 <div className="d-flex flex-wrap gap-1">
                                     {POINT_ICONS.map((icon) => {
                                         const selected = (form.symbol.icon || 'circle') === icon.id;
@@ -607,7 +608,7 @@ export default function StyleEditor() {
                                 {form.symbol.icon && form.symbol.icon !== 'circle' && (
                                     <div className="mt-2">
                                         <label className="form-label small">
-                                            Icon size: {form.symbol.size || 24}px
+                                            {__('maps.icon_size_colon')} {form.symbol.size || 24}px
                                         </label>
                                         <input
                                             type="range"
@@ -656,9 +657,9 @@ export default function StyleEditor() {
 
                         {form.renderer === 'simple' && (
                             <div className="vector-styles">
-                                <h6>Symbol</h6>
+                                <h6>{__('maps.symbol')}</h6>
                                 <div className="mb-3">
-                                    <label className="form-label">Fill Color:</label>
+                                    <label className="form-label">{__('maps.fill_color_colon')}</label>
                                     <input
                                         value={form.symbol.fillColor}
                                         type="color"
@@ -669,7 +670,7 @@ export default function StyleEditor() {
                                     />
                                 </div>
                                 <div className="mb-3">
-                                    <label className="form-label">Fill Opacity:</label>
+                                    <label className="form-label">{__('maps.fill_opacity_colon')}</label>
                                     <input
                                         value={form.symbol.fillOpacity}
                                         type="range"
@@ -685,7 +686,7 @@ export default function StyleEditor() {
                                     />
                                 </div>
                                 <div className="mb-3">
-                                    <label className="form-label">Stroke Color:</label>
+                                    <label className="form-label">{__('maps.stroke_color_colon')}</label>
                                     <input
                                         value={form.symbol.strokeColor}
                                         type="color"
@@ -696,7 +697,7 @@ export default function StyleEditor() {
                                     />
                                 </div>
                                 <div className="mb-3">
-                                    <label className="form-label">Stroke Width:</label>
+                                    <label className="form-label">{__('maps.stroke_width_colon')}</label>
                                     <input
                                         value={form.symbol.strokeWidth}
                                         type="number"
@@ -724,13 +725,13 @@ export default function StyleEditor() {
                                 }
                             />
                             <label className="form-check-label" htmlFor="labelsEnabled">
-                                Show labels
+                                {__('maps.show_labels')}
                             </label>
                         </div>
 
                         {form.labels.enabled && (
                             <div className="mb-3">
-                                <label className="form-label">Label field:</label>
+                                <label className="form-label">{__('maps.label_field_colon')}</label>
                                 {attributeFields.length ? (
                                     <select
                                         className="form-select form-select-sm"
@@ -739,7 +740,7 @@ export default function StyleEditor() {
                                             patchLabels({ field: event.target.value })
                                         }
                                     >
-                                        <option value="">— select —</option>
+                                        <option value="">{__('common.select_dash')}</option>
                                         {attributeFields.map((name) => (
                                             <option key={name} value={name}>
                                                 {name}
@@ -787,7 +788,7 @@ export default function StyleEditor() {
 
                 <div className="mb-3">
                     <button type="button" onClick={resetStyle} className="btn btn-secondary btn-sm w-100">
-                        <Undo2 className="glyph" strokeWidth={1.75} aria-hidden="true" /> Reset to Default
+                        <Undo2 className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.reset_default')}
                     </button>
                 </div>
             </div>

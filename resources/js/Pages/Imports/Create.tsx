@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import { Upload } from 'lucide-react';
 import { useState } from 'react';
 
@@ -42,10 +43,11 @@ function FileDrop({
     files: File[];
     onPick: (files: File[]) => void;
 }) {
+    const { t } = useTranslation();
     const [over, setOver] = useState(false);
 
     return (
-        <Field label="Files" hint={hint} error={error}>
+        <Field label={t('common.files')} hint={hint} error={error}>
             <label
                 className={cn(
                     'flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed px-6 py-8 text-center transition-colors',
@@ -63,8 +65,8 @@ function FileDrop({
                 }}
             >
                 <Upload className="size-5 text-muted-foreground" />
-                <span className="text-sm font-medium">Drop files here, or browse</span>
-                <span className="text-xs text-muted-foreground">{names || 'Nothing selected'}</span>
+                <span className="text-sm font-medium">{t('imports.drop_files')}</span>
+                <span className="text-xs text-muted-foreground">{names || t('imports.nothing_selected')}</span>
                 <input
                     type="file"
                     multiple
@@ -78,7 +80,7 @@ function FileDrop({
                     {files.map((file) => (
                         <li key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 px-3 py-2">
                             <span className="min-w-0 truncate">{file.name}</span>
-                            <span className="shrink-0 tabular-nums text-muted-foreground">{bytes(file.size)}</span>
+                            <span dir="ltr" className="shrink-0 tabular-nums text-muted-foreground">{bytes(file.size)}</span>
                         </li>
                     ))}
                 </ul>
@@ -96,6 +98,7 @@ export default function Create({
     featureMb = 0,
     imageryMb = 0,
 }: CreateProps) {
+    const { t } = useTranslation();
     const feature = useForm({ files: [] as File[] });
     const imagery = useForm({
         _kind: 'imagery',
@@ -113,9 +116,9 @@ export default function Create({
     }
 
     return (
-        <AppLayout title="Add data">
-            <PageHeader title="Add data" action={<GhostLink href="/imports">Back</GhostLink>} />
-            <div role="tablist" aria-label="What to add" className="inline-flex w-fit rounded-lg bg-muted p-1">
+        <AppLayout title={t('imports.add_data')}>
+            <PageHeader title={t('imports.add_data')} action={<GhostLink href="/imports">{t('actions.back')}</GhostLink>} />
+            <div role="tablist" aria-label={__('imports.what_to_add')} className="inline-flex w-fit rounded-lg bg-muted p-1">
                 <a
                     href="/imports/create"
                     role="tab"
@@ -125,7 +128,7 @@ export default function Create({
                         imageryMode ? 'text-muted-foreground hover:text-foreground' : 'bg-background text-foreground shadow-sm',
                     )}
                 >
-                    {featureLabel}
+                    {featureLabel === 'Feature data' ? __('imports.feature_data') : featureLabel}
                 </a>
                 <a
                     href="/imports/create?kind=imagery"
@@ -136,7 +139,7 @@ export default function Create({
                         imageryMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
-                    {imageryLabel}
+                    {imageryLabel === 'Imagery' ? __('imports.imagery') : imageryLabel}
                 </a>
             </div>
             <Panel className="max-w-2xl">
@@ -149,18 +152,18 @@ export default function Create({
                         }}
                     >
                         <p className="max-w-prose text-sm text-muted-foreground">
-                            Publish a georeferenced scene above the satellite basemap. A GeoTIFF, or a JPEG/PNG with its world file and .prj, is prepared as map tiles.
+                            {__('imports.imagery_help')}
                         </p>
-                        <Field label="Layer name" error={imagery.errors.name}>
-                            <TextInput value={imagery.data.name} onChange={(event) => imagery.setData('name', event.target.value)} placeholder="Coast, September 2026" />
+                        <Field label={t('solution_packs.layer_name')} error={imagery.errors.name}>
+                            <TextInput value={imagery.data.name} onChange={(event) => imagery.setData('name', event.target.value)} placeholder={__('imports.imagery_placeholder')} />
                         </Field>
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <Field label="Captured on" error={imagery.errors.acquired_at}>
+                            <Field label={t('common.captured_on')} error={imagery.errors.acquired_at}>
                                 <TextInput type="date" value={imagery.data.acquired_at} required onChange={(event) => imagery.setData('acquired_at', event.target.value)} />
                             </Field>
-                            <Field label="Add to an imagery layer" error={imagery.errors.layer_id}>
+                            <Field label={t('imports.add_to_imagery')} error={imagery.errors.layer_id}>
                                 <Select value={imagery.data.layer_id} onChange={(event) => imagery.setData('layer_id', event.target.value)}>
-                                    <option value="">New imagery layer</option>
+                                    <option value="">{__('imports.new_imagery_layer')}</option>
                                     {imageryLayers.map((layer) => (
                                         <option key={layer.id} value={layer.id}>
                                             {layer.name}
@@ -171,7 +174,7 @@ export default function Create({
                         </div>
                         <FileDrop
                             accept=".tif,.tiff,.jpg,.jpeg,.png,.zip,.jgw,.jpgw,.pgw,.pngw,.wld,.tfw,.prj"
-                            hint={`GeoTIFF, zip, or JPEG/PNG with a world file. Up to ${imageryMb} MB.`}
+                            hint={__('imports.imagery_hint', { mb: imageryMb })}
                             error={fileError(imagery.errors)}
                             names={names}
                             files={imagery.data.files}
@@ -179,7 +182,7 @@ export default function Create({
                         />
                         {imageryHint ? <p className="max-w-prose text-sm text-muted-foreground">{imageryHint}</p> : null}
                         <div className="flex gap-3">
-                            <GhostLink href="/imports">Cancel</GhostLink>
+                            <GhostLink href="/imports">{t('actions.cancel')}</GhostLink>
                             <PrimaryButton type="submit" disabled={imagery.processing || imagery.data.files.length === 0}>
                                 {imagery.processing ? 'Publishing…' : 'Publish imagery'}
                             </PrimaryButton>
@@ -194,20 +197,20 @@ export default function Create({
                         }}
                     >
                         <p className="max-w-prose text-sm text-muted-foreground">
-                            Drop a dataset the way a feature layer is published. A zipped shapefile, KML, KMZ, GeoJSON, CSV, or Excel file is loaded into PostGIS.
+                            {__('imports.feature_help')}
                         </p>
                         <FileDrop
                             accept=".zip,.shp,.shx,.dbf,.prj,.cpg,.geojson,.json,.kml,.kmz,.csv,.xlsx,.xls"
-                            hint={`Shapefile zip, KML, GeoJSON, CSV, or Excel. Up to ${featureMb} MB.`}
+                            hint={__('imports.feature_hint', { mb: featureMb })}
                             error={fileError(feature.errors)}
                             names={names}
                             files={feature.data.files}
                             onPick={(files) => onFiles(feature, files)}
                         />
                         <div className="flex gap-3">
-                            <GhostLink href="/imports">Cancel</GhostLink>
+                            <GhostLink href="/imports">{t('actions.cancel')}</GhostLink>
                             <PrimaryButton type="submit" disabled={feature.processing || feature.data.files.length === 0}>
-                                {feature.processing ? 'Importing…' : 'Import dataset'}
+                                {feature.processing ? t('imports.importing') : t('imports.import_dataset')}
                             </PrimaryButton>
                         </div>
                     </form>

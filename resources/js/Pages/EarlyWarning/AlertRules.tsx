@@ -1,4 +1,6 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Empty, Field, PageHeader, Panel, PrimaryButton, Select, TextInput } from '@/components/gis';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +73,8 @@ export default function AlertRules({
     seed_url,
     channels_url,
 }: Props) {
+    const { t } = useTranslation();
+    const isSuperAdmin = Boolean((usePage().props as { user?: { is_super_admin?: boolean } | null }).user?.is_super_admin);
     const form = useForm({
         name: '',
         basin_code: '',
@@ -105,18 +109,18 @@ export default function AlertRules({
 
     return (
         <AppLayout
-            title="Alert rules"
+            title={t('early_warning.alert_rules')}
             breadcrumbs={[
-                { title: 'Early Warning', href: '/x/early-warning' },
-                { title: 'Alert rules', href: '/x/early-warning/alert-rules' },
+                { title: t('early_warning.title'), href: '/x/early-warning' },
+                { title: t('early_warning.alert_rules'), href: '/x/early-warning/alert-rules' },
             ]}
         >
             <PageHeader
-                title="Alert rules"
+                title={t('early_warning.alert_rules')}
                 action={
                     <Button asChild variant="outline" size="sm">
                         <Link href={seed_url} method="post" as="button" preserveScroll>
-                            Seed Tripoli defaults
+                            {__('ew.seed_defaults')}
                         </Link>
                     </Button>
                 }
@@ -132,10 +136,10 @@ export default function AlertRules({
             <div className="mb-8 grid gap-6 lg:grid-cols-2">
                 <Panel>
                     <div className="border-b border-border px-3 py-2">
-                        <h2 className="text-sm font-semibold">Rules</h2>
+                        <h2 className="text-sm font-semibold">{__('ew.rules')}</h2>
                     </div>
                     {rules.length === 0 ? (
-                        <Empty>No rules yet. Seed defaults or add one below.</Empty>
+                        <Empty>{__('ew.no_rules')}</Empty>
                     ) : (
                         <ul className="divide-y divide-border">
                             {rules.map((rule) => (
@@ -144,13 +148,13 @@ export default function AlertRules({
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="font-medium">{rule.name}</span>
                                             <Badge variant="secondary" className={rule.enabled ? '' : 'opacity-60'}>
-                                                {rule.enabled ? 'On' : 'Off'}
+                                                {rule.enabled ? __('common.on') : __('common.off')}
                                             </Badge>
                                         </div>
-                                        <p className="mt-1 font-mono text-xs text-muted-foreground">
-                                            {rule.metric} {rule.operator} {rule.threshold}
-                                            {rule.risk_level_min ? ` · min ${rule.risk_level_min}` : ''}
-                                            {rule.basin_code ? ` · ${rule.basin_code}` : ' · all basins'}
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {enumLabel(rule.metric, 'ew.metric')} <bdi dir="ltr">{rule.operator} {rule.threshold}</bdi>
+                                            {rule.risk_level_min ? ` · ${__('ew.min_level', { level: enumLabel(rule.risk_level_min) })}` : ''}
+                                            {rule.basin_code ? ` · ${rule.basin_code}` : ` · ${__('ew.all_basins')}`}
                                         </p>
                                     </div>
                                     <div className="flex gap-2">
@@ -162,7 +166,7 @@ export default function AlertRules({
                                                 as="button"
                                                 preserveScroll
                                             >
-                                                {rule.enabled ? 'Disable' : 'Enable'}
+                                                {rule.enabled ? t('actions.disable') : t('actions.enable')}
                                             </Link>
                                         </Button>
                                         <Button asChild variant="ghost" size="sm">
@@ -172,7 +176,7 @@ export default function AlertRules({
                                                 as="button"
                                                 preserveScroll
                                             >
-                                                Delete
+                                                {__('actions.delete')}
                                             </Link>
                                         </Button>
                                     </div>
@@ -184,22 +188,22 @@ export default function AlertRules({
 
                 <Panel>
                     <div className="border-b border-border px-3 py-2">
-                        <h2 className="text-sm font-semibold">Add rule</h2>
+                        <h2 className="text-sm font-semibold">{t('early_warning.add_rule')}</h2>
                     </div>
                     <form onSubmit={submit} className="space-y-3 p-3">
-                        <Field label="Name" error={form.errors.name}>
+                        <Field label={t('forms.name')} error={form.errors.name}>
                             <TextInput
                                 value={form.data.name}
                                 required
                                 onChange={(e) => form.setData('name', e.target.value)}
                             />
                         </Field>
-                        <Field label="Basin (optional)">
+                        <Field label={t('early_warning.basin_optional')}>
                             <Select
                                 value={form.data.basin_code}
                                 onChange={(e) => form.setData('basin_code', e.target.value)}
                             >
-                                <option value="">All subscribed basins</option>
+                                <option value="">{t('early_warning.all_subscribed_basins')}</option>
                                 {basins.map((b) => (
                                     <option key={b.basin_code} value={b.basin_code}>
                                         {b.name} ({b.basin_code})
@@ -208,19 +212,19 @@ export default function AlertRules({
                             </Select>
                         </Field>
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label="Metric" error={form.errors.metric}>
+                            <Field label={t('early_warning.metric')} error={form.errors.metric}>
                                 <Select
                                     value={form.data.metric}
                                     onChange={(e) => form.setData('metric', e.target.value)}
                                 >
                                     {metrics.map((m) => (
                                         <option key={m} value={m}>
-                                            {m}
+                                            {enumLabel(m, 'ew.metric')}
                                         </option>
                                     ))}
                                 </Select>
                             </Field>
-                            <Field label="Operator" error={form.errors.operator}>
+                            <Field label={t('early_warning.operator')} error={form.errors.operator}>
                                 <Select
                                     value={form.data.operator}
                                     onChange={(e) => form.setData('operator', e.target.value)}
@@ -234,7 +238,7 @@ export default function AlertRules({
                             </Field>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label="Threshold" error={form.errors.threshold}>
+                            <Field label={t('early_warning.threshold')} error={form.errors.threshold}>
                                 <TextInput
                                     type="number"
                                     step="0.1"
@@ -243,22 +247,22 @@ export default function AlertRules({
                                     onChange={(e) => form.setData('threshold', Number(e.target.value))}
                                 />
                             </Field>
-                            <Field label="Min risk level">
+                            <Field label={t('early_warning.min_risk_level')}>
                                 <Select
                                     value={form.data.risk_level_min}
                                     onChange={(e) => form.setData('risk_level_min', e.target.value)}
                                 >
-                                    <option value="">None</option>
+                                    <option value="">{__('ew.risk_level.none')}</option>
                                     {risk_levels.map((level) => (
                                         <option key={level} value={level}>
-                                            {level}
+                                            {enumLabel(level)}
                                         </option>
                                     ))}
                                 </Select>
                             </Field>
                         </div>
                         <PrimaryButton type="submit" disabled={form.processing}>
-                            Create rule
+                            {__('ew.create_rule')}
                         </PrimaryButton>
                     </form>
                 </Panel>
@@ -266,29 +270,27 @@ export default function AlertRules({
 
             <Panel className="mb-8">
                 <div className="border-b border-border px-3 py-2">
-                    <h2 className="text-sm font-semibold">Delivery channels</h2>
+                    <h2 className="text-sm font-semibold">{t('webhooks.delivery_channels')}</h2>
                 </div>
                 <form onSubmit={saveChannels} className="space-y-3 p-3 max-w-xl">
                     <p className="text-sm text-muted-foreground">
-                        Rules with channel <code className="text-xs">email</code> or{' '}
-                        <code className="text-xs">telegram</code> use these destinations. Default rules use{' '}
-                        <code className="text-xs">log</code> only until you add channels on a rule.
+                        {__('ew.channels_help')}
                     </p>
-                    <Field label="Notify emails (comma-separated)" error={channelsForm.errors.notify_emails}>
+                    <Field label={t('early_warning.notify_emails')} error={channelsForm.errors.notify_emails}>
                         <TextInput
                             value={channelsForm.data.notify_emails}
                             placeholder="ops@example.com, duty@example.com"
                             onChange={(e) => channelsForm.setData('notify_emails', e.target.value)}
                         />
                     </Field>
-                    <Field label="Telegram chat IDs" error={channelsForm.errors.telegram_chat_ids}>
+                    <Field label={t('early_warning.telegram_chat_ids')} error={channelsForm.errors.telegram_chat_ids}>
                         <TextInput
                             value={channelsForm.data.telegram_chat_ids}
                             placeholder="-1001234567890"
                             onChange={(e) => channelsForm.setData('telegram_chat_ids', e.target.value)}
                         />
                     </Field>
-                    <Field label="SMS phones" error={channelsForm.errors.notify_phones}>
+                    <Field label={t('early_warning.notify_phones')} error={channelsForm.errors.notify_phones}>
                         <TextInput
                             value={channelsForm.data.notify_phones}
                             placeholder="+2189…"
@@ -296,39 +298,39 @@ export default function AlertRules({
                         />
                     </Field>
                     <p className="text-xs text-muted-foreground">
-                        Bot token: {channel_settings.telegram_configured ? 'configured' : 'set EW_TELEGRAM_BOT_TOKEN'}
+                        {__('ew.bot_token')}: {channel_settings.telegram_configured ? __('ew.configured') : __('ew.telegram_not_set')}
+                        {!channel_settings.telegram_configured && isSuperAdmin ? ` (${__('ew.telegram_not_set_ops')})` : null}
                         {' · '}
-                        SMS webhook:{' '}
-                        {channel_settings.sms_webhook_configured
-                            ? 'configured'
-                            : 'log-only (set EW_SMS_WEBHOOK_URL)'}
+                        {__('ew.sms_webhook')}:{' '}
+                        {channel_settings.sms_webhook_configured ? __('ew.configured') : __('ew.sms_log_only')}
+                        {!channel_settings.sms_webhook_configured && isSuperAdmin ? ` (${__('ew.sms_log_only_ops')})` : null}
                     </p>
                     <PrimaryButton type="submit" disabled={channelsForm.processing}>
-                        Save channels
+                        {__('ew.save_channels')}
                     </PrimaryButton>
                 </form>
             </Panel>
 
             <Panel>
                 <div className="border-b border-border px-3 py-2">
-                    <h2 className="text-sm font-semibold">Recent alert log</h2>
+                    <h2 className="text-sm font-semibold">{__('ew.recent_log')}</h2>
                 </div>
                 {recent_logs.length === 0 ? (
-                    <Empty>No alerts logged yet. Rules evaluate hourly after risk compute.</Empty>
+                    <Empty>{__('ew.no_alerts')}</Empty>
                 ) : (
                     <ul className="divide-y divide-border">
                         {recent_logs.map((log) => (
                             <li key={log.id} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
-                                <span className="font-medium">{log.rule_name ?? 'Rule'}</span>
+                                <span className="font-medium">{log.rule_name ?? __('ew.rule')}</span>
                                 <span className="text-muted-foreground">{log.basin_code}</span>
-                                <Badge variant="secondary">{log.status}</Badge>
-                                <span className="font-mono text-xs text-muted-foreground">
+                                <Badge variant="secondary">{enumLabel(log.status)}</Badge>
+                                <span dir="ltr" className="font-mono text-xs text-muted-foreground">
                                     {log.value != null && log.threshold != null
                                         ? `${log.value} / ${log.threshold}`
-                                        : log.channel}
+                                        : enumLabel(log.channel)}
                                 </span>
                                 <span className="ms-auto text-xs text-muted-foreground">
-                                    {log.created_at ? when(log.created_at) : '—'}
+                                    {log.created_at ? when(log.created_at) : t('common.em_dash')}
                                 </span>
                             </li>
                         ))}

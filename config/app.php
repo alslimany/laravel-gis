@@ -80,6 +80,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Timezone for every date shown to users (storage stays UTC).
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Africa/Tripoli'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

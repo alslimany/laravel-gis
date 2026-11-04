@@ -1,29 +1,31 @@
 import { Link } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { when } from '@/lib/format';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
 
 export default function Index({ maps }) {
+    const { t } = useTranslation();
     const rows = maps?.data || [];
 
     return (
-        <AppLayout title="Maps">
-            <PageHeader title="Maps" action={<PrimaryLink href="/maps/builder">Open map builder</PrimaryLink>} />
+        <AppLayout title={t('maps.title')}>
+            <PageHeader title={t('maps.title')} action={<PrimaryLink href="/maps/builder">{t('maps.open_builder')}</PrimaryLink>} />
             <Panel>
                 {rows.length === 0 ? (
                     <Empty>
-                        No maps yet.{' '}
-                        <PrimaryLink href="/maps/builder">Open map builder</PrimaryLink>
+                        {t('maps.empty')}{' '}
+                        <PrimaryLink href="/maps/builder">{t('maps.open_builder')}</PrimaryLink>
                     </Empty>
                 ) : (
                     <DataTable>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head className={thClass}>Name</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Description</Table.Head>
-                                <Table.Head className={`${thClass} hidden md:table-cell`}>Created by</Table.Head>
-                                <Table.Head className={thClass}>Status</Table.Head>
-                                <Table.Head className={thClass}>Actions</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('forms.description')}</Table.Head>
+                                <Table.Head className={`${thClass} hidden md:table-cell`}>{t('forms.created_by')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.status')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.actions')}</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -34,19 +36,19 @@ export default function Index({ maps }) {
                                             {map.name}
                                         </Link>
                                     </Table.Cell>
-                                    <Table.Cell className={`${tdMuted} hidden max-w-xs truncate md:table-cell`}>{map.description || '—'}</Table.Cell>
-                                    <Table.Cell className={`${tdClass} hidden md:table-cell`}>{map.user?.name || '—'}</Table.Cell>
+                                    <Table.Cell className={`${tdMuted} hidden max-w-xs truncate md:table-cell`}>{map.description || t('common.em_dash')}</Table.Cell>
+                                    <Table.Cell className={`${tdClass} hidden md:table-cell`}>{map.user?.name || t('common.em_dash')}</Table.Cell>
                                     <Table.Cell className={tdClass}>
-                                        <Pill live={map.is_public}>{map.is_public ? 'Public' : 'Private'}</Pill>
+                                        <Pill live={map.is_public}>{map.is_public ? t('common.public') : t('common.private')}</Pill>
                                     </Table.Cell>
                                     <Table.Cell className={tdClass}>
                                         <RowActions>
                                             <ActionLink href={`/maps/${map.id}`} hideOnPhone>
                                                 View
                                             </ActionLink>
-                                            <ActionLink href={`/maps/builder/${map.id}`}>Edit</ActionLink>
-                                            <ActionLink href={`/maps/${map.id}/share`}>Share</ActionLink>
-                                            <DangerButton onClick={() => destroyResource(`/maps/${map.id}`, 'Delete this map?')}>Delete</DangerButton>
+                                            <ActionLink href={`/maps/builder/${map.id}`}>{t('actions.edit')}</ActionLink>
+                                            <ActionLink href={`/maps/${map.id}/share`}>{t('actions.share')}</ActionLink>
+                                            <DangerButton onClick={() => destroyResource(`/maps/${map.id}`, t('maps.confirm_delete'))}>{t('actions.delete')}</DangerButton>
                                         </RowActions>
                                     </Table.Cell>
                                 </Table.Row>

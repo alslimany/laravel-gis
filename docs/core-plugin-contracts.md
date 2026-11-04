@@ -28,6 +28,26 @@ Dispatched from `App\Models\Layer` lifecycle:
 
 Early Warning listens for layers tagged `metadata.plugin=early-warning` or `metadata.kind=basins`.
 
+### WarningIssued (Early Warning → Disaster via Core)
+
+Core event: `App\Events\WarningIssued` carrying immutable DTO `App\Support\WarningIssuedPayload`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `source` | string | Emitting plugin key, e.g. `early-warning` |
+| `source_alert_id` | string | Opaque ID from the emitter (e.g. `ew_alert_logs.id`) |
+| `organization_id` | int | Tenant |
+| `hazard_type` | string | e.g. `flood` |
+| `severity` | string | CAP-like: Extreme / Severe / Moderate / Minor / Unknown |
+| `urgency` | string | CAP-like: Immediate / Expected / Future / Past |
+| `certainty` | string | CAP-like: Observed / Likely / Possible / Unlikely / Unknown |
+| `valid_from` / `valid_to` | datetime \| null | Validity window |
+| `affected` | list | GeoJSON feature/geometry objects **or** Core feature IDs |
+| `advisory_text` | string | Operator-facing advisory copy |
+| `is_exercise` | bool | Default `false` |
+
+**Golden rule 6:** Disaster must never read `ew_*` tables. Early Warning dispatches `WarningIssued` after creating an alert log; Disaster upserts `dm_activations` on `(organization_id, source, source_alert_id)` with status `proposed`. Core never imports either plugin.
+
 ## Open decisions (locked for now)
 
 1. **Basins:** Target = normal Core layer. Today `ew_basins` is a transitional global catalog with optional `layer_id` link. Geometry-of-record migration onto Core-only is a separate task.

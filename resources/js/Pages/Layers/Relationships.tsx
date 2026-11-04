@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import {
     DangerButton,
@@ -36,6 +37,7 @@ export default function Relationships({
     layer: LayerRecord;
     relationships?: RelationshipRecord[];
 }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props as { abilities?: { edit?: boolean } };
     const canEdit = Boolean(abilities?.edit);
 
@@ -47,7 +49,7 @@ export default function Relationships({
     };
 
     async function remove(relationship: RelationshipRecord) {
-        const confirmed = window.confirm(`Delete the "${relationship.name}" relationship?`);
+        const confirmed = window.confirm(__('rel.confirm_delete', { name: relationship.name }));
         if (!confirmed) {
             return;
         }
@@ -58,48 +60,44 @@ export default function Relationships({
         });
         if (!response.ok) {
             const data = await response.json().catch(() => ({}) as Record<string, unknown>);
-            window.alert(String(data.error || 'Could not delete the relationship.'));
+            window.alert(String(data.error || __('rel.delete_failed')));
             return;
         }
         router.reload({ only: ['relationships'] });
     }
 
     return (
-        <AppLayout title={`Relationships — ${layer.name}`}>
+        <AppLayout title={__('rel.title', { name: layer.name })}>
             <PageHeader
-                title="Relationships"
+                title={t('relationships.title')}
                 action={
                     <div className="flex flex-wrap gap-2">
-                        <GhostLink href={`/layers/${layer.id}`}>Back to layer</GhostLink>
+                        <GhostLink href={`/layers/${layer.id}`}>{t('layers.back_layer')}</GhostLink>
                         {canEdit ? (
-                            <PrimaryLink href={`/relationships?parent=${layer.id}`}>Add relationship</PrimaryLink>
+                            <PrimaryLink href={`/relationships?parent=${layer.id}`}>{t('layers.add_relationship')}</PrimaryLink>
                         ) : null}
                     </div>
                 }
             />
             <Panel>
                 <p className="max-w-prose text-sm text-muted-foreground">
-                    Relate features of <span className="font-medium text-foreground">{layer.name}</span> (parent) to
-                    features of another layer (child). Child rows are matched by a key column that stores the parent
-                    feature&apos;s id, and appear in the inspector next to each feature. New connections are drawn in
-                    the relationship builder.
+                    {__('rel.intro_a')} <span className="font-medium text-foreground">{layer.name}</span> {__('rel.intro_b')}
                 </p>
 
                 <div className="mt-4">
                     {relationships.length === 0 ? (
                         <Empty>
-                            No relationships yet. Add one in the relationship builder to show related records beside
-                            each feature.
+                            {__('rel.empty')}
                         </Empty>
                     ) : (
                         <DataTable>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.Head className={thClass}>Name</Table.Head>
-                                    <Table.Head className={thClass}>Related layer</Table.Head>
-                                    <Table.Head className={thClass}>Key column</Table.Head>
-                                    <Table.Head className={thClass}>Matches</Table.Head>
-                                    {canEdit ? <Table.Head className={thClass}>Actions</Table.Head> : null}
+                                    <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
+                                    <Table.Head className={thClass}>{__('rel.related_layer')}</Table.Head>
+                                    <Table.Head className={thClass}>{t('common.key_column')}</Table.Head>
+                                    <Table.Head className={thClass}>{__('rel.matches')}</Table.Head>
+                                    {canEdit ? <Table.Head className={thClass}>{t('forms.actions')}</Table.Head> : null}
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -107,7 +105,7 @@ export default function Relationships({
                                     <Table.Row key={relationship.id}>
                                         <Table.Cell className={tdClass}>{relationship.name}</Table.Cell>
                                         <Table.Cell className={tdClass}>
-                                            {relationship.related_layer?.name || '—'}
+                                            {relationship.related_layer?.name || t('common.em_dash')}
                                         </Table.Cell>
                                         <Table.Cell className={tdMono}>{relationship.foreign_key}</Table.Cell>
                                         <Table.Cell className={tdClass}>
@@ -118,7 +116,7 @@ export default function Relationships({
                                             <Table.Cell className={tdClass}>
                                                 <RowActions>
                                                     <DangerButton onClick={() => remove(relationship)}>
-                                                        Delete
+                                                        {__('rel.delete')}
                                                     </DangerButton>
                                                 </RowActions>
                                             </Table.Cell>

@@ -1,6 +1,8 @@
-import * as SheetPrimitive from "@radix-ui/react-dialog"
+
+import { __ } from '@/lib/i18n';import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 import * as React from "react"
+import { Direction } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
@@ -45,13 +47,17 @@ function SheetOverlay({
 function SheetContent({
   className,
   children,
-  side = "right",
+  side,
   showOverlay = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
   showOverlay?: boolean
 }) {
+  // Default side follows reading direction (start edge = right in Arabic). Physical variants stay as-is.
+  const dir = Direction.useDirection()
+  side = side ?? (dir === "rtl" ? "left" : "right")
+
   return (
     <SheetPortal>
       {showOverlay ? <SheetOverlay /> : null}
@@ -72,9 +78,9 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 end-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{__('common.close')}</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

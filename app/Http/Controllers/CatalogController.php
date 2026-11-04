@@ -6,6 +6,7 @@ use App\Models\DashboardBoard;
 use App\Models\Form;
 use App\Models\Layer;
 use App\Models\Map;
+use App\Services\ContentAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -75,9 +76,10 @@ class CatalogController extends Controller
             ->limit(50)
             ->get();
 
-        $access = app(\App\Services\ContentAccessService::class);
+        $access = app(ContentAccessService::class);
         $user = Auth::user();
         $layers = $access->filterVisible($user, 'layer', $layers);
+        $layers->each(fn (Layer $layer) => $layer->withoutInternalNamesFor($user));
         $maps = $access->filterVisible($user, 'map', $maps);
         $dashboards = $access->filterVisible($user, 'dashboard', $dashboards);
 

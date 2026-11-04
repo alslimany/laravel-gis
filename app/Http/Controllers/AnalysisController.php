@@ -9,6 +9,7 @@ use App\Models\AnalysisResult;
 use App\Models\Layer;
 use App\Services\AnalysisLayerSaver;
 use App\Services\GeoServerPublisher;
+use App\Support\LayerTable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -232,7 +233,7 @@ class AnalysisController extends Controller
             ->values();
 
         if ($sentIds && $ids->isNotEmpty()) {
-            if (! $layer || ! $layer->table_name || ! Schema::hasTable($layer->table_name) || ! Schema::hasColumn($layer->table_name, 'id')) {
+            if (! $layer || ! $layer->table_name || ! LayerTable::exists($layer->table_name) || ! Schema::hasColumn($layer->table_name, 'id')) {
                 return response()->json(['error' => 'Layer or table not found.'], 422);
             }
 
@@ -312,7 +313,7 @@ class AnalysisController extends Controller
             return response()->json(['error' => 'Source layer not found.'], 422);
         }
 
-        if (! $source->table_name || ! Schema::hasTable($source->table_name) || ! Schema::hasColumn($source->table_name, 'id')) {
+        if (! $source->table_name || ! LayerTable::exists($source->table_name) || ! Schema::hasColumn($source->table_name, 'id')) {
             return response()->json(['error' => 'Layer or table not found.'], 422);
         }
 

@@ -35,7 +35,9 @@ interface LayerPublisher
      *     styleName?: string,
      *     styleSld?: string
      * }|null  $sqlView  When null, only the Layer row is upserted (no GeoServer call).
-     * @return array{layer: Layer, published: bool}
+     * $sql must come from code only, never user input (single statement, no ";").
+     * The layer is stored with metadata.sql_view = true and is read-only.
+     * @return array{layer: Layer, published: bool, backing_view: bool}
      */
     public function upsertSqlViewLayer(
         Organization $organization,

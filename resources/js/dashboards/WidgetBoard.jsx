@@ -1,10 +1,20 @@
+import { __ } from '@/lib/i18n';
 import { useEffect, useMemo, useState } from 'react';
 import GridLayout, { useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import { GripVertical, Trash2 } from 'lucide-react';
+import { Direction } from 'radix-ui';
 import { WidgetBody, WidgetFrame, mergeWidgetData } from './widgets';
 import { DEFAULT_SIZE, canonicalType } from './widgetDocument';
 import { writeFiltersToSearch } from './filters';
 import 'react-grid-layout/css/styles.css';
+
+const COLS = 12;
+
+/** Saved layouts are LTR (x from the left). In RTL the grid is mirrored on screen and un-mirrored on save. */
+function mirror(items, rtl) {
+    if (!rtl) return items;
+    return items.map((item) => ({ ...item, x: Math.max(0, COLS - (item.x ?? 0) - (item.w ?? 1)) }));
+}
 
 function toLayout(widgets, editable) {
     return widgets.map((widget) => ({
@@ -57,7 +67,8 @@ export default function WidgetBoard({
     }, [widgetData]);
 
     const merged = useMemo(() => mergeWidgetData(widgets, liveData), [widgets, liveData]);
-    const layout = useMemo(() => toLayout(merged, editable), [merged, editable]);
+    const rtl = Direction.useDirection() === 'rtl';
+    const layout = useMemo(() => mirror(toLayout(merged, editable), rtl), [merged, editable, rtl]);
     const dropSize = DEFAULT_SIZE[canonicalType(draggingType)] || { w: 4, h: 3 };
 
     useEffect(() => {
@@ -81,7 +92,7 @@ export default function WidgetBoard({
                 }
             })
             .catch(() => {
-                if (!cancelled) setLoadError('The dashboard could not refresh. The last loaded numbers are still on screen.');
+                if (!cancelled) setLoadError(__('dash.refresh_failed'));
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -103,12 +114,13 @@ export default function WidgetBoard({
     function handleDrop(nextLayout, item, event) {
         const type = readDropType(event) || draggingType;
         if (!type || !item) return;
+        const [saved] = mirror([item], rtl);
         onDropWidget?.(type, {
-            x: item.x,
+            x: saved.x,
             y: item.y,
             w: item.w,
             h: item.h,
-        }, nextLayout);
+        }, mirror(nextLayout || [], rtl));
     }
 
     return (
@@ -126,7 +138,7 @@ export default function WidgetBoard({
             ) : null}
             {!editable && Object.keys(filters).length ? (
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Filtered</span>
+                    <span className="text-sm text-muted-foreground">{__('dash.filtered')}</span>
                     {Object.entries(filters).map(([layerId, value]) => (
                         <button
                             key={layerId}
@@ -135,19 +147,19 @@ export default function WidgetBoard({
                             onClick={() => setFilter(layerId, null)}
                         >
                             {value}
-                            <span className="text-muted-foreground">Clear</span>
+                            <span className="text-muted-foreground">{__('dash.clear')}</span>
                         </button>
                     ))}
                 </div>
             ) : null}
             {!merged.length && editable ? (
                 <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 text-center">
-                    <p className="max-w-sm text-sm text-muted-foreground">Drag a component here, or click one in the library.</p>
+                    <p className="max-w-sm text-sm text-muted-foreground">{__('dash.drop_hint')}</p>
                 </div>
             ) : null}
             {!merged.length && !editable ? (
                 <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 text-center">
-                    <p className="max-w-sm text-sm text-muted-foreground">This dashboard has no widgets yet.</p>
+                    <p className="max-w-sm text-sm text-muted-foreground">{__('dash.board_empty')}</p>
                 </div>
             ) : null}
             {mounted ? (
@@ -155,7 +167,7 @@ export default function WidgetBoard({
                     className="layout relative z-10"
                     width={width}
                     layout={layout}
-                    gridConfig={{ cols: 12, rowHeight: 56, margin: [12, 12], containerPadding: [0, 0] }}
+                    gridConfig={{ cols: COLS, rowHeight: 56, margin: [12, 12], containerPadding: [0, 0] }}
                     dragConfig={{ enabled: editable, handle: '.widget-drag-handle' }}
                     resizeConfig={{ enabled: editable }}
                     dropConfig={{
@@ -171,7 +183,7 @@ export default function WidgetBoard({
                     compactor={verticalCompactor}
                     onLayoutChange={(next) => {
                         if (next.some((item) => item.i === '__dropping__')) return;
-                        onLayoutChange?.(next);
+                        onLayoutChange?.(mirror(next, rtl));
                     }}
                     onDrop={handleDrop}
                     onDropDragOver={() => ({ w: dropSize.w, h: dropSize.h })}
@@ -187,16 +199,16 @@ export default function WidgetBoard({
                                         <div className="flex items-center gap-1">
                                             <span
                                                 className="widget-drag-handle inline-flex h-9 w-9 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-                                                aria-label="Move widget"
-                                                title="Move"
+                                                aria-label={__('dash.move_widget')}
+                                                title={__('dash.move')}
                                             >
                                                 <GripVertical className="h-4 w-4" strokeWidth={1.75} />
                                             </span>
                                             <button
                                                 type="button"
                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-md text-destructive hover:bg-muted"
-                                                aria-label="Remove widget"
-                                                title="Remove"
+                                                aria-label={__('dash.remove_widget')}
+                                                title={__('dash.remove')}
                                                 onClick={(event) => {
                                                     event.stopPropagation();
                                                     onRemove?.(widget.id);

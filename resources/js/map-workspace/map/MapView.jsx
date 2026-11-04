@@ -13,7 +13,8 @@ import TileWMS from 'ol/source/TileWMS';
 import GeoJSON from 'ol/format/GeoJSON';
 import MVT from 'ol/format/MVT';
 import { fromLonLat, toLonLat } from 'ol/proj';
-import { defaults as defaultControls, FullScreen, ScaleLine, ZoomSlider } from 'ol/control';
+import { FullScreen, ScaleLine, ZoomSlider } from 'ol/control';
+import { fullScreenTip, localizedControls } from '@/lib/ol-controls';
 import Select from 'ol/interaction/Select';
 import { click } from 'ol/events/condition';
 import Overlay from 'ol/Overlay';
@@ -123,6 +124,7 @@ function buildMvtUrl(layerConfig) {
     const timeFrom = layerConfig.timeFrom || layerConfig.time_from;
     const timeTo = layerConfig.timeTo || layerConfig.time_to;
     const timeField = layerConfig.timeField || layerConfig.time_field;
+    const revision = layerConfig.tileRevision || layerConfig.tile_revision;
 
     if (timeField && (timeFrom || timeTo)) {
         params.set('time_field', timeField);
@@ -132,6 +134,10 @@ function buildMvtUrl(layerConfig) {
         if (timeTo) {
             params.set('time_to', timeTo);
         }
+    }
+
+    if (revision) {
+        params.set('v', String(revision));
     }
 
     const qs = params.toString();
@@ -328,8 +334,8 @@ export default function MapView() {
                 zoom: initialViewport.zoom ?? 2,
                 rotation: initialViewport.rotation ?? 0,
             }),
-            controls: defaultControls().extend([
-                new FullScreen(),
+            controls: localizedControls().extend([
+                new FullScreen({ tipLabel: fullScreenTip() }),
                 new ScaleLine(),
                 new ZoomSlider(),
             ]),

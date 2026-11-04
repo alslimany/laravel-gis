@@ -2,6 +2,7 @@
 
 namespace Lumina\EarlyWarning\Jobs;
 
+use App\Models\OrganizationPlugin;
 use App\Plugins\Contracts\GlobalJob;
 use App\Plugins\PluginManager;
 use Carbon\Carbon;
@@ -47,6 +48,17 @@ class ComputeRiskJob implements GlobalJob, ShouldQueue
             return;
         }
 
+        // Exercise/demo orgs (early-warning settings.exercise = true, e.g. the NCMCD seeder) keep
+        // their stored risk; recomputing from live weather would overwrite the scenario.
+        $exerciseOrgIds = $this->exerciseOrganizationIds($orgIds);
+        if ($exerciseOrgIds !== []) {
+            Log::info('early-warning:compute-risk: skipping exercise organizations', ['organizations' => $exerciseOrgIds]);
+            $orgIds = $orgIds->reject(fn ($id) => in_array((int) $id, $exerciseOrgIds, true))->values();
+            if ($orgIds->isEmpty()) {
+                return;
+            }
+        }
+
         $basins = Basin::query()->orderBy('basin_code')->get()->keyBy('basin_code');
         if ($basins->isEmpty()) {
             Log::warning('early-warning:compute-risk: no basins');
@@ -80,6 +92,22 @@ class ComputeRiskJob implements GlobalJob, ShouldQueue
             'organizations' => $orgIds->count(),
             'rows' => $upserted,
         ]);
+    }
+
+    /**
+     * @param  Collection<int, int|string>  $orgIds
+     * @return list<int>
+     */
+    protected function exerciseOrganizationIds(Collection $orgIds): array
+    {
+        return OrganizationPlugin::query()
+            ->where('plugin_key', 'early-warning')
+            ->whereIn('organization_id', $orgIds->all())
+            ->get()
+            ->filter(fn (OrganizationPlugin $row) => (bool) (($row->settings ?? [])['exercise'] ?? false))
+            ->map(fn (OrganizationPlugin $row) => (int) $row->organization_id)
+            ->values()
+            ->all();
     }
 
     /**

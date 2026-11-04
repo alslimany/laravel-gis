@@ -63,10 +63,10 @@ class AlertRulesController extends Controller
         $basins = Basin::query()
             ->whereIn('basin_code', $codes)
             ->orderBy('basin_code')
-            ->get(['basin_code', 'name'])
+            ->get(['basin_code', 'name', 'name_ar'])
             ->map(fn (Basin $b) => [
                 'basin_code' => $b->basin_code,
-                'name' => $b->name,
+                'name' => (app()->getLocale() === 'ar' && $b->name_ar) ? $b->name_ar : $b->name,
             ])
             ->all();
 
@@ -92,7 +92,8 @@ class AlertRulesController extends Controller
 
         return Inertia::render('EarlyWarning/AlertRules', [
             ...AdvisoryCopy::forUi(),
-            'calibration_note' => 'Defaults are Tripoli-oriented and capped below Storm Daniel / Derna extremes. Re-seed with early-warning:seed-alert-rules; tune with early-warning:suggest-thresholds.',
+            'calibration_note' => __('ew.calibration_note')
+                .($request->user()?->isSuperAdmin() ? ' '.__('ew.calibration_note_ops') : ''),
             'rules' => $rules,
             'basins' => $basins,
             'metrics' => self::METRICS,

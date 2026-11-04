@@ -16,9 +16,13 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function NavUser() {
-    const { user } = usePage().props;
+    const { user, isRtl } = usePage().props as {
+        user?: { id: number; name: string; email: string } | null;
+        isRtl?: boolean;
+    };
     const { state } = useSidebar();
     const isMobile = useIsMobile();
+    const collapsedSide = isRtl ? 'left' : 'right';
 
     if (!user) {
         return null;
@@ -34,13 +38,13 @@ export function NavUser() {
                             className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
                         >
                             <UserInfo user={user} />
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className="ms-auto size-4" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                         className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
                         align="end"
-                        side={isMobile ? 'bottom' : state === 'collapsed' ? 'left' : 'bottom'}
+                        side={isMobile ? 'bottom' : state === 'collapsed' ? collapsedSide : 'bottom'}
                     >
                         <UserMenuContent user={user} />
                     </DropdownMenuContent>

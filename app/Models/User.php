@@ -39,6 +39,7 @@ class User extends Authenticatable
         'email',
         'password',
         'location',
+        'preferred_locale',
     ];
 
     /**

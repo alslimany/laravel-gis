@@ -41,7 +41,9 @@ class LayerFieldController extends Controller
         $this->authorize('view', $layer);
 
         return Inertia::render('Layers/Fields', [
-            'layer' => $layer,
+            // Internal table names are for super-admins only.
+            'layer' => $layer->withoutInternalNamesFor(request()->user()),
+            'readOnly' => $layer->isSqlView(),
             'fields' => $layer->fields()->orderBy('sort_order')->orderBy('id')->get(),
         ]);
     }
@@ -49,6 +51,8 @@ class LayerFieldController extends Controller
     public function store(Request $request, Layer $layer)
     {
         $this->authorize('update', $layer);
+        // SQL-view layers: no ALTER TABLE / field changes (the view is rebuilt on publish).
+        app(FeatureService::class)->assertWritable($layer);
 
         $geom = $layer->table_name ? GeometryColumnHelper::resolve($layer->table_name) : 'geom';
 
@@ -86,6 +90,8 @@ class LayerFieldController extends Controller
     public function update(Request $request, Layer $layer, LayerField $field)
     {
         $this->authorize('update', $layer);
+        // SQL-view layers: no ALTER TABLE / field changes (the view is rebuilt on publish).
+        app(FeatureService::class)->assertWritable($layer);
 
         if ($field->layer_id !== $layer->id) {
             return response()->json(['error' => 'Field does not belong to layer'], 404);
@@ -110,6 +116,8 @@ class LayerFieldController extends Controller
     public function destroy(Layer $layer, LayerField $field)
     {
         $this->authorize('update', $layer);
+        // SQL-view layers: no ALTER TABLE / field changes (the view is rebuilt on publish).
+        app(FeatureService::class)->assertWritable($layer);
 
         if ($field->layer_id !== $layer->id) {
             return response()->json(['error' => 'Field does not belong to layer'], 404);

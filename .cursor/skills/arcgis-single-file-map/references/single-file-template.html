@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Map title</title>
+  <script type="module" src="https://js.arcgis.com/5.1/"></script>
+  <script type="module" src="https://js.arcgis.com/5.1/map-components/"></script>
+  <style>
+    html, body { margin: 0; height: 100%; font-family: "Segoe UI", system-ui, sans-serif; background: #e5e7eb; }
+    arcgis-map { position: absolute; inset: 0; }
+    .title-card {
+      position: absolute; z-index: 5; top: 14px; left: 64px; max-width: min(380px, calc(100vw - 100px));
+      padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,.95); color: #1f2937;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2); pointer-events: none;
+    }
+    .title-card h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+    .title-card p { margin: 3px 0 0; font-size: 12.5px; color: #4b5563; line-height: 1.4; }
+    .title-card .meta { margin-top: 6px; font-size: 11.5px; color: #6b7280; }
+    #status {
+      position: absolute; z-index: 6; left: 50%; bottom: 24px; transform: translateX(-50%);
+      padding: 8px 14px; border-radius: 8px; font-size: 13px; background: #1f2937; color: #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3); display: none; max-width: 80vw;
+    }
+    #status.error { background: #991b1b; }
+  </style>
+</head>
+<body>
+  <arcgis-map id="view">
+    <arcgis-zoom slot="top-left"></arcgis-zoom>
+    <arcgis-home slot="top-left"></arcgis-home>
+    <arcgis-search slot="top-right"></arcgis-search>
+    <arcgis-legend slot="bottom-left"></arcgis-legend>
+    <arcgis-scale-bar slot="bottom-left" unit="dual"></arcgis-scale-bar>
+    <arcgis-basemap-toggle slot="bottom-right"></arcgis-basemap-toggle>
+  </arcgis-map>
+
+  <div class="title-card">
+    <h1 id="title"></h1>
+    <p id="subtitle"></p>
+    <div class="meta" id="meta"></div>
+  </div>
+  <div id="status"></div>
+
+  <script type="module">
+    // ---- Edit this block only ----
+    const CONFIG = {
+      title: "Map title",
+      subtitle: "Short description of what the map shows",
+      basemap: "topo-vector",          // streets-vector, gray-vector, dark-gray-vector, satellite, hybrid, osm
+      altBasemap: "satellite",         // basemap toggle target; null removes the toggle
+      center: [-118.25, 34.05],        // [longitude, latitude], used when no layer provides an extent
+      zoom: 9,
+      zoomToData: true,                // fit the view to the first layer with features
+      search: true,
+      layers: [
+        {
+          title: "Features",
+          url: "",                     // public FeatureServer/MapServer layer URL, e.g. .../FeatureServer/0
+          // geojson: null,            // alternative to url: GeoJSON URL (https or relative) or inline object
+          where: "1=1",
+          color: "#2563eb",            // used when colorBy is empty
+          colorBy: "",                 // optional field name -> unique-value symbols + legend
+          size: 8,                     // marker size for points
+          popupFields: [],             // e.g. ["Name", "Status"]; empty = all fields
+          maxFeatures: 5000
+        }
+      ]
+    };
+    // ------------------------------
+
+    const $ = id => document.getElementById(id);
+    const status = (msg, isError) => {
+      const s = $("status"); s.textContent = msg; s.className = isError ? "error" : "";
+      s.style.display = msg ? "block" : "none";
+    };
+
+    document.title = CONFIG.title;
+    $("title").textContent = CONFIG.title;
+    $("subtitle").textContent = CONFIG.subtitle;
+
+    const viewEl = $("view");
+    viewEl.basemap = CONFIG.basemap;
+    viewEl.center = CONFIG.center;
+    viewEl.zoom = CONFIG.zoom;
+    const toggle = viewEl.querySelector("arcgis-basemap-toggle");
+    if (CONFIG.altBasemap) toggle.nextBasemap = CONFIG.altBasemap; else toggle.remove();
+    if (!CONFIG.search) viewEl.querySelector("arcgis-search").remove();
+
+    const symbolFor = (type, color, size) => {
+      if (type === "point" || type === "multipoint") return { type: "simple-marker", size, color, outline: { color: "#ffffff", width: 1 } };
+      if (type === "polyline") return { type: "simple-line", color, width: 2 };
+      return { type: "simple-fill", color: color + "55", outline: { color, width: 1.5 } };
+    };
+
+    async function addLayer(cfg, view, m) {
+      const popupTemplate = {
+        title: cfg.title,
+        content: [{ type: "fields", fieldInfos: (cfg.popupFields && cfg.popupFields.length ? cfg.popupFields : ["*"]).map(fieldName => ({ fieldName })) }]
+      };
+      let layer;
+      if (cfg.geojson) {
+        const url = typeof cfg.geojson === "string" ? cfg.geojson
+          : URL.createObjectURL(new Blob([JSON.stringify(cfg.geojson)], { type: "application/json" }));
+        layer = new m.GeoJSONLayer({ url, title: cfg.title, popupTemplate });
+      } else if (cfg.url) {
+        layer = new m.FeatureLayer({ url: cfg.url, title: cfg.title, outFields: ["*"], definitionExpression: cfg.where || "1=1", popupTemplate });
+      } else return null;
+      viewEl.map.add(layer);
+      await layer.load();
+      layer.renderer = { type: "simple", label: cfg.title, symbol: symbolFor(layer.geometryType, cfg.color, cfg.size || 8) };
+      if (cfg.colorBy) {
+        try { layer.renderer = (await m.typeRenderer.createRenderer({ layer, view, field: cfg.colorBy })).renderer; }
+        catch (e) { console.warn("colorBy failed, using a single color", e); }
+      }
+      return layer;
+    }
+
+    try {
+      status("Loading map...");
+      await viewEl.componentOnReady();
+      const [FeatureLayer, GeoJSONLayer, typeRenderer] = await $arcgis.import([
+        "@arcgis/core/layers/FeatureLayer.js", "@arcgis/core/layers/GeoJSONLayer.js", "@arcgis/core/smartMapping/renderers/type.js"
+      ]);
+      const loaded = [];
+      for (const cfg of CONFIG.layers) {
+        try { const l = await addLayer(cfg, viewEl.view, { FeatureLayer, GeoJSONLayer, typeRenderer }); if (l) loaded.push(l); }
+        catch (e) { console.error(e); status('Layer "' + cfg.title + '" failed to load: ' + (e.message || e), true); }
+      }
+      if (CONFIG.zoomToData && loaded.length) {
+        const q = await loaded[0].queryExtent();
+        if (q && q.count) { await viewEl.goTo(q.extent.expand(1.2)).catch(() => {}); $("meta").textContent = q.count.toLocaleString() + " features"; }
+      }
+      if (!document.querySelector("#status.error")) status("");
+    } catch (e) {
+      console.error(e);
+      status("Could not load the ArcGIS Maps SDK from js.arcgis.com. Check your internet connection or network policy.", true);
+    }
+  </script>
+</body>
+</html>

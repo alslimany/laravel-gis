@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import { useTranslation, __ } from '@/lib/i18n';
 import { usePage } from '@inertiajs/react';
 import { Empty, GhostLink, Heading, PageHeader, Panel, Pill } from '@/components/gis';
 
@@ -26,20 +27,34 @@ type WorkflowStep = {
     href?: string | null;
 };
 
-const TYPE_LABEL: Record<AppItem['type'], string> = {
-    map: 'Map',
-    form: 'Form',
-    dashboard: 'Dashboard',
-};
+function typeLabel(type: AppItem['type'], t: (key: string) => string): string {
+    if (type === 'map') {
+        return t('maps.title');
+    }
+    if (type === 'form') {
+        return t('forms_page.title');
+    }
 
-const STEP_KIND_LABEL: Record<WorkflowStep['kind'], string> = {
-    map: 'Map',
-    form: 'Form',
-    dashboard: 'Dashboard',
-    text: 'Step',
-};
+    return t('dashboard.title');
+}
+
+function stepKindLabel(kind: WorkflowStep['kind'], t: (key: string) => string): string {
+    if (kind === 'map') {
+        return t('maps.title');
+    }
+    if (kind === 'form') {
+        return t('forms_page.title');
+    }
+    if (kind === 'dashboard') {
+        return t('dashboard.title');
+    }
+
+    return t('apps.step');
+}
 
 function Runbook({ steps }: { steps: WorkflowStep[] }) {
+    const { t } = useTranslation();
+
     if (!steps.length) {
         return null;
     }
@@ -47,7 +62,7 @@ function Runbook({ steps }: { steps: WorkflowStep[] }) {
         <ol className="mt-3 space-y-2 border-t border-border pt-3">
             {steps.map((step, index) => (
                 <li key={`${index}-${step.title}`} className="flex gap-2 text-sm">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[11px] font-medium tabular-nums text-muted-foreground">
+                    <span dir="ltr" className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[11px] font-medium tabular-nums text-muted-foreground">
                         {index + 1}
                     </span>
                     <span className="min-w-0">
@@ -59,8 +74,8 @@ function Runbook({ steps }: { steps: WorkflowStep[] }) {
                             <span className="font-medium">{step.title}</span>
                         )}
                         {step.kind !== 'text' ? (
-                            <span className="ml-1.5 inline-block rounded border border-border px-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                                {STEP_KIND_LABEL[step.kind]}
+                            <span className="ms-1.5 inline-block rounded border border-border px-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {stepKindLabel(step.kind, t)}
                             </span>
                         ) : null}
                         {step.description ? (
@@ -68,7 +83,7 @@ function Runbook({ steps }: { steps: WorkflowStep[] }) {
                         ) : null}
                         {step.kind !== 'text' && !step.href ? (
                             <span className="mt-0.5 block text-xs text-amber-600">
-                                {step.target || 'Target'} not found — step disabled
+                                {__('apps.step_missing', { target: step.target || __('apps.target') })}
                             </span>
                         ) : null}
                     </span>
@@ -79,6 +94,8 @@ function Runbook({ steps }: { steps: WorkflowStep[] }) {
 }
 
 function ItemRow({ item }: { item: AppItem }) {
+    const { t } = useTranslation();
+
     return (
         <li className="flex items-center justify-between gap-3 border-b border-border/70 px-3 py-2 last:border-b-0">
             <span className="min-w-0">
@@ -87,7 +104,7 @@ function ItemRow({ item }: { item: AppItem }) {
                 </a>
                 {item.detail ? <span className="block text-xs text-muted-foreground">{item.detail}</span> : null}
             </span>
-            <Pill>{TYPE_LABEL[item.type]}</Pill>
+            <Pill>{typeLabel(item.type, t)}</Pill>
         </li>
     );
 }
@@ -114,40 +131,40 @@ export default function Index({
     shared?: AppItem[];
     recent?: AppItem[];
 }) {
+    const { t } = useTranslation();
     const { abilities, routes } = usePage().props as {
         abilities?: { admin?: boolean };
         routes?: { solutionPacks?: string | null };
     };
 
     return (
-        <AppLayout title="Apps">
+        <AppLayout title={t('apps.title')}>
             <PageHeader
-                title="Apps"
+                title={t('apps.title')}
                 action={
                     <div className="flex flex-wrap gap-2">
-                        <GhostLink href="/dashboard">Back to dashboard</GhostLink>
+                        <GhostLink href="/dashboard">{t('projects.back_dashboard')}</GhostLink>
                         {abilities?.admin && routes?.solutionPacks ? (
-                            <GhostLink href={routes.solutionPacks}>Solution packs</GhostLink>
+                            <GhostLink href={routes.solutionPacks}>{t('solution_packs.title')}</GhostLink>
                         ) : null}
                     </div>
                 }
             />
             <p className="max-w-2xl text-sm text-muted-foreground">
-                One place to open the apps your organization runs: installed pack workspaces, public
-                share links, and anything you touched recently.
+                {__('apps.intro')}
             </p>
 
             <section className="space-y-4">
-                <Heading as="h2">Installed apps</Heading>
+                <Heading as="h2">{__('apps.installed')}</Heading>
                 {workspaces.length === 0 ? (
                     <Empty>
-                        No pack workspaces installed yet.{' '}
+                        {__('apps.none')}{' '}
                         {abilities?.admin && routes?.solutionPacks ? (
                             <a href={routes.solutionPacks} className="font-medium text-primary hover:underline">
-                                Install a solution pack
+                                {__('apps.install_pack')}
                             </a>
                         ) : (
-                            <span>Ask an admin to install a solution pack from organization settings.</span>
+                            <span>{__('apps.ask_admin')}</span>
                         )}
                     </Empty>
                 ) : (
@@ -166,7 +183,7 @@ export default function Index({
                                 {workspace.description ? (
                                     <p className="mb-2 text-sm text-muted-foreground">{workspace.description}</p>
                                 ) : null}
-                                <ItemList items={workspace.items} empty="Workspace is installed but has no apps yet." />
+                                <ItemList items={workspace.items} empty={t('apps.workspace_empty')} />
                                 <Runbook steps={workspace.workflow || []} />
                             </Panel>
                         ))}
@@ -177,15 +194,15 @@ export default function Index({
             <div className="grid gap-4 lg:grid-cols-2">
                 <section>
                     <Heading as="h2" className="mb-2">
-                        Shared links
+                        {__('apps.shared')}
                     </Heading>
-                    <ItemList items={shared} empty="Nothing shared publicly yet." />
+                    <ItemList items={shared} empty={t('apps.shared_empty')} />
                 </section>
                 <section>
                     <Heading as="h2" className="mb-2">
-                        Recent
+                        {__('apps.recent')}
                     </Heading>
-                    <ItemList items={recent} empty="No maps, dashboards, or forms yet." />
+                    <ItemList items={recent} empty={t('apps.recent_empty')} />
                 </section>
             </div>
         </AppLayout>

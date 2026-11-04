@@ -1,4 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import {
     DropdownMenuGroup,
@@ -12,6 +13,7 @@ import { useTheme } from '@/lib/theme';
 import type { User } from '@/types';
 
 export function UserMenuContent({ user }: { user: User }) {
+    const { t } = useTranslation();
     const cleanup = useMobileNavigation();
     const { routes } = usePage().props;
     const { theme, toggle } = useTheme();
@@ -19,7 +21,7 @@ export function UserMenuContent({ user }: { user: User }) {
     return (
         <>
             <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                     <UserInfo user={user} showEmail />
                 </div>
             </DropdownMenuLabel>
@@ -31,8 +33,8 @@ export function UserMenuContent({ user }: { user: User }) {
                         toggle();
                     }}
                 >
-                    {theme === 'dark' ? <Sun className="mr-2" /> : <Moon className="mr-2" />}
-                    {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    {theme === 'dark' ? <Sun /> : <Moon />}
+                    {theme === 'dark' ? t('common.light_mode') : t('common.dark_mode')}
                 </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -44,8 +46,8 @@ export function UserMenuContent({ user }: { user: User }) {
                     }
                 }}
             >
-                <LogOut className="mr-2" />
-                Log out
+                <LogOut />
+                {t('common.log_out')}
             </DropdownMenuItem>
         </>
     );

@@ -246,14 +246,17 @@ class GeoServerService
         string $tableName,
         array $options = []
     ): bool {
+        // DG-1.1: published name may be the org alias; nativeName stays the PostGIS table.
+        $publishName = (string) ($options['name'] ?? $tableName);
+
         try {
             // First create the featureType
             $payload = [
                 'featureType' => [
-                    'name' => $tableName,
+                    'name' => $publishName,
                     'nativeName' => $tableName,
-                    'title' => $options['title'] ?? $tableName,
-                    'abstract' => $options['abstract'] ?? "Layer {$tableName}",
+                    'title' => $options['title'] ?? $publishName,
+                    'abstract' => $options['abstract'] ?? "Layer {$publishName}",
                     'enabled' => true,
                     'srs' => $options['srs'] ?? 'EPSG:4326',
                     'projectionPolicy' => 'FORCE_DECLARED',
@@ -280,22 +283,22 @@ class GeoServerService
             );
 
             if ($response->getStatusCode() === 201) {
-                Log::info("Layer {$tableName} published successfully in workspace {$workspace}");
+                Log::info("Layer {$publishName} (native {$tableName}) published successfully in workspace {$workspace}");
 
                 // Apply default style if specified
                 if (isset($options['defaultStyle'])) {
-                    $this->applyStyleToLayer($workspace, $tableName, $options['defaultStyle']);
+                    $this->applyStyleToLayer($workspace, $publishName, $options['defaultStyle']);
                 }
 
                 return true;
             }
 
             throw GeoServerException::layerPublishFailed(
-                $tableName,
+                $publishName,
                 new \Exception("Status code: {$response->getStatusCode()}, Body: {$response->getBody()}")
             );
         } catch (GuzzleException $e) {
-            throw GeoServerException::layerPublishFailed($tableName, $e);
+            throw GeoServerException::layerPublishFailed($publishName, $e);
         }
     }
 
@@ -363,11 +366,22 @@ class GeoServerService
             ],
         ];
 
+        // Without an explicit extent GeoServer only computes one on first create;
+        // updates keep a stale (or empty) box and clients frame nothing.
+        $bbox = $options['bbox'] ?? null;
+        if (is_array($bbox) && count($bbox) === 4) {
+            [$minx, $miny, $maxx, $maxy] = array_map('floatval', array_values($bbox));
+            $box = ['minx' => $minx, 'miny' => $miny, 'maxx' => $maxx, 'maxy' => $maxy, 'crs' => 'EPSG:4326'];
+            $payload['featureType']['nativeBoundingBox'] = $box;
+            $payload['featureType']['latLonBoundingBox'] = $box;
+        }
+        $recalculate = is_array($bbox) ? '' : '?recalculate=nativebbox,latlonbbox';
+
         try {
             $exists = $this->layerExists($workspace, $layerName);
             if ($exists) {
                 $response = $this->client->put(
-                    "{$this->restUrl}/workspaces/{$workspace}/datastores/{$datastore}/featuretypes/{$layerName}.json",
+                    "{$this->restUrl}/workspaces/{$workspace}/datastores/{$datastore}/featuretypes/{$layerName}.json{$recalculate}",
                     [
                         'auth' => $this->auth,
                         'headers' => ['Content-Type' => 'application/json'],

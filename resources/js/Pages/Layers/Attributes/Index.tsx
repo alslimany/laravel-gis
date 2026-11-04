@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import { useEffect, useRef, useState } from 'react';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -8,7 +9,7 @@ import OSM from 'ol/source/OSM';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
 import { fromLonLat } from 'ol/proj';
-import { defaults as defaultControls } from 'ol/control';
+import { localizedControls } from '@/lib/ol-controls';
 import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
 import type Feature from 'ol/Feature';
 import 'ol/ol.css';
@@ -101,7 +102,7 @@ function LayerMap({ layerId, canEdit }: { layerId: number; canEdit: boolean }) {
             target,
             layers: [new TileLayer({ source: new OSM() }), vector],
             view: new View({ center: fromLonLat([0, 0]), zoom: 2 }),
-            controls: defaultControls({ attribution: false, zoom: true }),
+            controls: localizedControls({ attribution: false, zoom: true }),
         });
         mapRef.current = map;
 
@@ -127,7 +128,7 @@ function LayerMap({ layerId, canEdit }: { layerId: number; canEdit: boolean }) {
             }
             setSelected({
                 id: featureId(selectedRef.current),
-                type: selectedRef.current.getGeometry()?.getType() || 'Shape',
+                type: selectedRef.current.getGeometry()?.getType() || __('attr.shape'),
                 fields: featureFields(selectedRef.current),
             });
         });
@@ -217,9 +218,9 @@ function LayerMap({ layerId, canEdit }: { layerId: number; canEdit: boolean }) {
     return (
         <div className="relative overflow-hidden rounded-md border">
             <div ref={containerRef} className="h-[min(70vh,36rem)] w-full" />
-            <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1">
+            <div className="absolute top-3 start-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1">
                 <Button type="button" size="sm" variant={filter ? 'outline' : 'default'} onClick={() => focusFilter(null)}>
-                    All shapes
+                    {__('attr.all_shapes')}
                 </Button>
                 {types.map((type) => (
                     <Button key={type} type="button" size="sm" variant={filter === type ? 'default' : 'outline'} onClick={() => focusFilter(type)}>
@@ -227,11 +228,11 @@ function LayerMap({ layerId, canEdit }: { layerId: number; canEdit: boolean }) {
                     </Button>
                 ))}
             </div>
-            {status === 'loading' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-muted-foreground">Loading the layer…</p> : null}
-            {status === 'empty' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-muted-foreground">This layer has no geometry yet.</p> : null}
-            {status === 'error' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-destructive">The layer shape could not be loaded.</p> : null}
+            {status === 'loading' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-muted-foreground">{__('attr.loading')}</p> : null}
+            {status === 'empty' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-muted-foreground">{__('attr.no_geometry')}</p> : null}
+            {status === 'error' ? <p className="absolute inset-x-0 top-14 text-center text-sm text-destructive">{__('attr.load_failed')}</p> : null}
             {selected ? (
-                <div className="absolute right-3 bottom-3 left-3 z-10 rounded-lg border bg-background p-3 shadow-md sm:left-auto sm:w-72">
+                <div className="absolute end-3 bottom-3 start-3 z-10 rounded-lg border bg-background p-3 shadow-md sm:start-auto sm:w-72">
                     <p className="text-sm font-medium">{selected.type}</p>
                     <dl className="mt-2 grid gap-1">
                         {selected.fields.map(([name, value]) => (
@@ -243,13 +244,13 @@ function LayerMap({ layerId, canEdit }: { layerId: number; canEdit: boolean }) {
                     </dl>
                     {canEdit ? (
                         <Button type="button" variant="destructive" size="sm" className="mt-3" disabled={removing} onClick={removeSelected}>
-                            {removing ? 'Removing…' : 'Remove this shape'}
+                            {removing ? __('attr.removing') : __('attr.remove_shape')}
                         </Button>
                     ) : null}
                 </div>
             ) : status === 'ready' ? (
-                <p className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground">
-                    Click a shape to select it
+                <p className="pointer-events-none absolute bottom-3 start-3 z-10 rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground">
+                    {__('attr.click_hint')}
                 </p>
             ) : null}
         </div>
@@ -265,6 +266,7 @@ export default function Index({
     shapes = [],
     filters = {},
     canEdit = false,
+    readOnly = false,
 }: {
     layer: { id: number; name: string };
     features?: { data?: FeatureRow[] };
@@ -274,7 +276,9 @@ export default function Index({
     shapes?: ShapeCount[];
     filters?: { search?: string | null; shape?: string | null };
     canEdit?: boolean;
+    readOnly?: boolean;
 }) {
+    const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search || '');
     const [mapOpen, setMapOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Array<number | string>>([]);
@@ -332,7 +336,7 @@ export default function Index({
     }
 
     function removeFeature(featureId: number | string) {
-        if (!window.confirm('Remove this feature from the layer?')) {
+        if (!window.confirm(__('attr.confirm_remove'))) {
             return;
         }
         router.delete(`/layers/${layer.id}/features/${featureId}`, { preserveScroll: true });
@@ -351,7 +355,7 @@ export default function Index({
         if (bulkAction !== 'remove' || selectedIds.length === 0) {
             return;
         }
-        if (!window.confirm(`Remove ${selectedIds.length} selected feature${selectedIds.length === 1 ? '' : 's'}?`)) {
+        if (!window.confirm(__(selectedIds.length === 1 ? 'attr.confirm_bulk_one' : 'attr.confirm_bulk_many', { count: selectedIds.length }))) {
             return;
         }
         router.post(`/layers/${layer.id}/features/bulk-destroy`, { ids: selectedIds }, {
@@ -361,33 +365,34 @@ export default function Index({
     }
 
     return (
-        <AppLayout title={`${layer.name} features`}>
+        <AppLayout title={__('attr.title', { name: layer.name })}>
             <PageHeader
                 title={layer.name}
                 action={
                     <div className="flex flex-wrap gap-2">
                         <Button type="button" variant="outline" onClick={() => setMapOpen(true)}>
-                            Show on map
+                            {__('attr.show_on_map')}
                         </Button>
-                        <GhostLink href={`/layers/${layer.id}`}>Back to layer</GhostLink>
+                        <GhostLink href={`/layers/${layer.id}`}>{t('layers.back_layer')}</GhostLink>
                     </div>
                 }
             />
             <Dialog open={mapOpen} onOpenChange={setMapOpen}>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Layer shape</DialogTitle>
+                        <DialogTitle>{t('layers.layer_shape')}</DialogTitle>
                         <DialogDescription>{layer.name}</DialogDescription>
                     </DialogHeader>
                     {mapOpen ? <LayerMap layerId={layer.id} canEdit={canEdit} /> : null}
                 </DialogContent>
             </Dialog>
             <form onSubmit={submit} className="mb-4 flex max-w-xl gap-2">
-                <TextInput value={search} placeholder="Search attributes" onChange={(event) => setSearch(event.target.value)} />
-                <PrimaryButton type="submit">Search</PrimaryButton>
+                <TextInput value={search} placeholder={t('layers.search_attributes')} onChange={(event) => setSearch(event.target.value)} />
+                <PrimaryButton type="submit">{t('actions.search')}</PrimaryButton>
             </form>
+            {readOnly ? <p className="mb-4 text-sm text-muted-foreground">{t('layers.read_only_notice')}</p> : null}
             <div className="mb-4 flex flex-wrap items-center gap-2">
-                <GhostLink href={`/layers/${layer.id}/attributes`}>All shapes</GhostLink>
+                <GhostLink href={`/layers/${layer.id}/attributes`}>{t('layers.all_shapes')}</GhostLink>
                 {shapes.map((shape) => (
                     <button
                         key={shape.type}
@@ -401,18 +406,18 @@ export default function Index({
             </div>
             {canEdit && rows.length > 0 ? (
                 <form onSubmit={applyBulk} className="flex max-w-md items-center gap-2">
-                    <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value)} aria-label="Bulk actions">
-                        <option value="">Bulk actions</option>
-                        <option value="remove">Remove</option>
+                    <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value)} aria-label={t('layers.bulk_actions')}>
+                        <option value="">{t('layers.bulk_actions')}</option>
+                        <option value="remove">{t('actions.remove')}</option>
                     </Select>
                     <PrimaryButton type="submit" disabled={bulkAction !== 'remove' || selectedIds.length === 0}>
-                        Apply{selectedIds.length ? ` (${selectedIds.length})` : ''}
+                        {__('attr.apply')}{selectedIds.length ? ` (${selectedIds.length})` : ''}
                     </PrimaryButton>
                 </form>
             ) : null}
             <Panel>
                 {rows.length === 0 ? (
-                    <Empty>No features match this search.</Empty>
+                    <Empty>{__('attr.no_match')}</Empty>
                 ) : (
                     <DataTable>
                         <Table.Header>
@@ -422,7 +427,7 @@ export default function Index({
                                         <Checkbox
                                             checked={allPageSelected}
                                             onCheckedChange={(checked) => togglePage(checked === true)}
-                                            aria-label="Select all features on this page"
+                                            aria-label={__('attr.select_all')}
                                         />
                                     </Table.Head>
                                 ) : null}
@@ -431,7 +436,7 @@ export default function Index({
                                         {columnLabels[column] || column}
                                     </Table.Head>
                                 ))}
-                                {canEdit ? <Table.Head className={thClass}>Actions</Table.Head> : null}
+                                {canEdit ? <Table.Head className={thClass}>{t('forms.actions')}</Table.Head> : null}
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -444,7 +449,7 @@ export default function Index({
                                                 <Checkbox
                                                     checked={feature.id != null && selectedIds.includes(feature.id)}
                                                     onCheckedChange={(checked) => feature.id != null && toggleSelected(feature.id, checked === true)}
-                                                    aria-label={`Select feature ${feature.id ?? index + 1}`}
+                                                    aria-label={__('attr.select_feature', { id: String(feature.id ?? index + 1) })}
                                                 />
                                             </Table.Cell>
                                         ) : null}
@@ -469,7 +474,7 @@ export default function Index({
                                                                     }))
                                                                 }
                                                             >
-                                                                <option value="">—</option>
+                                                                <option value="">{t('common.em_dash')}</option>
                                                                 {options.map((option) => (
                                                                     <option key={option} value={option}>
                                                                         {option}
@@ -490,7 +495,7 @@ export default function Index({
                                                     ) : (
                                                         <span className="block truncate">
                                                             {feature[column] == null || feature[column] === ''
-                                                                ? '—'
+                                                                ? t('common.em_dash')
                                                                 : String(feature[column])}
                                                         </span>
                                                     )}
@@ -502,17 +507,17 @@ export default function Index({
                                                 {editing ? (
                                                     <span className="flex gap-2">
                                                         <PrimaryButton type="button" onClick={() => saveEdit(feature.id as number)}>
-                                                            Save
+                                                            {__('attr.save')}
                                                         </PrimaryButton>
-                                                        <GhostLink href={`/layers/${layer.id}/attributes`}>Cancel</GhostLink>
+                                                        <GhostLink href={`/layers/${layer.id}/attributes`}>{t('actions.cancel')}</GhostLink>
                                                     </span>
                                                 ) : (
                                                     <span className="flex gap-2">
                                                         <button type="button" className="text-sm text-primary hover:underline" onClick={() => startEdit(feature)}>
-                                                            Edit
+                                                            {__('attr.edit')}
                                                         </button>
                                                         <DangerButton type="button" onClick={() => removeFeature(feature.id as number)}>
-                                                            Remove
+                                                            {__('attr.remove')}
                                                         </DangerButton>
                                                     </span>
                                                 )}

@@ -29,7 +29,7 @@ class RelationshipController extends Controller
         $this->authorize('view', $layer);
 
         $relationships = $layer->relationships()
-            ->with('relatedLayer:id,name,table_name,geometry_type')
+            ->with('relatedLayer:id,name,geometry_type')
             ->get();
 
         return response()->json(['success' => true, 'relationships' => $relationships]);
@@ -43,8 +43,9 @@ class RelationshipController extends Controller
         $this->authorize('view', $layer);
 
         return Inertia::render('Layers/Relationships', [
-            'layer' => $layer,
-            'relationships' => $layer->relationships()->with('relatedLayer:id,name,table_name')->get(),
+            // Internal table names are for super-admins only.
+            'layer' => $layer->withoutInternalNamesFor(request()->user()),
+            'relationships' => $layer->relationships()->with('relatedLayer:id,name')->get(),
         ]);
     }
 
@@ -64,7 +65,6 @@ class RelationshipController extends Controller
             ->map(fn (Layer $layer) => [
                 'id' => $layer->id,
                 'name' => $layer->name,
-                'table_name' => $layer->table_name,
                 'geometry_type' => $layer->geometry_type,
                 'feature_count' => $layer->feature_count,
                 'key_stem' => Str::singular(Str::snake($layer->name)),
@@ -145,7 +145,7 @@ class RelationshipController extends Controller
 
         return response()->json([
             'success' => true,
-            'relationship' => $relationship->load('relatedLayer:id,name,table_name'),
+            'relationship' => $relationship->load('relatedLayer:id,name'),
         ], 201);
     }
 

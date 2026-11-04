@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, PrimaryButton, TextArea, TextInput } from '@/components/gis';
 
 export default function Form({ map = null }) {
+    const { t } = useTranslation();
     const editing = Boolean(map);
     const form = useForm({
         name: map?.name || '',
@@ -23,10 +25,10 @@ export default function Form({ map = null }) {
         <AppLayout title={editing ? `Edit ${map.name}` : 'New map'}>
             <PageHeader title={editing ? `Edit ${map.name}` : 'New map'} />
             <form onSubmit={submit} className="max-w-xl space-y-4">
-                <Field label="Name" error={form.errors.name}>
+                <Field label={t('forms.name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t('forms.description')}>
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
                 <label className="flex items-center gap-2">
@@ -34,7 +36,7 @@ export default function Form({ map = null }) {
                     Public
                 </label>
                 <div className="flex gap-3">
-                    <GhostLink href={editing ? `/maps/${map.id}` : '/maps'}>Cancel</GhostLink>
+                    <GhostLink href={editing ? `/maps/${map.id}` : '/maps'}>{t('actions.cancel')}</GhostLink>
                     <PrimaryButton type="submit" disabled={form.processing}>
                         {editing ? 'Update map' : 'Create map'}
                     </PrimaryButton>

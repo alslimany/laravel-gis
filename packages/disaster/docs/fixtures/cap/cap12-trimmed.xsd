@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trimmed CAP 1.2 structural fixture for pragmatic validation.
+  Not a full OASIS CAP-v1.2.xsd; covers required alert/info elements used by Cap12Validator.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2"
+           targetNamespace="urn:oasis:names:tc:emergency:cap:1.2"
+           elementFormDefault="qualified">
+
+  <xs:element name="alert">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="identifier" type="xs:string"/>
+        <xs:element name="sender" type="xs:string"/>
+        <xs:element name="sent" type="xs:string"/>
+        <xs:element name="status">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="Actual"/>
+              <xs:enumeration value="Exercise"/>
+              <xs:enumeration value="System"/>
+              <xs:enumeration value="Test"/>
+              <xs:enumeration value="Draft"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="msgType">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="Alert"/>
+              <xs:enumeration value="Update"/>
+              <xs:enumeration value="Cancel"/>
+              <xs:enumeration value="Ack"/>
+              <xs:enumeration value="Error"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="source" type="xs:string" minOccurs="0"/>
+        <xs:element name="scope">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="Public"/>
+              <xs:enumeration value="Restricted"/>
+              <xs:enumeration value="Private"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="restriction" type="xs:string" minOccurs="0"/>
+        <xs:element name="addresses" type="xs:string" minOccurs="0"/>
+        <xs:element name="code" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="note" type="xs:string" minOccurs="0"/>
+        <xs:element name="references" type="xs:string" minOccurs="0"/>
+        <xs:element name="incidents" type="xs:string" minOccurs="0"/>
+        <xs:element name="info" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="language" type="xs:string" minOccurs="0"/>
+              <xs:element name="category" type="xs:string" maxOccurs="unbounded"/>
+              <xs:element name="event" type="xs:string"/>
+              <xs:element name="responseType" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="urgency" type="xs:string"/>
+              <xs:element name="severity" type="xs:string"/>
+              <xs:element name="certainty" type="xs:string"/>
+              <xs:element name="audience" type="xs:string" minOccurs="0"/>
+              <xs:element name="eventCode" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="valueName" type="xs:string"/>
+                    <xs:element name="value" type="xs:string"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="effective" type="xs:string" minOccurs="0"/>
+              <xs:element name="onset" type="xs:string" minOccurs="0"/>
+              <xs:element name="expires" type="xs:string" minOccurs="0"/>
+              <xs:element name="senderName" type="xs:string" minOccurs="0"/>
+              <xs:element name="headline" type="xs:string" minOccurs="0"/>
+              <xs:element name="description" type="xs:string" minOccurs="0"/>
+              <xs:element name="instruction" type="xs:string" minOccurs="0"/>
+              <xs:element name="web" type="xs:string" minOccurs="0"/>
+              <xs:element name="contact" type="xs:string" minOccurs="0"/>
+              <xs:element name="parameter" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="valueName" type="xs:string"/>
+                    <xs:element name="value" type="xs:string"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="resource" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="resourceDesc" type="xs:string"/>
+                    <xs:element name="mimeType" type="xs:string"/>
+                    <xs:element name="size" type="xs:integer" minOccurs="0"/>
+                    <xs:element name="uri" type="xs:string" minOccurs="0"/>
+                    <xs:element name="derefUri" type="xs:string" minOccurs="0"/>
+                    <xs:element name="digest" type="xs:string" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="area" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="areaDesc" type="xs:string"/>
+                    <xs:element name="polygon" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="circle" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="geocode" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="valueName" type="xs:string"/>
+                          <xs:element name="value" type="xs:string"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="altitude" type="xs:decimal" minOccurs="0"/>
+                    <xs:element name="ceiling" type="xs:decimal" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

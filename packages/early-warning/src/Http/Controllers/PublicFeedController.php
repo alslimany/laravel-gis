@@ -134,7 +134,7 @@ class PublicFeedController extends Controller
 
                 return [
                     'basin_code' => $basin->basin_code,
-                    'name' => $basin->name,
+                    'name' => (app()->getLocale() === 'ar' && $basin->name_ar) ? $basin->name_ar : $basin->name,
                     'name_ar' => $basin->name_ar,
                     'area_km2' => $basin->area_km2 !== null ? (float) $basin->area_km2 : null,
                     'outlet_lat' => $basin->outlet_lat !== null ? (float) $basin->outlet_lat : null,

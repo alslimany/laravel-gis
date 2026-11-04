@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, PrimaryButton, TextArea, TextInput } from '@/components/gis';
 
 export default function Form({ group = null }) {
+    const { t } = useTranslation();
     const editing = Boolean(group);
     const form = useForm({ name: group?.name || '', description: group?.description || '' });
 
@@ -16,14 +18,14 @@ export default function Form({ group = null }) {
         <AppLayout title={editing ? `Edit ${group.name}` : 'New group'}>
             <PageHeader title={editing ? `Edit ${group.name}` : 'New group'} />
             <form onSubmit={submit} className="max-w-xl space-y-4">
-                <Field label="Name" error={form.errors.name}>
+                <Field label={t('forms.name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t('forms.description')}>
                     <TextArea value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} />
                 </Field>
                 <div className="flex gap-3">
-                    <GhostLink href={editing ? `/groups/${group.id}` : '/groups'}>Cancel</GhostLink>
+                    <GhostLink href={editing ? `/groups/${group.id}` : '/groups'}>{t('actions.cancel')}</GhostLink>
                     <PrimaryButton type="submit" disabled={form.processing}>
                         {editing ? 'Update group' : 'Create group'}
                     </PrimaryButton>

@@ -1,15 +1,17 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { ActionLink, DangerButton, Empty, PageHeader, Pager, Panel, Pill, PrimaryLink, RowActions, Table, destroyResource, DataTable, thClass, tdClass, tdMuted, tdMono } from '@/components/gis';
 
 export default function Index({ webhooks }) {
+    const { t } = useTranslation();
     const { abilities } = usePage().props;
     const rows = webhooks?.data || [];
 
     return (
-        <AppLayout title="Webhooks">
+        <AppLayout title={t('webhooks.title')}>
             <PageHeader
-                title="Webhooks"
+                title={t('webhooks.title')}
                 action={
                     abilities?.admin ? (
                         <PrimaryLink href="/webhooks/create">
@@ -25,10 +27,10 @@ export default function Index({ webhooks }) {
                     <DataTable>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head className={thClass}>Name</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.name')}</Table.Head>
                                 <Table.Head className={thClass}>URL</Table.Head>
-                                <Table.Head className={thClass}>Status</Table.Head>
-                                <Table.Head className={thClass}>Actions</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.status')}</Table.Head>
+                                <Table.Head className={thClass}>{t('forms.actions')}</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -41,8 +43,8 @@ export default function Index({ webhooks }) {
                                     </Table.Cell>
                                     <Table.Cell className={tdClass}>
                                         <RowActions>
-                                            <ActionLink href={`/webhooks/${hook.id}/edit`}>Edit</ActionLink>
-                                            <DangerButton onClick={() => destroyResource(`/webhooks/${hook.id}`, 'Delete this webhook?')}>Delete</DangerButton>
+                                            <ActionLink href={`/webhooks/${hook.id}/edit`}>{t('actions.edit')}</ActionLink>
+                                            <DangerButton onClick={() => destroyResource(`/webhooks/${hook.id}`, 'Delete this webhook?')}>{t('actions.delete')}</DangerButton>
                                         </RowActions>
                                     </Table.Cell>
                                 </Table.Row>

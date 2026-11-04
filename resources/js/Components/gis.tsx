@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow };
@@ -15,7 +16,7 @@ export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow };
 export function DataTable({ children, className = '' }: { children: ReactNode; className?: string }) {
     return (
         <div className="overflow-x-auto rounded-md border">
-            <Table className={cn('w-full text-left text-sm', className)}>{children}</Table>
+            <Table className={cn('w-full text-start text-sm', className)}>{children}</Table>
         </div>
     );
 }
@@ -28,7 +29,7 @@ export function DataTable({ children, className = '' }: { children: ReactNode; c
 ;(Table as any).Cell = TableCell;
 
 export const thClass =
-    'whitespace-nowrap bg-muted/40 px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground';
+    'whitespace-nowrap bg-muted/40 px-3 py-2 text-start text-[10px] font-medium uppercase tracking-wider text-muted-foreground';
 export const tdClass = 'px-3 py-2 align-middle text-foreground';
 export const tdMuted = `${tdClass} text-muted-foreground`;
 export const tdMono = `${tdClass} font-mono tabular-nums text-muted-foreground`;
@@ -125,13 +126,16 @@ export function GhostLink({
     );
 }
 
+/** Pages whose forms already show every validation error next to its field: the banner skips them. */
+const INLINE_ERROR_PAGES = new Set(['Disaster/EvacuationOrders']);
+
 export function Flash() {
-    const { flash, errors } = usePage().props;
+    const page = usePage();
+    const { flash, errors } = page.props;
     const messages = [flash?.success, flash?.status].filter(Boolean) as string[];
-    const errorList = [
-        ...(flash?.error ? [flash.error] : []),
-        ...(errors ? Object.values(errors).flat() : []),
-    ] as string[];
+    const fieldErrors = errors && !INLINE_ERROR_PAGES.has(page.component) ? Object.values(errors).flat() : [];
+    // De-duplicate so one message never shows twice in the banner.
+    const errorList = Array.from(new Set([...(flash?.error ? [flash.error] : []), ...fieldErrors])) as string[];
 
     if (!messages.length && !errorList.length) {
         return null;
@@ -193,6 +197,7 @@ export function Panel({ children, className = '' }: { children: ReactNode; class
 }
 
 export function Empty({ children }: { children?: ReactNode }) {
+    const { t } = useTranslation();
     const nodes = Children.toArray(children);
     const text = nodes
         .filter((node) => typeof node === 'string')
@@ -203,7 +208,7 @@ export function Empty({ children }: { children?: ReactNode }) {
 
     return (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-            <p>{text || 'Nothing to show'}</p>
+            <p>{text || t('common.nothing_to_show')}</p>
             {extra.length ? <div className="mt-3">{extra}</div> : null}
         </div>
     );
@@ -228,13 +233,14 @@ export function Pager({
 }: {
     paginator?: { links?: Array<{ url: string | null; label: string; active: boolean }> };
 }) {
+    const { t } = useTranslation();
     const links = paginator?.links || [];
     if (links.length <= 3) {
         return null;
     }
 
     return (
-        <nav aria-label="Pagination" className="flex flex-wrap gap-1">
+        <nav aria-label={t('common.pagination')} className="flex flex-wrap gap-1">
             {links.map((link, index) =>
                 link.url ? (
                     <Button key={`${link.label}-${index}`} asChild variant={link.active ? 'default' : 'ghost'} size="sm">

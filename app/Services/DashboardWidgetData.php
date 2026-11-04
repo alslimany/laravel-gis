@@ -7,6 +7,7 @@ use App\Models\AnalysisResult;
 use App\Models\DashboardBoard;
 use App\Models\Layer;
 use App\Models\Map;
+use App\Support\LayerTable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -47,8 +48,8 @@ class DashboardWidgetData
                 $entry['status'] = 'error';
                 $entry['message'] = null;
                 $entry['error'] = $public
-                    ? 'This widget could not be loaded.'
-                    : 'Could not read this widget.';
+                    ? __('dash.widget_load_failed')
+                    : __('dash.widget_read_failed');
             }
 
             $results[] = $entry;
@@ -153,11 +154,11 @@ class DashboardWidgetData
                 return $this->hiddenMap();
             }
 
-            return $this->failure('Layer or table not found.');
+            return $this->failure(__('dash.layer_not_found'));
         }
 
-        if (! $layer->table_name || ! Schema::hasTable($layer->table_name)) {
-            return $this->failure('Layer or table not found.');
+        if (! $layer->table_name || ! LayerTable::exists($layer->table_name)) {
+            return $this->failure(__('dash.layer_not_found'));
         }
 
         $requested = $filters[(string) $layerId] ?? null;
@@ -258,7 +259,7 @@ class DashboardWidgetData
     {
         $mapId = isset($widget['map_id']) ? (int) $widget['map_id'] : 0;
         if ($mapId === 0) {
-            return $this->empty('Choose a saved map when this widget should show one.');
+            return $this->empty(__('dash.hint_saved_map'));
         }
 
         $map = Map::query()
@@ -269,7 +270,7 @@ class DashboardWidgetData
         if (! $map || ($public && ! $map->is_public)) {
             return $public
                 ? $this->hiddenMap()
-                : $this->failure('Saved map not found.');
+                : $this->failure(__('dash.map_not_found'));
         }
 
         return [
@@ -451,7 +452,7 @@ class DashboardWidgetData
     {
         $analysisId = isset($widget['analysis_id']) ? (int) $widget['analysis_id'] : 0;
         if ($analysisId === 0) {
-            return $this->empty('Choose a saved analysis when this widget should show a result.');
+            return $this->empty(__('dash.hint_analysis_result'));
         }
 
         $result = AnalysisResult::query()
@@ -460,7 +461,7 @@ class DashboardWidgetData
             ->first();
 
         if (! $result) {
-            return $this->failure('Saved analysis not found.');
+            return $this->failure(__('dash.analysis_not_found'));
         }
 
         $ids = collect($result->feature_ids ?? [])
@@ -480,7 +481,7 @@ class DashboardWidgetData
             'layer_id' => $layer?->id,
         ];
 
-        if (! $layer || ! $layer->table_name || ! Schema::hasTable($layer->table_name)) {
+        if (! $layer || ! $layer->table_name || ! LayerTable::exists($layer->table_name)) {
             if ($type === 'indicator' && strtolower((string) ($widget['aggregation'] ?? 'count')) === 'count') {
                 return array_merge($meta, [
                     'status' => 'ok',
@@ -490,7 +491,7 @@ class DashboardWidgetData
                 ]);
             }
 
-            return array_merge($meta, $this->failure('Layer or table not found.'));
+            return array_merge($meta, $this->failure(__('dash.layer_not_found')));
         }
 
         if ($ids === []) {
@@ -503,7 +504,7 @@ class DashboardWidgetData
                 ]);
             }
 
-            return array_merge($meta, $this->empty('This analysis has no features.'));
+            return array_merge($meta, $this->empty(__('dash.analysis_empty')));
         }
 
         $requested = $filters[(string) $layer->id] ?? null;
@@ -529,7 +530,7 @@ class DashboardWidgetData
         $query = DB::table($table);
         if ($onlyIds !== null) {
             if (! Schema::hasColumn($table, 'id')) {
-                return $this->failure('Layer or table not found.');
+                return $this->failure(__('dash.layer_not_found'));
             }
             $query->whereIn('id', $onlyIds);
         }
@@ -537,7 +538,7 @@ class DashboardWidgetData
 
         if ($type === 'indicator') {
             if (in_array($agg, ['sum', 'avg'], true) && ! $column) {
-                return $this->empty('Choose a numeric column.', $filtered);
+                return $this->empty(__('dash.choose_numeric'), $filtered);
             }
 
             $value = match ($agg) {
@@ -557,7 +558,7 @@ class DashboardWidgetData
         if ($type === 'category') {
             $field = $groupBy ?: $column;
             if (! $field) {
-                return $this->empty('Choose a field when this filter should drive the dashboard.');
+                return $this->empty(__('dash.hint_filter_field'));
             }
 
             $options = (clone $query)
@@ -576,17 +577,17 @@ class DashboardWidgetData
                 'error' => null,
                 'labels' => $options,
                 'options' => $options,
-                'message' => $options === [] ? 'No values in this field yet.' : null,
+                'message' => $options === [] ? __('dash.no_values') : null,
                 'filtered' => false,
             ];
         }
 
         if (in_array($type, ['serial', 'pie'], true)) {
             if (! $groupBy) {
-                return $this->empty('Choose a field to group by.', $filtered);
+                return $this->empty(__('dash.choose_group_by'), $filtered);
             }
             if (in_array($agg, ['sum', 'avg'], true) && ! $column) {
-                return $this->empty('Choose a numeric column.', $filtered);
+                return $this->empty(__('dash.choose_numeric'), $filtered);
             }
 
             $selectAgg = match ($agg) {
@@ -610,7 +611,7 @@ class DashboardWidgetData
                 'labels' => $labels,
                 'values' => $rows->pluck('value')->map(fn ($value) => (float) $value)->all(),
                 'message' => $labels === []
-                    ? ($filtered ? 'No features match this filter.' : 'No features in this layer.')
+                    ? ($filtered ? __('dash.no_match') : __('dash.no_features'))
                     : null,
                 'filtered' => $filtered,
             ];
@@ -679,14 +680,14 @@ class DashboardWidgetData
                 'labels' => array_values(array_filter([$titleField, $descriptionField])),
                 'rows' => $mapped,
                 'message' => $mapped === []
-                    ? ($filtered ? 'No features match this filter.' : 'No features in this layer.')
+                    ? ($filtered ? __('dash.no_match') : __('dash.no_features'))
                     : null,
                 'filtered' => $filtered,
             ];
         }
 
         if ($type !== 'table') {
-            return $this->empty('This widget type is not available.');
+            return $this->empty(__('dash.type_unavailable'));
         }
 
         $requestedColumns = is_array($widget['columns'] ?? null) ? $widget['columns'] : null;
@@ -702,7 +703,7 @@ class DashboardWidgetData
         }
 
         if (! $columns) {
-            return $this->empty('Choose columns when this table should show attributes.', $filtered);
+            return $this->empty(__('dash.hint_table_columns'), $filtered);
         }
 
         $limit = min((int) ($widget['limit'] ?? 20), 100);
@@ -718,7 +719,7 @@ class DashboardWidgetData
             'labels' => $columns,
             'rows' => $rows,
             'message' => $rows === []
-                ? ($filtered ? 'No features match this filter.' : 'No features in this layer.')
+                ? ($filtered ? __('dash.no_match') : __('dash.no_features'))
                 : null,
             'filtered' => $filtered,
         ];
@@ -795,9 +796,9 @@ class DashboardWidgetData
     protected function unlinkedMessage(string $type): string
     {
         return match ($type) {
-            'map' => 'Choose a layer or a saved map when this widget should show a map.',
-            'category' => 'Choose a layer and a field when this filter should drive the dashboard.',
-            default => 'Choose a layer when this widget should show data.',
+            'map' => __('dash.hint_map_source'),
+            'category' => __('dash.hint_filter_layer'),
+            default => __('dash.hint_layer'),
         };
     }
 }

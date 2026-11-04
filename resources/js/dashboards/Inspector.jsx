@@ -1,14 +1,15 @@
 import { fieldLabel } from './widgetDocument';
 import { Field, Select, TextArea, TextInput } from '@/components/gis';
 
+import { __ } from '@/lib/i18n';
 const ANALYSIS_TYPES = ['indicator', 'serial', 'pie', 'table', 'list'];
 
 export default function Inspector({ widget, layers = [], maps = [], analyses = [], liveView = null, onChange, onClose }) {
     if (!widget) {
         return (
-            <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
-                <div className="border-b border-border px-4 py-3 font-semibold">Inspector</div>
-                <p className="px-4 py-6 text-sm text-muted-foreground">Select a widget on the canvas to configure it.</p>
+            <aside className="flex w-80 shrink-0 flex-col border-s border-border bg-card">
+                <div className="border-b border-border px-4 py-3 font-semibold">{__('dash.inspector')}</div>
+                <p className="px-4 py-6 text-sm text-muted-foreground">{__('dash.select_widget')}</p>
             </aside>
         );
     }
@@ -29,14 +30,14 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
     }
 
     function viewportSummary(viewport) {
-        if (!viewport) return 'Automatic — opens on the layer or saved map view.';
+        if (!viewport) return __('dash.view_auto');
         if (viewport.bounds) {
-            return `Bounds ${viewport.bounds.map((n) => Number(n).toFixed(4)).join(', ')} · zoom ${Math.round(viewport.zoom ?? 0)}`;
+            return __('dash.view_bounds', { bounds: viewport.bounds.map((n) => Number(n).toFixed(4)).join(', '), zoom: Math.round(viewport.zoom ?? 0) });
         }
         if (viewport.center) {
-            return `zoom ${Math.round(viewport.zoom ?? 0)} at ${Number(viewport.center[0]).toFixed(5)}, ${Number(viewport.center[1]).toFixed(5)}`;
+            return __('dash.view_center', { zoom: Math.round(viewport.zoom ?? 0), lon: Number(viewport.center[0]).toFixed(5), lat: Number(viewport.center[1]).toFixed(5) });
         }
-        return 'Automatic — opens on the layer or saved map view.';
+        return __('dash.view_auto');
     }
 
     function captureView() {
@@ -72,20 +73,20 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
     const canCapture = Boolean(liveView && liveView.widgetId === widget.id && liveView.center);
 
     return (
-        <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
+        <aside className="flex w-80 shrink-0 flex-col border-s border-border bg-card">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <p className="font-semibold">Inspector</p>
+                <p className="font-semibold">{__('dash.inspector')}</p>
                 <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={onClose}>
-                    Done
+                    {__('dash.done')}
                 </button>
             </div>
             <div className="space-y-4 overflow-y-auto px-4 py-4">
-                <Field label="Title">
+                <Field label={__('dash.title')}>
                     <TextInput value={widget.title || ''} onChange={(event) => patch({ title: event.target.value })} />
                 </Field>
 
                 {supportsAnalysis ? (
-                    <Field label="Source" hint="Choose a layer or a saved analysis when this widget should show data.">
+                    <Field label={__('dash.source')} hint={__('dash.hint_data_source')}>
                         <Select
                             value={dataSource}
                             onChange={(event) => {
@@ -93,14 +94,14 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 patch(next === 'analysis' ? { source: 'analysis' } : { source: 'layer' });
                             }}
                         >
-                            <option value="layer">Layer</option>
-                            <option value="analysis">Saved analysis</option>
+                            <option value="layer">{__('dash.layer')}</option>
+                            <option value="analysis">{__('dash.saved_analysis')}</option>
                         </Select>
                     </Field>
                 ) : null}
 
                 {supportsAnalysis && dataSource === 'analysis' ? (
-                    <Field label="Saved analysis" hint="Choose a saved analysis when this widget should show a query result.">
+                    <Field label={__('dash.saved_analysis')} hint={__('dash.hint_analysis')}>
                         <Select
                             value={widget.analysis_id || ''}
                             onChange={(event) =>
@@ -110,7 +111,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 })
                             }
                         >
-                            <option value="">No saved analysis</option>
+                            <option value="">{__('dash.no_analysis')}</option>
                             {analyses.map((item) => (
                                 <option key={item.id} value={item.id}>
                                     {item.name}
@@ -124,14 +125,14 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 href={`/layers/${analysis.resulting_layer_id}`}
                                 className="mt-1 inline-block text-xs font-medium text-primary hover:underline"
                             >
-                                Open resulting layer →
+                                {__('dash.open_result_layer')}
                             </a>
                         ) : null}
                     </Field>
                 ) : null}
 
                 {widget.type === 'map' ? (
-                    <Field label="Source" hint="Choose a layer or a saved map when this widget should show a map.">
+                    <Field label={__('dash.source')} hint={__('dash.hint_map_source')}>
                         <Select
                             value={mapSource}
                             onChange={(event) => {
@@ -139,19 +140,19 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 patch(next === 'map' ? { source: 'map', layer_id: null } : { source: 'layer', map_id: null });
                             }}
                         >
-                            <option value="layer">Layer</option>
-                            <option value="map">Saved map</option>
+                            <option value="layer">{__('dash.layer')}</option>
+                            <option value="map">{__('dash.saved_map')}</option>
                         </Select>
                     </Field>
                 ) : null}
 
                 {widget.type === 'map' && mapSource === 'map' ? (
-                    <Field label="Saved map" hint="On a public dashboard, only a public saved map is shown. A private map stays off that link.">
+                    <Field label={__('dash.saved_map')} hint={__('dash.hint_public_map')}>
                         <Select
                             value={widget.map_id || ''}
                             onChange={(event) => patch({ map_id: event.target.value ? Number(event.target.value) : null, source: 'map' })}
                         >
-                            <option value="">No saved map</option>
+                            <option value="">{__('dash.no_map')}</option>
                             {maps.map((item) => (
                                 <option key={item.id} value={item.id}>
                                     {item.name}{item.is_public ? '' : ' · Private'}
@@ -162,12 +163,12 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                 ) : null}
 
                 {showLayer ? (
-                    <Field label="Layer" hint="Choose a layer when this widget should show data.">
+                    <Field label={__('dash.layer')} hint={__('dash.hint_layer')}>
                         <Select
                             value={widget.layer_id || ''}
                             onChange={(event) => patch({ layer_id: event.target.value ? Number(event.target.value) : null })}
                         >
-                            <option value="">No layer</option>
+                            <option value="">{__('dash.no_layer')}</option>
                             {layers.map((item) => (
                                 <option key={item.id} value={item.id}>
                                     {item.name}
@@ -180,17 +181,17 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
 
                 {widget.type === 'indicator' ? (
                     <>
-                        <Field label="Aggregation">
+                        <Field label={__('dash.aggregation')}>
                             <Select value={widget.aggregation || 'count'} onChange={(event) => patch({ aggregation: event.target.value })}>
-                                <option value="count">Count</option>
-                                <option value="sum">Sum</option>
-                                <option value="avg">Average</option>
+                                <option value="count">{__('dash.agg_count')}</option>
+                                <option value="sum">{__('dash.agg_sum')}</option>
+                                <option value="avg">{__('dash.agg_avg')}</option>
                             </Select>
                         </Field>
                         {(widget.aggregation === 'sum' || widget.aggregation === 'avg') && (
-                            <Field label="Column">
+                            <Field label={__('dash.column')}>
                                 <Select value={widget.column || ''} onChange={(event) => patch({ column: event.target.value || null })}>
-                                    <option value="">Choose a column</option>
+                                    <option value="">{__('dash.choose_column')}</option>
                                     {fields.map((field) => (
                                         <option key={field.name} value={field.name}>
                                             {fieldLabel(field)}
@@ -199,10 +200,10 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 </Select>
                             </Field>
                         )}
-                        <Field label="Prefix">
+                        <Field label={__('dash.prefix')}>
                             <TextInput value={widget.prefix || ''} onChange={(event) => patch({ prefix: event.target.value })} />
                         </Field>
-                        <Field label="Suffix">
+                        <Field label={__('dash.suffix')}>
                             <TextInput value={widget.suffix || ''} onChange={(event) => patch({ suffix: event.target.value })} />
                         </Field>
                     </>
@@ -211,16 +212,16 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                 {widget.type === 'serial' || widget.type === 'pie' ? (
                     <>
                         {widget.type === 'serial' ? (
-                            <Field label="Chart style">
+                            <Field label={__('dash.chart_style')}>
                                 <Select value={widget.chart_style || 'bar'} onChange={(event) => patch({ chart_style: event.target.value })}>
-                                    <option value="bar">Bar</option>
-                                    <option value="line">Line</option>
+                                    <option value="bar">{__('dash.bar')}</option>
+                                    <option value="line">{__('dash.line')}</option>
                                 </Select>
                             </Field>
                         ) : null}
-                        <Field label="Group by">
+                        <Field label={__('dash.group_by')}>
                             <Select value={widget.group_by || ''} onChange={(event) => patch({ group_by: event.target.value || null })}>
-                                <option value="">Choose a field</option>
+                                <option value="">{__('dash.choose_field')}</option>
                                 {fields.map((field) => (
                                     <option key={field.name} value={field.name}>
                                         {fieldLabel(field)}
@@ -228,17 +229,17 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Aggregation">
+                        <Field label={__('dash.aggregation')}>
                             <Select value={widget.aggregation || 'count'} onChange={(event) => patch({ aggregation: event.target.value })}>
-                                <option value="count">Count</option>
-                                <option value="sum">Sum</option>
-                                <option value="avg">Average</option>
+                                <option value="count">{__('dash.agg_count')}</option>
+                                <option value="sum">{__('dash.agg_sum')}</option>
+                                <option value="avg">{__('dash.agg_avg')}</option>
                             </Select>
                         </Field>
                         {(widget.aggregation === 'sum' || widget.aggregation === 'avg') && (
-                            <Field label="Value column">
+                            <Field label={__('dash.value_column')}>
                                 <Select value={widget.column || ''} onChange={(event) => patch({ column: event.target.value || null })}>
-                                    <option value="">Choose a column</option>
+                                    <option value="">{__('dash.choose_column')}</option>
                                     {fields.map((field) => (
                                         <option key={field.name} value={field.name}>
                                             {fieldLabel(field)}
@@ -252,7 +253,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
 
                 {widget.type === 'table' ? (
                     <>
-                        <Field label="Columns" hint="Leave empty to show all attribute columns.">
+                        <Field label={__('dash.columns')} hint={__('dash.hint_columns')}>
                             <Select
                                 multiple
                                 className="min-h-32"
@@ -270,7 +271,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Row limit">
+                        <Field label={__('dash.row_limit')}>
                             <TextInput
                                 type="number"
                                 min="1"
@@ -284,9 +285,9 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
 
                 {widget.type === 'list' ? (
                     <>
-                        <Field label="Title field">
+                        <Field label={__('dash.title_field')}>
                             <Select value={widget.title_field || ''} onChange={(event) => patch({ title_field: event.target.value || null })}>
-                                <option value="">Choose a field</option>
+                                <option value="">{__('dash.choose_field')}</option>
                                 {fields.map((field) => (
                                     <option key={field.name} value={field.name}>
                                         {fieldLabel(field)}
@@ -294,12 +295,12 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Description field">
+                        <Field label={__('dash.description_field')}>
                             <Select
                                 value={widget.description_field || ''}
                                 onChange={(event) => patch({ description_field: event.target.value || null })}
                             >
-                                <option value="">None</option>
+                                <option value="">{__('dash.none')}</option>
                                 {fields.map((field) => (
                                     <option key={field.name} value={field.name}>
                                         {fieldLabel(field)}
@@ -307,7 +308,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Row limit">
+                        <Field label={__('dash.row_limit')}>
                             <TextInput
                                 type="number"
                                 min="1"
@@ -321,8 +322,8 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
 
                 {widget.type === 'map' ? (
                     <Field
-                        label="Initial view"
-                        hint="Saved with the dashboard, so viewers open on this area and zoom instead of the whole world."
+                        label={__('dash.initial_view')}
+                        hint={__('dash.hint_initial_view')}
                     >
                         <div className="space-y-2">
                             <p className="text-xs text-muted-foreground">{viewportSummary(widget.viewport)}</p>
@@ -333,7 +334,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                     onClick={captureView}
                                     className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    Use current view
+                                    {__('dash.use_current_view')}
                                 </button>
                                 <button
                                     type="button"
@@ -341,12 +342,12 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                     onClick={() => patch({ viewport: null })}
                                     className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    Back to auto
+                                    {__('dash.back_to_auto')}
                                 </button>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
                                 <label className="grid gap-1 text-xs text-muted-foreground">
-                                    Zoom
+                                    {__('dash.zoom')}
                                     <input
                                         type="number"
                                         min="0"
@@ -358,7 +359,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                     />
                                 </label>
                                 <label className="grid gap-1 text-xs text-muted-foreground">
-                                    Longitude
+                                    {__('dash.longitude')}
                                     <input
                                         type="number"
                                         min="-180"
@@ -370,7 +371,7 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                                     />
                                 </label>
                                 <label className="grid gap-1 text-xs text-muted-foreground">
-                                    Latitude
+                                    {__('dash.latitude')}
                                     <input
                                         type="number"
                                         min="-90"
@@ -387,27 +388,27 @@ export default function Inspector({ widget, layers = [], maps = [], analyses = [
                 ) : null}
 
                 {widget.type === 'map' && mapSource === 'layer' ? (
-                    <Field label="Basemap">
+                    <Field label={__('dash.basemap')}>
                         <Select value={widget.basemap || 'osm'} onChange={(event) => patch({ basemap: event.target.value })}>
-                            <option value="osm">Street</option>
-                            <option value="imagery">Satellite</option>
+                            <option value="osm">{__('maps.basemap.osm')}</option>
+                            <option value="imagery">{__('dash.satellite')}</option>
                         </Select>
                     </Field>
                 ) : null}
 
                 {widget.type === 'text' ? (
-                    <Field label="Body">
+                    <Field label={__('dash.body')}>
                         <TextArea value={widget.body || ''} onChange={(event) => patch({ body: event.target.value })} />
                     </Field>
                 ) : null}
 
                 {widget.type === 'category' ? (
-                    <Field label="Field">
+                    <Field label={__('dash.field')}>
                         <Select
                             value={widget.group_by || widget.column || ''}
                             onChange={(event) => patch({ group_by: event.target.value || null, column: event.target.value || null })}
                         >
-                            <option value="">Choose a field</option>
+                            <option value="">{__('dash.choose_field')}</option>
                             {fields.map((field) => (
                                 <option key={field.name} value={field.name}>
                                     {fieldLabel(field)}

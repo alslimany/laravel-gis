@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "skills": {
+    "agol-publish-checklist": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/agol-publish-checklist/SKILL.md",
+      "computedHash": "ebfe76e4fc3337d008d53a6b865050dd37dc15b4a1e5127414ab22a422e45454"
+    },
+    "agol-search": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/agol-search/SKILL.md",
+      "computedHash": "5f375b79ac6640336b7694832f189031bb5e27bf40a9fc172f0e134004e38ad0"
+    },
+    "analysis-readiness-check": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/analysis-readiness-check/SKILL.md",
+      "computedHash": "a10f364dfba6bf83f4a2c59b6671e6a6c2628b17917e10a4bd63b689d0d44707"
+    },
+    "arcgis-single-file-map": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arcgis-single-file-map/SKILL.md",
+      "computedHash": "0f6cd47c7a57e45a4d413acabd9ba5bed0e12e98656da57292afdbcf835f82c0"
+    },
+    "arcpy-plan": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arcpy-plan/SKILL.md",
+      "computedHash": "39332ce9120e5e873446b1643cf4e478544ee09f7f16adf1b8ae9180a8a2a584"
+    },
+    "arcpy-script": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/arcpy-script/SKILL.md",
+      "computedHash": "d28ad03f989785a77627d2327ea09fdb6f33713ebf8b46c9064f8c48b28a4fd4"
+    },
+    "data-smells-summary": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/data-smells-summary/SKILL.md",
+      "computedHash": "fcf5614c81dc89b17f2c9c0366c11464f7ac9dcc29fda0c1839c0fbc2161ff16"
+    },
+    "design-postgis-tables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/design-postgis-tables/SKILL.md",
+      "computedHash": "54b10ad9c978b475e12073fa7a9c0bbced2edabed5d599b2c214878ec2f08493"
+    },
+    "geoparquet-pack": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/geoparquet-pack/SKILL.md",
+      "computedHash": "2fb9200be208103c3a9948ba85e34c5f7857436f4a476e803bdf54a6c8d83bc1"
+    },
+    "gis-microapp-ux-spec": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gis-microapp-ux-spec/SKILL.md",
+      "computedHash": "10b6dad4ed170d61ea3a1a2b4a07b058e97e77a5da67623f2962367a3b43c901"
+    },
+    "h3-pg": {
+      "source": "postgis/h3-pg",
+      "sourceType": "github",
+      "skillPath": "docs/h3-pg-skill/SKILL.md",
+      "computedHash": "835509e8944520140dae783eb69f4e906178c0093f7c2f1c598b98b767477649"
+    },
+    "kml-author": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/kml-author/SKILL.md",
+      "computedHash": "8e91b5914f9bf8b5191b513cd6753ffb8f7143e41ae59690aa229e99a5e9f4f2"
+    },
+    "living-atlas": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/living-atlas/SKILL.md",
+      "computedHash": "27efb14e292d49e88d6e91a85e397b21d08798e1daf64c8c7ce3e4299911eb31"
+    },
+    "post-run-validation": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/post-run-validation/SKILL.md",
+      "computedHash": "cc208ef9154323bac929fe15b1e299003aae9acc8fb841739af29326de9fec64"
+    },
+    "postgis-spatial-sql": {
+      "source": "muend/geoai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/postgis-spatial-sql/SKILL.md",
+      "computedHash": "f85dcea7a90608a81639ba0cefbf0cacafe3496742e0175cbff9102a08662bff"
+    },
+    "project-audit": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/project-audit/SKILL.md",
+      "computedHash": "042de207ba213b8628d41b2e1aa9495dc351183d7c16be595f8ec64d7eea992c"
+    },
+    "safety": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/safety/SKILL.md",
+      "computedHash": "96f1257a7b00b6e03f156014f5a0fad68e69f1df5198d08c16939301b7d3f1b4"
+    },
+    "sample-qa-skill": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sample-qa-skill/SKILL.md",
+      "computedHash": "67b64ac31070b560f410e1bf09a2f348bb9ac57dde73c43dbc83cb41182a7384"
+    },
+    "scaffold": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scaffold/SKILL.md",
+      "computedHash": "5c18ad54e4e2f1cd5b3dfa5abd8e634dabde5442ac35a7129b6da8388cd5945d"
+    },
+    "schema-smells": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/schema-smells/SKILL.md",
+      "computedHash": "5fa63df1dc7977bba5362a498c46c5ded0d7a91de01d35dc917cbd672c13152a"
+    },
+    "spatial-index": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/spatial-index/SKILL.md",
+      "computedHash": "7dc8625a3cf0e4fee784ea02302cfa6d04eca115c13640b0cd0a1bede3de912a"
+    },
+    "static-map": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/static-map/SKILL.md",
+      "computedHash": "38ad795c133c56e514a1f4df115b8ab6f8798bbe42497c3aafd603fb84ff886a"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "e14e276241805c97dbcfe40dcbea1a3035269cc7293cac4b1832dda41a835e60"
+    },
+    "symbology-compat": {
+      "source": "danmaps/gis-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/symbology-compat/SKILL.md",
+      "computedHash": "f335957df5a0fb0c6cfe4bd0c60e16fe504a73736aed4cca4bd852f51a522c69"
+    }
+  }
+}

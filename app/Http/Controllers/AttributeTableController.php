@@ -70,7 +70,7 @@ class AttributeTableController extends Controller
         }
 
         return Inertia::render('Layers/Attributes/Index', [
-            'layer' => $layer,
+            'layer' => $layer->withoutInternalNamesFor($request->user()),
             'features' => $features,
             'columns' => $columns,
             'columnLabels' => $columnLabels,
@@ -80,7 +80,9 @@ class AttributeTableController extends Controller
                 'search' => $search,
                 'shape' => $shape,
             ],
-            'canEdit' => $request->user()->can('update', $layer),
+            // SQL-view layers are computed: no attribute edits, whatever the user's rights.
+            'canEdit' => $request->user()->can('update', $layer) && ! $layer->isSqlView(),
+            'readOnly' => $layer->isSqlView(),
         ]);
     }
 

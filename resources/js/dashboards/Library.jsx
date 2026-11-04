@@ -1,3 +1,4 @@
+import { __ } from '@/lib/i18n';
 import { useMemo, useRef, useState } from 'react';
 import { ChartColumn, ChevronDown, ChevronRight, Filter, Hash, List, Map, PieChart, Table2, Type } from 'lucide-react';
 import { TextInput } from '@/components/gis';
@@ -13,11 +14,11 @@ const ICONS = {
     category: Filter,
 };
 
-const GROUP_ORDER = ['Data', 'Map', 'Content', 'Filters'];
+// Groups arrive translated from the server catalog, already in display order.
 
 export default function Library({ catalog = [], onAdd, onDragType }) {
     const [query, setQuery] = useState('');
-    const [openGroups, setOpenGroups] = useState(() => Object.fromEntries(GROUP_ORDER.map((group) => [group, true])));
+    const [openGroups, setOpenGroups] = useState({});
     const didDragRef = useRef(false);
 
     const groups = useMemo(() => {
@@ -29,7 +30,7 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
 
         const next = {};
         filtered.forEach((item) => {
-            const group = item.group || 'Data';
+            const group = item.group || __('dash.group.data');
             if (!next[group]) next[group] = [];
             next[group].push(item);
         });
@@ -38,14 +39,11 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
 
     const orderedGroups = useMemo(() => {
         const keys = Object.keys(groups);
-        return [
-            ...GROUP_ORDER.filter((group) => keys.includes(group)),
-            ...keys.filter((group) => !GROUP_ORDER.includes(group)),
-        ];
+        return keys;
     }, [groups]);
 
     function toggleGroup(group) {
-        setOpenGroups((current) => ({ ...current, [group]: !current[group] }));
+        setOpenGroups((current) => ({ ...current, [group]: !(current[group] ?? true) }));
     }
 
     function startDrag(event, type) {
@@ -69,27 +67,27 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
     }
 
     return (
-        <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
+        <aside className="flex w-64 shrink-0 flex-col border-e border-border bg-card">
             <div className="border-b border-border px-4 py-3">
-                <p className="font-semibold">Components</p>
-                <TextInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search components" />
+                <p className="font-semibold">{__('dash.components')}</p>
+                <TextInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={__('dash.search_components')} />
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
                 {orderedGroups.length === 0 ? (
-                    <p className="px-1 py-4 text-sm text-muted-foreground">No components match that search.</p>
+                    <p className="px-1 py-4 text-sm text-muted-foreground">{__('dash.no_components')}</p>
                 ) : (
                     orderedGroups.map((group) => {
                         const items = groups[group] || [];
-                        const open = query.trim() ? true : Boolean(openGroups[group]);
+                        const open = query.trim() ? true : openGroups[group] ?? true;
                         return (
                             <div key={group}>
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group)}
-                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm font-semibold text-foreground hover:bg-muted"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-start text-sm font-semibold text-foreground hover:bg-muted"
                                     aria-expanded={open}
                                 >
-                                    {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                    {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground rtl:rotate-180" />}
                                     <span className="flex-1 truncate">{group}</span>
                                     <span className="text-xs font-medium text-muted-foreground">{items.length}</span>
                                 </button>
@@ -112,7 +110,7 @@ export default function Library({ catalog = [], onAdd, onDragType }) {
                                                             addFromLibrary(item.type);
                                                         }
                                                     }}
-                                                    className="flex w-full cursor-grab items-start gap-3 rounded-md border border-border bg-background px-3 py-3 text-left hover:border-primary active:cursor-grabbing"
+                                                    className="flex w-full cursor-grab items-start gap-3 rounded-md border border-border bg-background px-3 py-3 text-start hover:border-primary active:cursor-grabbing"
                                                 >
                                                     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
                                                     <span>

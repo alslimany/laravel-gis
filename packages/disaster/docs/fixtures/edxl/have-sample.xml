@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<HospitalStatus xmlns="urn:oasis:names:tc:emergency:EDXL:HAVE:1.0" schemaVersion="1.0-lite">
+  <Organization>
+    <OrganizationID>1</OrganizationID>
+  </Organization>
+  <LastUpdateTime>2026-10-28T10:00:00+00:00</LastUpdateTime>
+  <Hospital>
+    <OrganizationInformation>
+      <OrganizationID>MF-CENTRAL</OrganizationID>
+      <OrganizationName>Central Hospital</OrganizationName>
+    </OrganizationInformation>
+    <HospitalBedCapacityStatus>
+      <BedCapacity>
+        <CapacityType>TotalBeds</CapacityType>
+        <CapacityStatus>Available</CapacityStatus>
+        <CapacityTotal>120</CapacityTotal>
+        <CapacityAvailable>45</CapacityAvailable>
+      </BedCapacity>
+    </HospitalBedCapacityStatus>
+    <ServiceCapacity>
+      <TraumaCenterServiceTraumaLevel>3</TraumaCenterServiceTraumaLevel>
+    </ServiceCapacity>
+    <FacilityStatus>
+      <GeneratorStatus>ONLINE</GeneratorStatus>
+      <ResourceStatus>01_Available</ResourceStatus>
+    </FacilityStatus>
+  </Hospital>
+</HospitalStatus>

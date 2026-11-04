@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, PrimaryButton, TextInput } from '@/components/gis';
 
 export default function Edit({ user, roles = [] }) {
+    const { t } = useTranslation();
     const form = useForm({
         name: user.name || '',
         email: user.email || '',
@@ -16,7 +18,7 @@ export default function Edit({ user, roles = [] }) {
 
     return (
         <AppLayout title={`Edit ${user.name}`}>
-            <PageHeader title={`Edit ${user.name}`} action={<GhostLink href="/users">Back</GhostLink>} />
+            <PageHeader title={`Edit ${user.name}`} action={<GhostLink href="/users">{t('actions.back')}</GhostLink>} />
             <form
                 className="max-w-xl space-y-4"
                 onSubmit={(event) => {
@@ -24,10 +26,10 @@ export default function Edit({ user, roles = [] }) {
                     form.put(`/users/${user.id}`);
                 }}
             >
-                <Field label="Name" error={form.errors.name}>
+                <Field label={t('forms.name')} error={form.errors.name}>
                     <TextInput value={form.data.name} required onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Email" error={form.errors.email}>
+                <Field label={t('forms.email')} error={form.errors.email}>
                     <TextInput type="email" value={form.data.email} required onChange={(event) => form.setData('email', event.target.value)} />
                 </Field>
                 <fieldset>

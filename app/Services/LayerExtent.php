@@ -152,7 +152,7 @@ class LayerExtent
         $table = $layer->table_name;
 
         try {
-            if (! Schema::hasTable($table)) {
+            if (! Schema::hasTable($table) && ! Schema::hasView($table)) {
                 return null;
             }
 

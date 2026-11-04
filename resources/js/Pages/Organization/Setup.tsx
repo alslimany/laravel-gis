@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import { useTranslation } from '@/lib/i18n';
 import { PageHeader } from '@/components/gis';
 
 /**
@@ -7,9 +8,10 @@ import { PageHeader } from '@/components/gis';
  * /platform.
  */
 export default function Setup() {
+    const { t } = useTranslation();
     return (
         <AppLayout>
-            <PageHeader title="Organization setup" />
+            <PageHeader title={t('organization.setup')} />
             <p className="mt-4 text-sm text-muted-foreground">
                 Your account is not a member of an organization yet. Ask an organization admin to add you,
                 or use the platform tools if you are a super admin.

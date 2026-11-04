@@ -275,6 +275,7 @@ class MapController extends Controller
                     'mvtUrl' => "/api/layers/{$seedLayer->id}/tiles/{z}/{x}/{y}.mvt",
                     'style_config' => $seedLayer->style_config ?: ['renderer' => 'simple'],
                     'geometry_type' => $seedLayer->geometry_type,
+                    'read_only' => $seedLayer->isSqlView(),
                 ];
                 $extent = app(LayerExtent::class)->for($seedLayer);
                 if ($extent !== null) {
@@ -290,6 +291,8 @@ class MapController extends Controller
                 $initialLayers = array_merge($seedLayers, $map->layers);
             }
         }
+
+        $initialLayers = $this->withLiveReadOnly($initialLayers, $map?->organization_id ?? $seedLayer?->organization_id);
 
         if ($map) {
             $viewport = is_array($map->viewport) && $map->viewport !== [] ? $map->viewport : null;
@@ -319,6 +322,39 @@ class MapController extends Controller
             'layers' => $initialLayers,
             'plugins' => $this->enabledPluginKeys(),
         ];
+    }
+
+    /**
+     * read_only comes from the layer's live metadata.sql_view at load time, never from the saved
+     * map config (a saved map may predate the flag, or the layer may have become a SQL view since).
+     *
+     * @param  array<int, mixed>  $layers
+     * @return array<int, mixed>
+     */
+    protected function withLiveReadOnly(array $layers, ?int $organizationId): array
+    {
+        $ids = collect($layers)->filter(fn ($l) => is_array($l) && is_numeric($l['id'] ?? null))
+            ->map(fn ($l) => (int) $l['id'])->unique()->values()->all();
+        $sqlView = $ids === [] ? [] : Layer::query()
+            ->whereIn('id', $ids)
+            ->when($organizationId !== null, fn ($q) => $q->where('organization_id', $organizationId))
+            ->get(['id', 'metadata'])
+            ->mapWithKeys(fn (Layer $layer) => [$layer->id => $layer->isSqlView()])
+            ->all();
+
+        return array_map(function ($layer) use ($sqlView) {
+            if (! is_array($layer)) {
+                return $layer;
+            }
+            $id = is_numeric($layer['id'] ?? null) ? (int) $layer['id'] : null;
+            if ($id !== null && array_key_exists($id, $sqlView)) {
+                $layer['read_only'] = $sqlView[$id];
+            } else {
+                unset($layer['read_only']); // external/WMS entries: no stale flag from the saved config
+            }
+
+            return $layer;
+        }, $layers);
     }
 
     /**

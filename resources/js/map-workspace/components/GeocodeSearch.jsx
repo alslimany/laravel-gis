@@ -6,11 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useMapStore } from '../store/mapStore';
 
+import { __ } from '@/lib/i18n';
 /**
  * Geocode search box. GETs /api/geocode?q=... and flies the map to the result.
  * Also listens for / dispatches `gis:geocode-fly` for parent integration.
  */
-export default function GeocodeSearch({ placeholder = 'Search place…' }) {
+export default function GeocodeSearch({ placeholder }) {
     const map = useMapStore((state) => state.map);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
@@ -147,7 +148,7 @@ export default function GeocodeSearch({ placeholder = 'Search place…' }) {
         <div className="geocode-search relative w-full max-w-sm" ref={wrapperRef}>
             <div className="relative flex w-full items-center gap-2">
                 <div className="relative min-w-0 flex-1">
-                    <span className="pointer-events-none absolute top-1/2 left-2.5 z-10 -translate-y-1/2 text-muted-foreground">
+                    <span className="pointer-events-none absolute top-1/2 start-2.5 z-10 -translate-y-1/2 text-muted-foreground">
                         {loading ? (
                             <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} aria-hidden />
                         ) : (
@@ -156,26 +157,26 @@ export default function GeocodeSearch({ placeholder = 'Search place…' }) {
                     </span>
                     <Input
                         type="search"
-                        placeholder={placeholder}
+                        placeholder={placeholder ?? __('maps.geocode_search')}
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         onFocus={() => results.length && setOpen(true)}
-                        aria-label="Geocode search"
+                        aria-label={__('maps.geocode_search')}
                         autoComplete="off"
-                        className="h-9 bg-background pr-9 pl-8 shadow-xs"
+                        className="h-9 bg-background pe-9 ps-8 shadow-xs"
                     />
                     {query ? (
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+                            className="absolute top-1/2 end-1 size-7 -translate-y-1/2"
                             onClick={() => {
                                 setQuery('');
                                 setResults([]);
                                 setOpen(false);
                             }}
-                            aria-label="Clear search"
+                            aria-label={__('maps.clear_search')}
                         >
                             <X className="size-3.5" strokeWidth={1.75} />
                         </Button>
@@ -193,7 +194,7 @@ export default function GeocodeSearch({ placeholder = 'Search place…' }) {
                                 key={`${item.lon}-${item.lat}-${index}`}
                                 type="button"
                                 variant="ghost"
-                                className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-left whitespace-normal"
+                                className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-start whitespace-normal"
                                 onClick={() => selectResult(item)}
                             >
                                 <MapPin

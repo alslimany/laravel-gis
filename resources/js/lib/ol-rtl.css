@@ -1,0 +1,12 @@
+/* RTL: mirror OpenLayers controls so zoom sits top-right (reading start) on every map.
+   The map builder (.map-stage) places its own zoom in map-workspace.css, so it is excluded here. */
+[dir='rtl'] .ol-zoom:not(.map-stage *),
+[dir='rtl'] .ol-zoomslider:not(.map-stage *) {
+    left: auto;
+    right: 0.5em;
+}
+[dir='rtl'] .ol-rotate:not(.map-stage *),
+[dir='rtl'] .ol-full-screen:not(.map-stage *) {
+    right: auto;
+    left: 0.5em;
+}

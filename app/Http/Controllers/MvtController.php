@@ -76,9 +76,11 @@ class MvtController extends Controller
         try {
             $mvt = $this->features->tile($layer, $z, $x, $y, $timeField, $timeFrom, $timeTo);
 
+            // Private + short/no cache: empty tiles must not stick after the
+            // first draw of a brand-new layer (browser would hide new features).
             return response($mvt, 200, [
                 'Content-Type' => 'application/vnd.mapbox-vector-tile',
-                'Cache-Control' => 'public, max-age=300',
+                'Cache-Control' => 'private, max-age=0, must-revalidate',
             ]);
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);

@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import GuestLayout from '@/layouts/guest-layout';
 import { Field, Heading, PrimaryButton, TextInput } from '@/components/gis';
 
 export default function ConfirmPassword() {
+    const { t } = useTranslation();
     const form = useForm({ password: '' });
 
     function submit(event) {
@@ -11,11 +13,11 @@ export default function ConfirmPassword() {
     }
 
     return (
-        <GuestLayout title="Confirm password">
+        <GuestLayout title={t('forms.confirm_password')}>
             <form onSubmit={submit} className="space-y-4">
-                <Heading as="h2">Confirm password</Heading>
+                <Heading as="h2">{t('forms.confirm_password')}</Heading>
                 <p className="text-muted-foreground">Please confirm your password before continuing.</p>
-                <Field label="Password" error={form.errors.password}>
+                <Field label={t('forms.password')} error={form.errors.password}>
                     <TextInput id="password" type="password" value={form.data.password} required autoFocus onChange={(event) => form.setData('password', event.target.value)} />
                 </Field>
                 <PrimaryButton type="submit" disabled={form.processing}>

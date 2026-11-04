@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation, __ } from '@/lib/i18n';
 import { type FormEvent, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Field, GhostLink, PageHeader, Panel, PrimaryButton, Select, TextArea, TextInput } from '@/components/gis';
@@ -69,51 +70,53 @@ type PackProp = {
 };
 
 const geometryOptions: Array<[string, string]> = [
-    ['Polygon', 'Polygon'],
-    ['LineString', 'LineString'],
-    ['Point', 'Point'],
-    ['MultiPolygon', 'MultiPolygon'],
-    ['None', 'No geometry (table)'],
+    ['Polygon', 'enum.polygon'],
+    ['LineString', 'enum.linestring'],
+    ['Point', 'enum.point'],
+    ['MultiPolygon', 'enum.multipolygon'],
+    ['None', 'sp.opt.no_geometry'],
 ];
 
 const fieldTypeOptions: Array<[string, string]> = [
-    ['string', 'Text'],
-    ['integer', 'Whole number'],
-    ['float', 'Decimal'],
-    ['boolean', 'Yes / No'],
-    ['date', 'Date'],
-    ['datetime', 'Date & time'],
+    ['string', 'sp.opt.text'],
+    ['integer', 'sp.opt.integer'],
+    ['float', 'sp.opt.decimal'],
+    ['boolean', 'sp.opt.boolean'],
+    ['date', 'sp.opt.date'],
+    ['datetime', 'sp.opt.datetime'],
 ];
 
 const schemaTypeOptions: Array<[string, string]> = [
-    ['text', 'Text'],
-    ['textarea', 'Long text'],
-    ['number', 'Number'],
-    ['select', 'Choice'],
-    ['checkbox', 'Checkbox'],
-    ['date', 'Date'],
+    ['text', 'sp.opt.text'],
+    ['textarea', 'sp.opt.long_text'],
+    ['number', 'sp.opt.number'],
+    ['select', 'sp.opt.choice'],
+    ['checkbox', 'sp.opt.checkbox'],
+    ['date', 'sp.opt.date'],
 ];
 
-const widgetTypeOptions: Array<[string, string]> = [
-    ['indicator', 'Indicator'],
-    ['serial', 'Bar / line chart'],
-    ['pie', 'Pie chart'],
-    ['table', 'Table'],
-    ['list', 'List'],
-    ['map', 'Map'],
-    ['text', 'Text'],
-    ['category', 'Category filter'],
-];
+function widgetTypeOptions(t: (key: string) => string): Array<[string, string]> {
+    return [
+        ['indicator', 'dash.type.indicator'],
+        ['serial', 'sp.opt.serial'],
+        ['pie', 'dash.type.pie'],
+        ['table', 'layers.table'],
+        ['list', 'dash.type.list'],
+        ['map', 'dash.type.map'],
+        ['text', 'sp.opt.text'],
+        ['category', 'sp.opt.category'],
+    ];
+}
 
 const aggregationOptions: Array<[string, string]> = [
-    ['count', 'Count'],
-    ['sum', 'Sum'],
-    ['avg', 'Average'],
+    ['count', 'dash.agg_count'],
+    ['sum', 'dash.agg_sum'],
+    ['avg', 'dash.agg_avg'],
 ];
 
 const basemapOptions: Array<[string, string]> = [
-    ['osm', 'Street'],
-    ['imagery', 'Satellite'],
+    ['osm', 'sp.opt.street'],
+    ['imagery', 'dash.satellite'],
 ];
 
 function slugify(value: string): string {
@@ -153,7 +156,7 @@ function defaultRelationship(): PackRelationship {
 
 function defaultMap(): PackMap {
     return {
-        name: 'Site overview',
+        name: __('sp.site_overview'),
         description: '',
         basemap: 'osm',
         viewport: { center: [-122.4195, 37.7745], zoom: 14, rotation: 0 },
@@ -182,6 +185,7 @@ function defaultWorkflowStep(): PackWorkflowStep {
 }
 
 export default function Edit({ pack }: { pack?: PackProp | null }) {
+    const { t } = useTranslation();
     const isEdit = Boolean(pack);
     const form = useForm({
         name: pack?.name ?? '',
@@ -224,28 +228,27 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
     }
 
     return (
-        <AppLayout title={isEdit ? 'Edit solution pack' : 'New solution pack'}>
+        <AppLayout title={isEdit ? __('sp.edit') : __('sp.new')}>
             <PageHeader
-                title={isEdit ? `Edit ${pack?.name}` : 'New solution pack'}
-                action={<GhostLink href="/solution-packs">Back to packs</GhostLink>}
+                title={isEdit ? __('sp.edit_name', { name: pack?.name ?? '' }) : __('sp.new')}
+                action={<GhostLink href="/solution-packs">{t('solution_packs.back_packs')}</GhostLink>}
             />
             <p className="max-w-2xl text-sm text-base-600">
-                Define the blueprint once, then install it into this organization. Sample features copied from a duplicate
-                are preserved but are not editable here.
+                {__('sp.intro')}
             </p>
 
             <form onSubmit={submit} className="grid max-w-4xl gap-4">
                 <Panel className="grid gap-3">
-                    <h2 className="text-sm font-semibold">Basics</h2>
+                    <h2 className="text-sm font-semibold">{t('solution_packs.basics')}</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label="Pack name" error={form.errors.name}>
+                        <Field label={t('solution_packs.pack_name')} error={form.errors.name}>
                             <TextInput
                                 value={form.data.name}
                                 required
                                 onChange={(event) => setName(event.target.value)}
                             />
                         </Field>
-                        <Field label="Slug" error={form.errors.slug} hint="Lowercase letters, numbers, and dashes. Used by install commands.">
+                        <Field label={t('solution_packs.slug')} error={form.errors.slug} hint={t('solution_packs.slug_hint')}>
                             <TextInput
                                 value={form.data.slug}
                                 required
@@ -256,7 +259,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                             />
                         </Field>
                     </div>
-                    <Field label="Description" error={form.errors.description}>
+                    <Field label={t('forms.description')} error={form.errors.description}>
                         <TextArea
                             value={form.data.description}
                             onChange={(event) => form.setData('description', event.target.value)}
@@ -266,7 +269,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">Layers</h2>
+                        <h2 className="text-sm font-semibold">{t('layers.title')}</h2>
                         <Button
                             type="button"
                             size="sm"
@@ -277,17 +280,17 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 })
                             }
                         >
-                            Add layer
+                            {__('sp.add_layer')}
                         </Button>
                     </div>
                     {definition.layers.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No layers yet. Add the first one.</p>
+                        <p className="text-sm text-muted-foreground">{__('sp.no_layers')}</p>
                     ) : null}
                     {definition.layers.map((layer, layerIndex) => (
                         <div key={layerIndex} className="grid gap-3 rounded-md border border-border p-3">
                             <div className="flex items-end justify-between gap-2">
                                 <div className="grid flex-1 gap-3 sm:grid-cols-3">
-                                    <Field label="Layer name" error={form.errors[`definition.layers.${layerIndex}.name`]}>
+                                    <Field label={t('solution_packs.layer_name')} error={form.errors[`definition.layers.${layerIndex}.name`]}>
                                         <TextInput
                                             value={layer.name}
                                             onChange={(event) =>
@@ -298,7 +301,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                         />
                                     </Field>
                                     <Field
-                                        label="Geometry"
+                                        label={t('layers.geometry')}
                                         error={form.errors[`definition.layers.${layerIndex}.geometry_type`]}
                                     >
                                         <Select
@@ -311,12 +314,12 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                         >
                                             {geometryOptions.map(([value, label]) => (
                                                 <option key={value} value={value}>
-                                                    {label}
+                                                    {__(label)}
                                                 </option>
                                             ))}
                                         </Select>
                                     </Field>
-                                    <Field label="Description">
+                                    <Field label={t('forms.description')}>
                                         <TextInput
                                             value={layer.description ?? ''}
                                             onChange={(event) =>
@@ -338,14 +341,14 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                         })
                                     }
                                 >
-                                    Remove
+                                    {__('sp.remove')}
                                 </Button>
                             </div>
 
                             <details className="text-sm">
-                                <summary className="cursor-pointer text-muted-foreground">Default style</summary>
+                                <summary className="cursor-pointer text-muted-foreground">{t('layers.default_style')}</summary>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-4">
-                                    <Field label="Fill color">
+                                    <Field label={t('solution_packs.fill_color')}>
                                         <TextInput
                                             type="color"
                                             value={String(layer.style?.symbol?.fillColor ?? '#3b82f6')}
@@ -363,7 +366,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Fill opacity">
+                                    <Field label={t('solution_packs.fill_opacity')}>
                                         <TextInput
                                             type="number"
                                             step="0.05"
@@ -384,7 +387,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Stroke color">
+                                    <Field label={t('solution_packs.stroke_color')}>
                                         <TextInput
                                             type="color"
                                             value={String(layer.style?.symbol?.strokeColor ?? '#1d4ed8')}
@@ -402,7 +405,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Stroke width">
+                                    <Field label={t('solution_packs.stroke_width')}>
                                         <TextInput
                                             type="number"
                                             step="1"
@@ -426,7 +429,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                             </details>
 
                             <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-semibold uppercase text-muted-foreground">Fields</h3>
+                                <h3 className="text-xs font-semibold uppercase text-muted-foreground">{t('layers.fields')}</h3>
                                 <Button
                                     type="button"
                                     size="sm"
@@ -437,7 +440,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                         })
                                     }
                                 >
-                                    Add field
+                                    {__('sp.add_field')}
                                 </Button>
                             </div>
                             {layer.fields.map((field, fieldIndex) => {
@@ -446,7 +449,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 return (
                                     <div key={fieldIndex} className="grid items-end gap-2 border-t border-border pt-2 sm:grid-cols-12">
                                         <div className="sm:col-span-3">
-                                            <Field label="Name" error={form.errors[`${base}.name`]}>
+                                            <Field label={t('forms.name')} error={form.errors[`${base}.name`]}>
                                                 <TextInput
                                                     value={field.name}
                                                     onChange={(event) =>
@@ -458,7 +461,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-2">
-                                            <Field label="Label">
+                                            <Field label={t('forms.label')}>
                                                 <TextInput
                                                     value={field.alias ?? ''}
                                                     onChange={(event) =>
@@ -470,7 +473,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-2">
-                                            <Field label="Type" error={form.errors[`${base}.type`]}>
+                                            <Field label={t('forms.type')} error={form.errors[`${base}.type`]}>
                                                 <Select
                                                     value={field.type}
                                                     onChange={(event) =>
@@ -481,14 +484,14 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 >
                                                     {fieldTypeOptions.map(([value, label]) => (
                                                         <option key={value} value={value}>
-                                                            {label}
+                                                            {__(label)}
                                                         </option>
                                                     ))}
                                                 </Select>
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-3">
-                                            <Field label="Allowed values" hint="Comma-separated for choices">
+                                            <Field label={t('solution_packs.allowed_values')} hint={t('solution_packs.allowed_values_hint')}>
                                                 <TextInput
                                                     value={(field.domain ?? []).join(', ')}
                                                     onChange={(event) =>
@@ -512,7 +515,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                         })
                                                     }
                                                 />
-                                                Req
+                                                {__('sp.req')}
                                             </label>
                                         </div>
                                         <div className="sm:col-span-1">
@@ -539,7 +542,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">Relationships</h2>
+                        <h2 className="text-sm font-semibold">{t('relationships.title')}</h2>
                         <Button
                             type="button"
                             size="sm"
@@ -550,11 +553,11 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 })
                             }
                         >
-                            Add relationship
+                            {__('sp.add_relationship')}
                         </Button>
                     </div>
                     {definition.relationships.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No relationships yet.</p>
+                        <p className="text-sm text-muted-foreground">{__('sp.no_relationships')}</p>
                     ) : null}
                     {definition.relationships.map((relationship, index) => {
                         const base = `definition.relationships.${index}`;
@@ -562,7 +565,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                         return (
                             <div key={index} className="grid items-end gap-2 border-t border-border pt-2 sm:grid-cols-12">
                                 <div className="sm:col-span-3">
-                                    <Field label="Name" error={form.errors[`${base}.name`]}>
+                                    <Field label={t('forms.name')} error={form.errors[`${base}.name`]}>
                                         <TextInput
                                             value={relationship.name}
                                             onChange={(event) =>
@@ -574,7 +577,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     </Field>
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <Field label="Parent" error={form.errors[`${base}.parent`]}>
+                                    <Field label={t('solution_packs.parent')} error={form.errors[`${base}.parent`]}>
                                         <Select
                                             value={relationship.parent}
                                             onChange={(event) =>
@@ -583,7 +586,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 })
                                             }
                                         >
-                                            <option value="">Choose…</option>
+                                            <option value="">{t('common.choose_placeholder')}</option>
                                             {layerNames.map((name) => (
                                                 <option key={name} value={name}>
                                                     {name}
@@ -593,7 +596,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     </Field>
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <Field label="Child" error={form.errors[`${base}.child`]}>
+                                    <Field label={t('solution_packs.child')} error={form.errors[`${base}.child`]}>
                                         <Select
                                             value={relationship.child}
                                             onChange={(event) =>
@@ -602,7 +605,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 })
                                             }
                                         >
-                                            <option value="">Choose…</option>
+                                            <option value="">{t('common.choose_placeholder')}</option>
                                             {layerNames.map((name) => (
                                                 <option key={name} value={name}>
                                                     {name}
@@ -612,7 +615,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     </Field>
                                 </div>
                                 <div className="sm:col-span-3">
-                                    <Field label="Foreign key" error={form.errors[`${base}.foreign_key`]}>
+                                    <Field label={t('solution_packs.foreign_key')} error={form.errors[`${base}.foreign_key`]}>
                                         <TextInput
                                             value={relationship.foreign_key}
                                             placeholder="parent_id"
@@ -636,7 +639,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             })
                                         }
                                     >
-                                        Remove
+                                        {__('sp.remove')}
                                     </Button>
                                 </div>
                             </div>
@@ -652,7 +655,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">Starter map</h2>
+                        <h2 className="text-sm font-semibold">{__('sp.starter_map')}</h2>
                         {definition.maps.length === 0 ? (
                             <Button
                                 type="button"
@@ -664,7 +667,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Add map
+                                {__('sp.add_map')}
                             </Button>
                         ) : (
                             <Button
@@ -678,7 +681,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Remove
+                                {__('sp.remove')}
                             </Button>
                         )}
                     </div>
@@ -689,7 +692,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                         return (
                             <div key={index} className="grid gap-3 rounded-md border border-border p-3">
                                 <div className="grid gap-3 sm:grid-cols-3">
-                                    <Field label="Map name" error={form.errors[`${base}.name`]}>
+                                    <Field label={t('solution_packs.map_name')} error={form.errors[`${base}.name`]}>
                                         <TextInput
                                             value={map.name}
                                             onChange={(event) =>
@@ -699,7 +702,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Basemap">
+                                    <Field label={t('solution_packs.basemap')}>
                                         <Select
                                             value={map.basemap}
                                             onChange={(event) =>
@@ -710,12 +713,12 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                         >
                                             {basemapOptions.map(([value, label]) => (
                                                 <option key={value} value={value}>
-                                                    {label}
+                                                    {__(label)}
                                                 </option>
                                             ))}
                                         </Select>
                                     </Field>
-                                    <Field label="Zoom">
+                                    <Field label={t('solution_packs.zoom')}>
                                         <TextInput
                                             type="number"
                                             min="1"
@@ -734,7 +737,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     </Field>
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
-                                    <Field label="Center longitude">
+                                    <Field label={t('solution_packs.center_longitude')}>
                                         <TextInput
                                             type="number"
                                             step="0.0001"
@@ -750,7 +753,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Center latitude">
+                                    <Field label={t('solution_packs.center_latitude')}>
                                         <TextInput
                                             type="number"
                                             step="0.0001"
@@ -768,7 +771,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     </Field>
                                 </div>
                                 <div>
-                                    <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Layers on map</p>
+                                    <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{__('sp.layers_on_map')}</p>
                                     <div className="flex flex-wrap gap-4">
                                         {layerNames.map((name) => (
                                             <label key={name} className="flex items-center gap-2 text-sm">
@@ -788,7 +791,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             </label>
                                         ))}
                                         {layerNames.length === 0 ? (
-                                            <span className="text-sm text-muted-foreground">Add layers first.</span>
+                                            <span className="text-sm text-muted-foreground">{t('layers.add_layers_first')}</span>
                                         ) : null}
                                     </div>
                                 </div>
@@ -799,7 +802,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">Form</h2>
+                        <h2 className="text-sm font-semibold">{__('sp.form')}</h2>
                         {definition.forms.length === 0 ? (
                             <Button
                                 type="button"
@@ -811,7 +814,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Add form
+                                {__('sp.add_form')}
                             </Button>
                         ) : (
                             <Button
@@ -825,7 +828,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Remove
+                                {__('sp.remove')}
                             </Button>
                         )}
                     </div>
@@ -835,7 +838,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                         return (
                             <div key={index} className="grid gap-3 rounded-md border border-border p-3">
                                 <div className="grid gap-3 sm:grid-cols-3">
-                                    <Field label="Form name" error={form.errors[`${base}.name`]}>
+                                    <Field label={t('solution_packs.form_name')} error={form.errors[`${base}.name`]}>
                                         <TextInput
                                             value={formDef.name}
                                             onChange={(event) =>
@@ -845,7 +848,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             }
                                         />
                                     </Field>
-                                    <Field label="Layer" error={form.errors[`${base}.layer`]}>
+                                    <Field label={__('sp.layer')} error={form.errors[`${base}.layer`]}>
                                         <Select
                                             value={formDef.layer}
                                             onChange={(event) =>
@@ -854,7 +857,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 })
                                             }
                                         >
-                                            <option value="">Choose…</option>
+                                            <option value="">{t('common.choose_placeholder')}</option>
                                             {layerNames.map((name) => (
                                                 <option key={name} value={name}>
                                                     {name}
@@ -871,12 +874,12 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 })
                                             }
                                         />
-                                        Public share link
+                                        {__('sp.public_link')}
                                     </label>
                                 </div>
 
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">Fields</h3>
+                                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">{t('layers.fields')}</h3>
                                     <Button
                                         type="button"
                                         size="sm"
@@ -887,7 +890,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             })
                                         }
                                     >
-                                        Add field
+                                        {__('sp.add_field')}
                                     </Button>
                                 </div>
                                 {formDef.schema.map((field, fieldIndex) => {
@@ -896,7 +899,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     return (
                                         <div key={fieldIndex} className="grid items-end gap-2 border-t border-border pt-2 sm:grid-cols-12">
                                             <div className="sm:col-span-3">
-                                                <Field label="Column" error={form.errors[`${fieldBase}.name`]}>
+                                                <Field label={t('solution_packs.column')} error={form.errors[`${fieldBase}.name`]}>
                                                     <TextInput
                                                         value={field.name}
                                                         placeholder="result"
@@ -909,7 +912,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-3">
-                                                <Field label="Label">
+                                                <Field label={t('forms.label')}>
                                                     <TextInput
                                                         value={field.label ?? ''}
                                                         onChange={(event) =>
@@ -921,7 +924,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <Field label="Type" error={form.errors[`${fieldBase}.type`]}>
+                                                <Field label={t('forms.type')} error={form.errors[`${fieldBase}.type`]}>
                                                     <Select
                                                         value={field.type}
                                                         onChange={(event) =>
@@ -932,14 +935,14 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                     >
                                                         {schemaTypeOptions.map(([value, label]) => (
                                                             <option key={value} value={value}>
-                                                                {label}
+                                                                {__(label)}
                                                             </option>
                                                         ))}
                                                     </Select>
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-3">
-                                                <Field label="Options" hint="Comma-separated for choices">
+                                                <Field label={__('sp.options')} hint={t('solution_packs.allowed_values_hint')}>
                                                     <TextInput
                                                         value={(field.options ?? []).join(', ')}
                                                         onChange={(event) =>
@@ -978,7 +981,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-semibold">Dashboard</h2>
+                        <h2 className="text-sm font-semibold">{t('dashboard.title')}</h2>
                         {definition.dashboards.length === 0 ? (
                             <Button
                                 type="button"
@@ -990,7 +993,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Add dashboard
+                                {__('sp.add_dashboard')}
                             </Button>
                         ) : (
                             <Button
@@ -1004,7 +1007,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     })
                                 }
                             >
-                                Remove
+                                {__('sp.remove')}
                             </Button>
                         )}
                     </div>
@@ -1013,7 +1016,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                         return (
                             <div key={index} className="grid gap-3 rounded-md border border-border p-3">
-                                <Field label="Dashboard name" error={form.errors[`${base}.name`]}>
+                                <Field label={__('sp.dashboard_name')} error={form.errors[`${base}.name`]}>
                                     <TextInput
                                         value={dashboard.name}
                                         onChange={(event) =>
@@ -1025,7 +1028,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 </Field>
 
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">Widgets</h3>
+                                    <h3 className="text-xs font-semibold uppercase text-muted-foreground">{__('sp.widgets')}</h3>
                                     <Button
                                         type="button"
                                         size="sm"
@@ -1036,7 +1039,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             })
                                         }
                                     >
-                                        Add widget
+                                        {__('sp.add_widget')}
                                     </Button>
                                 </div>
                                 {dashboard.widgets.map((widget, widgetIndex) => {
@@ -1045,7 +1048,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                     return (
                                         <div key={widgetIndex} className="grid items-end gap-2 border-t border-border pt-2 sm:grid-cols-12">
                                             <div className="sm:col-span-3">
-                                                <Field label="Type" error={form.errors[`${widgetBase}.type`]}>
+                                                <Field label={t('forms.type')} error={form.errors[`${widgetBase}.type`]}>
                                                     <Select
                                                         value={widget.type}
                                                         onChange={(event) =>
@@ -1054,16 +1057,16 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                             })
                                                         }
                                                     >
-                                                        {widgetTypeOptions.map(([value, label]) => (
+                                                        {widgetTypeOptions(t).map(([value, label]) => (
                                                             <option key={value} value={value}>
-                                                                {label}
+                                                                {__(label)}
                                                             </option>
                                                         ))}
                                                     </Select>
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-3">
-                                                <Field label="Title">
+                                                <Field label={t('forms.title')}>
                                                     <TextInput
                                                         value={widget.title}
                                                         onChange={(event) =>
@@ -1075,7 +1078,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <Field label="Layer" error={form.errors[`${widgetBase}.layer`]}>
+                                                <Field label={__('sp.layer')} error={form.errors[`${widgetBase}.layer`]}>
                                                     <Select
                                                         value={widget.layer ?? ''}
                                                         onChange={(event) =>
@@ -1084,7 +1087,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                             })
                                                         }
                                                     >
-                                                        <option value="">None</option>
+                                                        <option value="">{__('sp.none')}</option>
                                                         {layerNames.map((name) => (
                                                             <option key={name} value={name}>
                                                                 {name}
@@ -1094,7 +1097,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-2">
-                                                <Field label="Group by">
+                                                <Field label={t('common.group_by')}>
                                                     <TextInput
                                                         value={widget.group_by ?? ''}
                                                         placeholder="status"
@@ -1107,7 +1110,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                 </Field>
                                             </div>
                                             <div className="sm:col-span-1">
-                                                <Field label="Agg.">
+                                                <Field label={__('sp.agg')}>
                                                     <Select
                                                         value={widget.aggregation ?? 'count'}
                                                         onChange={(event) =>
@@ -1118,7 +1121,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                     >
                                                         {aggregationOptions.map(([value, label]) => (
                                                             <option key={value} value={value}>
-                                                                {label}
+                                                                {__(label)}
                                                             </option>
                                                         ))}
                                                     </Select>
@@ -1150,10 +1153,9 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                 <Panel className="grid gap-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-sm font-semibold">Workflow runbook</h2>
+                            <h2 className="text-sm font-semibold">{__('sp.runbook')}</h2>
                             <p className="text-xs text-muted-foreground">
-                                Optional. Documents how the workspace apps chain together (collect → notify → monitor →
-                                review). Steps are guidance, not automation.
+                                {__('sp.runbook_help')}
                             </p>
                         </div>
                         <Button
@@ -1166,11 +1168,11 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 })
                             }
                         >
-                            Add step
+                            {__('sp.add_step')}
                         </Button>
                     </div>
                     {definition.workflow.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No workflow steps yet.</p>
+                        <p className="text-sm text-muted-foreground">{__('sp.no_steps')}</p>
                     ) : (
                         <div className="grid gap-3">
                             {definition.workflow.map((step, index) => {
@@ -1187,7 +1189,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                 return (
                                     <div key={index} className="grid items-end gap-2 border border-border p-3 sm:grid-cols-12">
                                         <div className="sm:col-span-3">
-                                            <Field label="Step title" error={form.errors[`${base}.title`]}>
+                                            <Field label={__('sp.step_title')} error={form.errors[`${base}.title`]}>
                                                 <TextInput
                                                     value={step.title}
                                                     onChange={(event) =>
@@ -1199,7 +1201,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-2">
-                                            <Field label="Type" error={form.errors[`${base}.kind`]}>
+                                            <Field label={t('forms.type')} error={form.errors[`${base}.kind`]}>
                                                 <Select
                                                     value={step.kind}
                                                     onChange={(event) =>
@@ -1210,17 +1212,17 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                         })
                                                     }
                                                 >
-                                                    <option value="text">Note</option>
-                                                    <option value="form">Form</option>
-                                                    <option value="dashboard">Dashboard</option>
-                                                    <option value="map">Map</option>
+                                                    <option value="text">{__('sp.note')}</option>
+                                                    <option value="form">{__('sp.form')}</option>
+                                                    <option value="dashboard">{t('dashboard.title')}</option>
+                                                    <option value="map">{__('sp.map')}</option>
                                                 </Select>
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-3">
-                                            <Field label="Target" error={form.errors[`${base}.target`]}>
+                                            <Field label={__('sp.target')} error={form.errors[`${base}.target`]}>
                                                 {step.kind === 'text' ? (
-                                                    <TextInput value="" placeholder="Not needed for notes" disabled />
+                                                    <TextInput value="" placeholder={__('sp.not_needed_notes')} disabled />
                                                 ) : (
                                                     <Select
                                                         value={step.target ?? ''}
@@ -1230,7 +1232,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                                             })
                                                         }
                                                     >
-                                                        <option value="">Choose…</option>
+                                                        <option value="">{t('common.choose_placeholder')}</option>
                                                         {targetOptions.map((name) => (
                                                             <option key={name} value={name}>
                                                                 {name}
@@ -1241,7 +1243,7 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
                                             </Field>
                                         </div>
                                         <div className="sm:col-span-3">
-                                            <Field label="Description">
+                                            <Field label={t('forms.description')}>
                                                 <TextInput
                                                     value={step.description ?? ''}
                                                     onChange={(event) =>
@@ -1276,9 +1278,9 @@ export default function Edit({ pack }: { pack?: PackProp | null }) {
 
                 <div className="flex items-center gap-3">
                     <PrimaryButton type="submit" disabled={form.processing}>
-                        {form.processing ? 'Saving…' : isEdit ? 'Save pack' : 'Create pack'}
+                        {form.processing ? __('sp.saving') : isEdit ? __('sp.save') : __('sp.create')}
                     </PrimaryButton>
-                    <GhostLink href="/solution-packs">Cancel</GhostLink>
+                    <GhostLink href="/solution-packs">{t('actions.cancel')}</GhostLink>
                 </div>
             </form>
         </AppLayout>

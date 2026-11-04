@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import GuestLayout from '@/layouts/guest-layout';
 import { Field, Heading, PrimaryButton, TextInput } from '@/components/gis';
 
 export default function Register() {
+    const { t } = useTranslation();
     const form = useForm({
         name: '',
         email: '',
@@ -16,19 +18,19 @@ export default function Register() {
     }
 
     return (
-        <GuestLayout title="Register">
+        <GuestLayout title={t('auth.register')}>
             <form onSubmit={submit} className="space-y-4">
-                <Heading as="h2">Register</Heading>
-                <Field label="Name" error={form.errors.name}>
+                <Heading as="h2">{t('auth.register')}</Heading>
+                <Field label={t('forms.name')} error={form.errors.name}>
                     <TextInput id="name" value={form.data.name} required autoFocus onChange={(event) => form.setData('name', event.target.value)} />
                 </Field>
-                <Field label="Email" error={form.errors.email}>
+                <Field label={t('forms.email')} error={form.errors.email}>
                     <TextInput id="email" type="email" value={form.data.email} required autoComplete="email" onChange={(event) => form.setData('email', event.target.value)} />
                 </Field>
-                <Field label="Password" error={form.errors.password}>
+                <Field label={t('forms.password')} error={form.errors.password}>
                     <TextInput id="password" type="password" value={form.data.password} required autoComplete="new-password" onChange={(event) => form.setData('password', event.target.value)} />
                 </Field>
-                <Field label="Confirm password" error={form.errors.password_confirmation}>
+                <Field label={t('forms.confirm_password')} error={form.errors.password_confirmation}>
                     <TextInput
                         id="password_confirmation"
                         type="password"

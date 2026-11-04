@@ -98,20 +98,35 @@ abstract class SolutionPack
         $definition = $this->definition();
 
         $parts = [
-            count($definition['layers']).' layers',
-            count($definition['relationships']).' relationships',
+            trans_choice('packs.count.layers', count($definition['layers'])),
+            trans_choice('packs.count.relationships', count($definition['relationships'])),
         ];
-        foreach (['maps' => 'map', 'forms' => 'form', 'dashboards' => 'dashboard'] as $key => $singular) {
+        foreach (['maps', 'forms', 'dashboards'] as $key) {
             $count = count($definition[$key] ?? []);
             if ($count > 0) {
-                $parts[] = $count.' '.($count === 1 ? $singular : $singular.'s');
+                $parts[] = trans_choice("packs.count.{$key}", $count);
             }
         }
         if (! empty($definition['features'])) {
-            $parts[] = count($definition['features']).' sample features';
+            $parts[] = trans_choice('packs.count.features', count($definition['features']));
         }
 
         return implode(' · ', $parts);
+    }
+
+    /** Pack name for display: built-in packs have catalog translations, custom packs keep their own name. */
+    public function displayName(): string
+    {
+        $key = 'packs.builtin.'.$this->slug().'.name';
+
+        return __($key) !== $key ? __($key) : $this->name();
+    }
+
+    public function displayDescription(): string
+    {
+        $key = 'packs.builtin.'.$this->slug().'.description';
+
+        return __($key) !== $key ? __($key) : $this->description();
     }
 
     /**

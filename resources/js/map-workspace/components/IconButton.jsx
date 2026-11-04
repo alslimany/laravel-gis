@@ -1,3 +1,4 @@
+import { Direction } from 'radix-ui';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ export function IconButton({
     const mapped = variant === 'solid' ? 'default' : variant === 'outline' ? 'outline' : 'ghost';
     const label = ariaLabel || title;
 
+    const dir = Direction.useDirection();
     const button = (
         <Button
             type="button"
@@ -35,7 +37,7 @@ export function IconButton({
     return (
         <Tooltip>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
+            <TooltipContent side={dir === 'rtl' ? 'left' : 'right'} sideOffset={8}>
                 {label}
             </TooltipContent>
         </Tooltip>

@@ -3,6 +3,7 @@ import { Download, FileSpreadsheet, Image, Map, Plus, Search, X } from 'lucide-r
 import { useMapStore } from '../store/mapStore';
 import { getCsrfToken } from '../utils/csrf';
 
+import { __ } from '@/lib/i18n';
 function publishAnalysisResult(payload, setAnalysisResults, onAnalysisComplete) {
     setAnalysisResults?.(payload);
     window.dispatchEvent(new CustomEvent('gis:analysis-result', { detail: payload }));
@@ -28,7 +29,7 @@ function featureIds(features) {
 
 function analysisError(data) {
     if (!data) {
-        return 'Analysis failed';
+        return __('analysis.failed');
     }
     if (typeof data.error === 'string' && data.error) {
         return data.error;
@@ -36,7 +37,7 @@ function analysisError(data) {
     if (typeof data.message === 'string' && data.message) {
         return data.message;
     }
-    return 'Analysis failed';
+    return __('analysis.failed');
 }
 
 async function downloadExport(url, fallbackName) {
@@ -44,14 +45,14 @@ async function downloadExport(url, fallbackName) {
         headers: { Accept: 'application/json, application/geo+json, text/csv, */*' },
     });
     if (!response.ok) {
-        let message = 'Export failed';
+        let message = __('analysis.export_failed');
         try {
             const body = await response.json();
             if (typeof body.error === 'string' && body.error) {
                 message = body.error;
             }
         } catch {
-            message = 'Export failed';
+            message = __('analysis.export_failed');
         }
         alert(message);
         return;
@@ -116,7 +117,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
     const performBuffer = async () => {
         if (!selectedGeometry) {
-            alert('Please draw or select a geometry first');
+            alert(__('analysis.need_geometry'));
             return;
         }
 
@@ -147,13 +148,13 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             );
         } catch (error) {
             console.error('Buffer analysis failed:', error);
-            alert('Buffer analysis failed');
+            alert(__('analysis.buffer_failed'));
         }
     };
 
     const performSpatialQuery = async () => {
         if (!selectedLayer || !selectedGeometry) {
-            alert('Please select a layer and draw a geometry');
+            alert(__('analysis.need_layer_geometry'));
             return;
         }
 
@@ -195,20 +196,20 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             );
         } catch (error) {
             console.error('Spatial query failed:', error);
-            alert('Spatial query failed');
+            alert(__('analysis.spatial_failed'));
         }
     };
 
     const performAttributeQuery = async () => {
         if (!selectedLayer) {
-            alert('Please select a layer');
+            alert(__('analysis.need_layer'));
             return;
         }
 
         const validConditions = queryConditions.filter((c) => c.column && c.value);
 
         if (validConditions.length === 0) {
-            alert('Please add at least one valid condition');
+            alert(__('analysis.need_condition'));
             return;
         }
 
@@ -249,13 +250,13 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             );
         } catch (error) {
             console.error('Attribute query failed:', error);
-            alert('Attribute query failed');
+            alert(__('analysis.attr_failed'));
         }
     };
 
     const performOverlay = async () => {
         if (!selectedLayer?.id || !overlayLayerB) {
-            alert('Select both input layers for the overlay');
+            alert(__('analysis.need_two_layers'));
             return;
         }
 
@@ -281,7 +282,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                         ? data.error
                         : data.error
                           ? JSON.stringify(data.error)
-                          : 'Overlay failed'
+                          : __('analysis.overlay_failed')
                 );
             }
             setResults({ count: data.count, features: data.geojson?.features || [] });
@@ -298,7 +299,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             );
         } catch (error) {
             console.error(error);
-            alert(error.message || 'Overlay failed');
+            alert(error.message || __('analysis.overlay_failed'));
         } finally {
             setOverlayBusy(false);
         }
@@ -306,7 +307,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
     const exportGeoJSON = () => {
         if (!selectedLayer) {
-            alert('Select a layer in the layer list, then export again.');
+            alert(__('analysis.export_need_layer'));
             return;
         }
 
@@ -315,7 +316,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
     const exportCSV = () => {
         if (!selectedLayer) {
-            alert('Select a layer in the layer list, then export again.');
+            alert(__('analysis.export_need_layer'));
             return;
         }
 
@@ -340,7 +341,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
     const exportMapImage = () => {
         if (!map) {
-            alert('Map not available');
+            alert(__('analysis.map_unavailable'));
             return;
         }
 
@@ -349,14 +350,14 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                 const mapCanvas = document.createElement('canvas');
                 const size = map.getSize();
                 if (!size || !size[0] || !size[1]) {
-                    alert('Map is not ready to export yet.');
+                    alert(__('analysis.map_not_ready'));
                     return;
                 }
                 mapCanvas.width = size[0];
                 mapCanvas.height = size[1];
                 const mapContext = mapCanvas.getContext('2d');
                 if (!mapContext) {
-                    alert('Could not export the map image.');
+                    alert(__('analysis.image_failed'));
                     return;
                 }
 
@@ -382,7 +383,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
                 mapCanvas.toBlob((blob) => {
                     if (!blob) {
-                        alert('Could not export the map image.');
+                        alert(__('analysis.image_failed'));
                         return;
                     }
                     const link = document.createElement('a');
@@ -393,7 +394,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                 });
             } catch (error) {
                 console.error(error);
-                alert('Could not export the map image.');
+                alert(__('analysis.image_failed'));
             }
         });
 
@@ -403,7 +404,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
     const saveResult = async () => {
         const analysisId = await persistResult();
         if (analysisId) {
-            setSaveState(`Saved "${savedName.trim()}" for dashboards.`);
+            setSaveState(__('analysis.saved_for_dash', { name: savedName.trim() }));
         }
     };
 
@@ -415,11 +416,11 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
         const ids = featureIds(results?.features);
         const name = savedName.trim();
         if (!selectedLayer || ids.length === 0) {
-            alert('Run a query that returns features on a layer, then save it.');
+            alert(__('analysis.need_result'));
             return null;
         }
         if (!name) {
-            alert('Name this result before saving it.');
+            alert(__('analysis.need_name'));
             return null;
         }
 
@@ -447,7 +448,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
             return data.analysis?.id ?? null;
         } catch (error) {
             console.error(error);
-            alert('Could not save this analysis.');
+            alert(__('analysis.save_failed'));
             return null;
         }
     };
@@ -474,10 +475,10 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                 return;
             }
             setSavedLayer(data.layer ?? null);
-            setSaveState(`Layer "${data.layer?.name}" created from this result.`);
+            setSaveState(__('analysis.layer_created', { name: data.layer?.name ?? '' }));
         } catch (error) {
             console.error(error);
-            alert('Could not save this analysis as a layer.');
+            alert(__('analysis.save_layer_failed'));
         }
     };
 
@@ -487,7 +488,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
     return (
         <div className="analysis-panel">
             <div className="panel-header">
-                <h4>Analysis Tools</h4>
+                <h4>{__('maps.analysis_tools')}</h4>
                 <button type="button" onClick={onClose} className="close-btn">
                     <X className="glyph" strokeWidth={1.75} aria-hidden="true" />
                 </button>
@@ -495,61 +496,61 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
 
             <div className="panel-body">
                 <div className="tool-section">
-                    <h5>Spatial Analysis</h5>
+                    <h5>{__('maps.spatial_analysis')}</h5>
 
                     <div className="tool-item">
-                        <label>Buffer Analysis</label>
+                        <label>{__('maps.buffer_analysis')}</label>
                         <div className="input-group">
                             <input
                                 value={bufferDistance}
                                 onChange={(event) => setBufferDistance(Number(event.target.value))}
                                 type="number"
-                                placeholder="Distance (meters)"
+                                placeholder={__('maps.distance_m')}
                                 className="form-control"
                             />
                             <button type="button" onClick={performBuffer} className="btn btn-sm btn-primary">
-                                <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> Buffer
+                                <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.buffer')}
                             </button>
                         </div>
                     </div>
 
                     <div className="tool-item">
-                        <label>Spatial Query</label>
+                        <label>{__('maps.spatial_query')}</label>
                         <select
                             value={spatialOperation}
                             onChange={(event) => setSpatialOperation(event.target.value)}
                             className="form-control mb-2"
                         >
-                            <option value="within">Within</option>
-                            <option value="contains">Contains</option>
-                            <option value="intersects">Intersects</option>
+                            <option value="within">{__('maps.within')}</option>
+                            <option value="contains">{__('maps.contains')}</option>
+                            <option value="intersects">{__('maps.intersects')}</option>
                         </select>
                         <button
                             type="button"
                             onClick={performSpatialQuery}
                             className="btn btn-sm btn-primary w-100"
                         >
-                            <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> Query Features
+                            <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.query_features')}
                         </button>
                     </div>
 
                     <div className="tool-item">
-                        <label>Overlay (union / intersect / erase)</label>
+                        <label>{__('maps.overlay')}</label>
                         <select
                             value={overlayOp}
                             onChange={(event) => setOverlayOp(event.target.value)}
                             className="form-control mb-2"
                         >
-                            <option value="union">Union</option>
-                            <option value="intersect">Intersect</option>
-                            <option value="erase">Erase</option>
+                            <option value="union">{__('maps.union')}</option>
+                            <option value="intersect">{__('maps.intersect')}</option>
+                            <option value="erase">{__('maps.erase')}</option>
                         </select>
                         <select
                             value={overlayLayerB}
                             onChange={(event) => setOverlayLayerB(event.target.value)}
                             className="form-control mb-2"
                         >
-                            <option value="">Second layer…</option>
+                            <option value="">{__('maps.second_layer')}</option>
                             {otherLayers.map((layer) => (
                                 <option key={layer.id} value={layer.id}>
                                     {layer.name}
@@ -560,7 +561,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                             value={resultName}
                             onChange={(event) => setResultName(event.target.value)}
                             className="form-control mb-2"
-                            placeholder="Result layer name (optional)"
+                            placeholder={__('maps.result_name')}
                         />
                         <label className="form-check mb-2">
                             <input
@@ -569,7 +570,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                 checked={writeResult}
                                 onChange={(event) => setWriteResult(event.target.checked)}
                             />
-                            <span className="form-check-label">Write result as a new layer</span>
+                            <span className="form-check-label">{__('maps.write_new_layer')}</span>
                         </label>
                         <button
                             type="button"
@@ -578,13 +579,13 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                             disabled={overlayBusy}
                         >
                             <Search className="glyph" strokeWidth={1.75} aria-hidden="true" />{' '}
-                            {overlayBusy ? 'Running…' : 'Run overlay'}
+                            {overlayBusy ? __('analysis.running') : __('analysis.run_overlay')}
                         </button>
                     </div>
                 </div>
 
                 <div className="tool-section">
-                    <h5>Attribute Query</h5>
+                    <h5>{__('maps.attribute_query')}</h5>
                     <div className="tool-item">
                         <div className="query-builder">
                             {queryConditions.map((condition, index) => (
@@ -594,7 +595,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                         onChange={(event) =>
                                             updateCondition(index, 'column', event.target.value)
                                         }
-                                        placeholder="Column"
+                                        placeholder={__('maps.column')}
                                         className="form-control form-control-sm"
                                     />
                                     <select
@@ -617,7 +618,7 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                         onChange={(event) =>
                                             updateCondition(index, 'value', event.target.value)
                                         }
-                                        placeholder="Value"
+                                        placeholder={__('maps.value')}
                                         className="form-control form-control-sm"
                                     />
                                     <button
@@ -631,42 +632,42 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                             ))}
                         </div>
                         <button type="button" onClick={addCondition} className="btn btn-sm btn-secondary mb-2">
-                            <Plus className="glyph" strokeWidth={1.75} aria-hidden="true" /> Add Condition
+                            <Plus className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.add_condition')}
                         </button>
                         <button
                             type="button"
                             onClick={performAttributeQuery}
                             className="btn btn-sm btn-primary w-100"
                         >
-                            <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> Execute Query
+                            <Search className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.execute_query')}
                         </button>
                     </div>
                 </div>
 
                 <div className="tool-section">
-                    <h5>Export</h5>
+                    <h5>{__('maps.export')}</h5>
                     <div className="tool-item">
                         <button type="button" onClick={exportGeoJSON} className="btn btn-sm btn-success w-100 mb-2">
-                            <Download className="glyph" strokeWidth={1.75} aria-hidden="true" /> Export as GeoJSON
+                            <Download className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.export_geojson')}
                         </button>
                         <button type="button" onClick={exportCSV} className="btn btn-sm btn-success w-100 mb-2">
-                            <FileSpreadsheet className="glyph" strokeWidth={1.75} aria-hidden="true" /> Export as CSV
+                            <FileSpreadsheet className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.export_csv')}
                         </button>
                         <button type="button" onClick={exportMapConfig} className="btn btn-sm btn-info w-100 mb-2">
-                            <Map className="glyph" strokeWidth={1.75} aria-hidden="true" /> Export Map Config
+                            <Map className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.export_config')}
                         </button>
                         <button type="button" onClick={exportMapImage} className="btn btn-sm btn-warning w-100">
-                            <Image className="glyph" strokeWidth={1.75} aria-hidden="true" /> Export as Image
+                            <Image className="glyph" strokeWidth={1.75} aria-hidden="true" /> {__('maps.export_image')}
                         </button>
                     </div>
                 </div>
 
                 {results && (
                     <div className="tool-section">
-                        <h5>Results</h5>
+                        <h5>{__('maps.results')}</h5>
                         <div className="results-display">
                             <p>
-                                <strong>Count:</strong> {results.count}
+                                <strong>{__('maps.count_colon')}</strong> {results.count}
                             </p>
                             {savableIds.length > 0 && selectedLayer ? (
                                 <div className="mt-2">
@@ -674,14 +675,14 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                         value={savedName}
                                         onChange={(event) => setSavedName(event.target.value)}
                                         className="form-control form-control-sm mb-2"
-                                        placeholder="Name this result"
-                                        aria-label="Saved analysis name"
+                                        placeholder={__('maps.name_result')}
+                                        aria-label={__('maps.saved_analysis_name')}
                                     />
                                     <button type="button" onClick={saveResult} className="btn btn-sm btn-secondary w-100">
-                                        Save for dashboards
+                                        {__('maps.save_dashboards')}
                                     </button>
                                     <button type="button" onClick={saveAsLayer} className="btn btn-sm btn-primary w-100 mt-2">
-                                        Save as layer
+                                        {__('maps.save_as_layer')}
                                     </button>
                                     {savedLayer ? (
                                         <p className="text-muted mt-2 mb-0">
@@ -695,12 +696,12 @@ export default function AnalysisPanel({ selectedLayer, selectedGeometry, onClose
                                 <div className="feature-list">
                                     {results.features.slice(0, 5).map((_, index) => (
                                         <div key={index} className="feature-item">
-                                            Feature {index + 1}
+                                            {__('maps.feature_n', { n: index + 1 })}
                                         </div>
                                     ))}
                                     {results.features.length > 5 && (
                                         <p className="text-muted">
-                                            ... and {results.features.length - 5} more
+                                            {__('maps.and_more', { n: results.features.length - 5 })}
                                         </p>
                                     )}
                                 </div>

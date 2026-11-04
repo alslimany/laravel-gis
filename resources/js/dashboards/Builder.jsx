@@ -1,3 +1,4 @@
+import { __ } from '@/lib/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import Library from './Library';
@@ -29,7 +30,7 @@ export default function Builder({ dashboard = null, layers = [], maps = [], anal
     const [selectedId, setSelectedId] = useState(null);
     const [previewData, setPreviewData] = useState([]);
     const [previewError, setPreviewError] = useState(null);
-    const [name, setName] = useState(dashboard?.name || 'Untitled dashboard');
+    const [name, setName] = useState(dashboard?.name || __('dash.untitled'));
     const [description, setDescription] = useState(dashboard?.description || '');
     const [isPublic, setIsPublic] = useState(Boolean(dashboard?.is_public));
     const [processing, setProcessing] = useState(false);
@@ -62,7 +63,7 @@ export default function Builder({ dashboard = null, layers = [], maps = [], anal
                 });
                 const payload = await response.json();
                 if (!response.ok) {
-                    throw new Error(payload.message || 'Preview failed');
+                    throw new Error(payload.message || __('dash.preview_failed'));
                 }
                 setPreviewData(payload.widgets || []);
                 setPreviewError(null);
@@ -157,23 +158,23 @@ export default function Builder({ dashboard = null, layers = [], maps = [], anal
             <header className="shrink-0 border-b border-border bg-muted/40">
                 <div className="flex items-center gap-3 px-4 py-3">
                         <Link href={editing ? `/dashboards/${dashboard.id}` : '/dashboards'} className="text-primary hover:underline">
-                            Back
+                            {__('dash.back')}
                         </Link>
                         <div className="grid min-w-0 flex-1 gap-2 md:grid-cols-2">
-                            <TextInput value={name} onChange={(event) => setName(event.target.value)} aria-label="Dashboard name" />
+                            <TextInput value={name} onChange={(event) => setName(event.target.value)} aria-label={__('dash.name')} />
                             <TextInput
                                 value={description}
                                 onChange={(event) => setDescription(event.target.value)}
-                                placeholder="Description for the shared view"
-                                aria-label="Dashboard description"
+                                placeholder={__('dash.description_placeholder')}
+                                aria-label={__('dash.description')}
                             />
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
-                            Share publicly
+                            {__('dash.share_publicly')}
                         </label>
                         <PrimaryButton type="button" disabled={processing} onClick={submit}>
-                            {editing ? 'Save dashboard' : 'Create dashboard'}
+                            {editing ? __('dash.save') : __('dash.create')}
                         </PrimaryButton>
                 </div>
             </header>

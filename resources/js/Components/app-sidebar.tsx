@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import { House } from 'lucide-react';
 import { ModuleSwitcher } from '@/components/module-switcher';
 import { NavMain } from '@/components/nav-main';
@@ -25,20 +26,21 @@ function toNavItem(entry: ConsoleModuleItem): NavItem {
 }
 
 export function AppSidebar() {
-    const { routes, brand } = usePage().props;
+    const { t } = useTranslation();
+    const { routes, brand, isRtl } = usePage().props;
     const { active } = useConsoleModules();
 
     const homeHref = routes.dashboard || '/dashboard';
     const brandName = brand?.name || 'Lumina GIS';
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="icon" variant="inset" side={isRtl ? 'right' : 'left'}>
             <SidebarHeader>
                 <ModuleSwitcher />
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={[{ title: 'Home', href: homeHref, icon: House }]} label="" />
+                <NavMain items={[{ title: t('common.home'), href: homeHref, icon: House }]} label="" />
                 <SidebarSeparator className="mx-2" />
                 {active?.sections.map((section) => (
                     <NavMain key={`${active.key}-${section.label}`} items={section.items.map(toNavItem)} label={section.label} />

@@ -118,6 +118,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // ENV-1: phpunit.xml points LOG_CHANNEL here so test runs never write to the shared dev laravel.log.
+        'testing' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/testing.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,

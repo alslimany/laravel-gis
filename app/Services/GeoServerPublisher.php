@@ -38,13 +38,15 @@ class GeoServerPublisher
             }
 
             try {
+                $publishName = $layer->geoServerPublishName();
                 PublishLayerToGeoServer::dispatchSync($workspace, $datastore, $layer->table_name, [
+                    'name' => $publishName,
                     'title' => $layer->name,
                     'abstract' => $layer->description ?? "Layer: {$layer->name}",
                     'srs' => 'EPSG:4326',
                 ]);
 
-                $layer->markAsPublished($layer->table_name, $workspace);
+                $layer->markAsPublished($publishName, $workspace);
                 $published++;
             } catch (Throwable $e) {
                 Log::warning('Failed to publish pack layer to GeoServer', [

@@ -10,26 +10,17 @@ final class AdvisoryCopy
 {
     public static function message(): string
     {
-        return (string) config(
-            'early-warning.advisory.message',
-            'Forecast-based decision support only — not an official warning.',
-        );
+        return self::localized('message', 'Forecast-based decision support only — not an official warning.');
     }
 
     public static function citizenReports(): string
     {
-        return (string) config(
-            'early-warning.advisory.citizen_reports',
-            'Citizen reports are a verification layer — not official warnings.',
-        );
+        return self::localized('citizen_reports', 'Citizen reports are a verification layer — not official warnings.');
     }
 
     public static function reportReceived(): string
     {
-        return (string) config(
-            'early-warning.advisory.report_received',
-            'Report received for verification — not an official warning.',
-        );
+        return self::localized('report_received', 'Report received for verification — not an official warning.');
     }
 
     /**
@@ -37,10 +28,28 @@ final class AdvisoryCopy
      */
     public static function shortTag(): string
     {
-        return (string) config(
-            'early-warning.advisory.short_tag',
-            'decision support, not an official warning',
-        );
+        return self::localized('short_tag', 'decision support, not an official warning');
+    }
+
+    /**
+     * English (or any non-Arabic locale) uses the configurable text; Arabic uses the catalog
+     * entry ew.advisory.<key>, unless an explicit early-warning.advisory.<key>_ar override is set.
+     */
+    private static function localized(string $key, string $default): string
+    {
+        if (app()->getLocale() === 'ar') {
+            $override = trim((string) config("early-warning.advisory.{$key}_ar", ''));
+            if ($override !== '') {
+                return $override;
+            }
+            $catalogKey = "ew.advisory.{$key}";
+            $hit = __($catalogKey);
+            if ($hit !== $catalogKey) {
+                return $hit;
+            }
+        }
+
+        return (string) config("early-warning.advisory.{$key}", $default);
     }
 
     /**

@@ -1,0 +1,312 @@
+{
+    "name": "lumina/disaster",
+    "description": "Lumina Disaster & Emergency Management plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
+    "version": "0.5.0",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lumina\\Disaster\\": "src/"
+        }
+    },
+    "extra": {
+        "lumina": {
+            "key": "disaster",
+            "name": "Disaster & Emergency Management",
+            "core": "^1.0",
+            "provider": "Lumina\\Disaster\\Providers\\DisasterServiceProvider",
+            "permissions": [
+                "disaster.view",
+                "disaster.manage",
+                "disaster.field",
+                "disaster.dispatch",
+                "disaster.command",
+                "disaster.telemetry",
+                "disaster.ingest",
+                "disaster.public_publish",
+                "disaster.approve_evacuation",
+                "disaster.registry"
+            ],
+            "module": {
+                "label_en": "Disaster & EM",
+                "label_ar": "الكوارث والطوارئ",
+                "description_en": "Prevention assets, response incidents, vehicle tracking",
+                "description_ar": "أصول الوقاية وبلاغات الاستجابة وتتبع المركبات",
+                "icon": "siren",
+                "accent": "orange",
+                "home": "disaster.index",
+                "order": 110,
+                "sections": [
+                    {
+                        "label_en": "Prevention",
+                        "label_ar": "الوقاية",
+                        "items": [
+                            {
+                                "key": "disaster-overview",
+                                "label_en": "Overview",
+                                "label_ar": "نظرة عامة",
+                                "route": "disaster.index",
+                                "icon": "layout-dashboard",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-hazards",
+                                "label_en": "Hazards",
+                                "label_ar": "المخاطر",
+                                "route": "disaster.hazards.index",
+                                "icon": "waves",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-assets",
+                                "label_en": "Assets",
+                                "label_ar": "الأصول",
+                                "route": "disaster.assets.index",
+                                "icon": "building-2",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-planning",
+                                "label_en": "Planning (evac)",
+                                "label_ar": "التخطيط (إخلاء)",
+                                "route": "disaster.planning.index",
+                                "icon": "route",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-exposure",
+                                "label_en": "Exposure",
+                                "label_ar": "التعرض",
+                                "route": "disaster.exposure.page",
+                                "icon": "radar",
+                                "permission": "disaster.view"
+                            }
+                        ]
+                    },
+                    {
+                        "label_en": "Response",
+                        "label_ar": "الاستجابة",
+                        "items": [
+                            {
+                                "key": "disaster-cop",
+                                "label_en": "COP / Overview",
+                                "label_ar": "الصورة التشغيلية",
+                                "route": "disaster.cop.index",
+                                "icon": "scan",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-activations",
+                                "label_en": "Activations",
+                                "label_ar": "التفعيلات",
+                                "route": "disaster.activations.index",
+                                "icon": "bell-ring",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-escalation-rules",
+                                "label_en": "Escalation rules",
+                                "label_ar": "قواعد التصعيد",
+                                "route": "disaster.escalation-rules.index",
+                                "icon": "timer",
+                                "permission": "disaster.manage"
+                            },
+                            {
+                                "key": "disaster-evacuation-orders",
+                                "label_en": "Evacuation orders",
+                                "label_ar": "أوامر الإخلاء",
+                                "route": "disaster.evacuation-orders.index",
+                                "icon": "megaphone",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-incidents",
+                                "label_en": "Incidents",
+                                "label_ar": "البلاغات",
+                                "route": "disaster.incidents.index",
+                                "icon": "alert-triangle",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-resource-requests",
+                                "label_en": "Resource requests",
+                                "label_ar": "طلبات الموارد",
+                                "route": "disaster.resource-requests.index",
+                                "icon": "package",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-inventory",
+                                "label_en": "Inventory",
+                                "label_ar": "المخزون",
+                                "route": "disaster.inventory.index",
+                                "icon": "warehouse",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-volunteers",
+                                "label_en": "Volunteers",
+                                "label_ar": "المتطوعون",
+                                "route": "disaster.volunteers.index",
+                                "icon": "users",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-registry",
+                                "label_en": "Registry",
+                                "label_ar": "السجل",
+                                "route": "disaster.registry.index",
+                                "icon": "clipboard-list",
+                                "permission": "disaster.registry"
+                            },
+                            {
+                                "key": "disaster-closures",
+                                "label_en": "Closures",
+                                "label_ar": "الإغلاقات",
+                                "route": "disaster.closures.index",
+                                "icon": "ban",
+                                "permission": "disaster.view"
+                            },
+                            {
+                                "key": "disaster-avl",
+                                "label_en": "AVL",
+                                "label_ar": "تتبع المركبات",
+                                "route": "disaster.avl.page",
+                                "icon": "truck",
+                                "permission": "disaster.telemetry"
+                            },
+                            {
+                                "key": "disaster-public-tokens",
+                                "label_en": "Public tokens",
+                                "label_ar": "رموز البوابة العامة",
+                                "route": "disaster.public-tokens.index",
+                                "icon": "globe",
+                                "permission": "disaster.public_publish"
+                            }
+                        ]
+                    },
+                    {
+                        "label_en": "Recovery",
+                        "label_ar": "التعافي",
+                        "items": [
+                            {
+                                "key": "disaster-damage",
+                                "label_en": "Damage reports",
+                                "label_ar": "تقارير الأضرار",
+                                "route": "disaster.damage.index",
+                                "icon": "hammer",
+                                "permission": "disaster.view"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "nav": [
+                {
+                    "key": "disaster",
+                    "label_en": "Disaster & EM",
+                    "label_ar": "الكوارث والطوارئ",
+                    "route": "disaster.index",
+                    "icon": "siren",
+                    "order": 110,
+                    "permission": "disaster.view"
+                }
+            ],
+            "frontend": {
+                "entry": "resources/js/DisasterPanel.jsx",
+                "slots": {
+                    "mapBuilder.panel": "DisasterPanel"
+                }
+            },
+            "settings": {
+                "rules": {
+                    "floodplain_layer_id": ["nullable", "integer", "min:1"],
+                    "fault_layer_id": ["nullable", "integer", "min:1"],
+                    "wildfire_layer_id": ["nullable", "integer", "min:1"],
+                    "demographic_layer_id": ["nullable", "integer", "min:1"],
+                    "ew_risk_layer_id": ["nullable", "integer", "min:1"],
+                    "avl_max_skew_seconds": ["nullable", "integer", "min:0", "max:86400"],
+                    "retention_avl_days": ["nullable", "integer", "min:1", "max:365"],
+                    "is_official_authority": ["sometimes", "boolean"]
+                },
+                "defaults": {
+                    "floodplain_layer_id": null,
+                    "fault_layer_id": null,
+                    "wildfire_layer_id": null,
+                    "demographic_layer_id": null,
+                    "ew_risk_layer_id": null,
+                    "avl_max_skew_seconds": 300,
+                    "retention_avl_days": 14,
+                    "is_official_authority": false
+                }
+            },
+            "data": {
+                "prefix": "dm_",
+                "tables": [
+                    "dm_medical_facilities",
+                    "dm_staging_areas",
+                    "dm_critical_sites",
+                    "dm_evac_corridors",
+                    "dm_exposure_summaries",
+                    "dm_incidents",
+                    "dm_closures",
+                    "dm_avl_units",
+                    "dm_avl_pings",
+                    "dm_public_tokens",
+                    "dm_dissemination_logs",
+                    "dm_damage_points",
+                    "dm_activations",
+                    "dm_infrastructure_conditions",
+                    "dm_warning_recipients",
+                    "dm_warning_acks",
+                    "dm_escalation_rules",
+                    "dm_warning_audit_log",
+                    "dm_evacuation_orders",
+                    "dm_evacuation_order_events",
+                    "dm_operational_periods",
+                    "dm_incident_plans",
+                    "dm_incident_roles",
+                    "dm_tasks",
+                    "dm_event_log",
+                    "dm_sitreps",
+                    "dm_resource_types",
+                    "dm_warehouses",
+                    "dm_inventory_items",
+                    "dm_resource_requests",
+                    "dm_resource_assignments",
+                    "dm_inventory_ledger",
+                    "dm_volunteers",
+                    "dm_incident_workspaces",
+                    "dm_workspace_members",
+                    "dm_workspace_access_log",
+                    "dm_lifeline_components",
+                    "dm_lifeline_status",
+                    "dm_damage_photos",
+                    "dm_damage_form_schemas",
+                    "dm_incident_imagery",
+                    "dm_road_network_edges",
+                    "dm_evac_assignments",
+                    "dm_routing_runs",
+                    "dm_exchange_tokens",
+                    "dm_exchange_logs",
+                    "dm_message_templates",
+                    "dm_sms_deliveries",
+                    "dm_shelter_checkins",
+                    "dm_beneficiaries",
+                    "dm_missing_persons",
+                    "dm_person_reports",
+                    "dm_registry_access_log"
+                ],
+                "global_tables": []
+            }
+        },
+        "laravel": {
+            "providers": [
+                "Lumina\\Disaster\\Providers\\DisasterServiceProvider"
+            ]
+        }
+    }
+}

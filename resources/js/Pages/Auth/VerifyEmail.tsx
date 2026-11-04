@@ -1,13 +1,15 @@
 import { useForm, usePage } from '@inertiajs/react';
+import { useTranslation } from '@/lib/i18n';
 import GuestLayout from '@/layouts/guest-layout';
 import { Heading, PrimaryButton } from '@/components/gis';
 
 export default function VerifyEmail() {
+    const { t } = useTranslation();
     const { flash } = usePage().props;
     const form = useForm({});
 
     return (
-        <GuestLayout title="Verify email">
+        <GuestLayout title={t('auth.verify_email')}>
             <div className="space-y-4">
                 <Heading as="h2">Verify your email address</Heading>
                 {flash?.status ? <p className="text-ok">A fresh verification link has been sent to your email address.</p> : null}

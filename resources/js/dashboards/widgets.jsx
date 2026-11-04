@@ -1,3 +1,4 @@
+import { __ } from '@/lib/i18n';
 import { useEffect, useMemo, useRef } from 'react';
 import {
     Chart,
@@ -108,13 +109,13 @@ export function WidgetFrame({ title, children, className = '', onClick, selected
 
 export function IndicatorView({ widget }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
-    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || __('dash.hint_layer')}</Note>;
     const display = widget.value == null || widget.value === '' ? '—' : widget.value;
     return (
-        <p className="flex h-full items-end pb-1 text-3xl font-semibold tabular-nums text-foreground">
-            {widget.prefix ? <span className="mr-1 text-base font-medium text-muted-foreground">{widget.prefix}</span> : null}
+        <p dir="ltr" className="flex h-full items-end pb-1 text-3xl font-semibold tabular-nums text-foreground">
+            {widget.prefix ? <span className="me-1 text-base font-medium text-muted-foreground">{widget.prefix}</span> : null}
             <span>{display}</span>
-            {widget.suffix ? <span className="ml-1 text-base font-medium text-muted-foreground">{widget.suffix}</span> : null}
+            {widget.suffix ? <span className="ms-1 text-base font-medium text-muted-foreground">{widget.suffix}</span> : null}
         </p>
     );
 }
@@ -122,7 +123,7 @@ export function IndicatorView({ widget }) {
 export function SerialView({ widget }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
     if (widget.status === 'empty' || !(widget.labels || []).length) {
-        return <Note>{widget.message || 'No features in this layer.'}</Note>;
+        return <Note>{widget.message || __('dash.no_features')}</Note>;
     }
     return (
         <div className="h-full min-h-[180px]">
@@ -134,7 +135,7 @@ export function SerialView({ widget }) {
 export function PieView({ widget }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
     if (widget.status === 'empty' || !(widget.labels || []).length) {
-        return <Note>{widget.message || 'No features in this layer.'}</Note>;
+        return <Note>{widget.message || __('dash.no_features')}</Note>;
     }
     return (
         <div className="h-full min-h-[180px]">
@@ -145,11 +146,11 @@ export function PieView({ widget }) {
 
 export function TableView({ widget }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
-    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || __('dash.hint_layer')}</Note>;
     const labels = widget.labels || [];
     const rows = widget.rows || [];
-    if (!labels.length) return <Note>{widget.message || 'Choose columns when this table should show attributes.'}</Note>;
-    if (!rows.length) return <Note>{widget.message || 'No features in this layer.'}</Note>;
+    if (!labels.length) return <Note>{widget.message || __('dash.hint_table_columns')}</Note>;
+    if (!rows.length) return <Note>{widget.message || __('dash.no_features')}</Note>;
     return (
         <DataTable>
             <Table.Header>
@@ -178,9 +179,9 @@ export function TableView({ widget }) {
 
 export function ListView({ widget }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
-    if (widget.status === 'empty') return <Note>{widget.message || 'Choose a layer when this widget should show data.'}</Note>;
+    if (widget.status === 'empty') return <Note>{widget.message || __('dash.hint_layer')}</Note>;
     const rows = widget.rows || [];
-    if (!rows.length) return <Note>{widget.message || 'No features in this layer.'}</Note>;
+    if (!rows.length) return <Note>{widget.message || __('dash.no_features')}</Note>;
     return (
         <ul className="space-y-2">
             {rows.map((row, index) => (
@@ -196,7 +197,7 @@ export function ListView({ widget }) {
 export function MapView({ widget, onViewChange = null }) {
     if (widget.error) return <Note tone="danger">{widget.error}</Note>;
     if (!widget.map) {
-        return <Note>{widget.message || 'Choose a layer or a saved map when this widget should show a map.'}</Note>;
+        return <Note>{widget.message || __('dash.hint_map_source')}</Note>;
     }
     return (
         <div className="flex h-full min-h-[220px] flex-col gap-2">
@@ -219,7 +220,7 @@ export function TextView({ widget }) {
             {widget.body ? (
                 <p className="whitespace-pre-wrap text-sm text-muted-foreground">{widget.body}</p>
             ) : (
-                <p className="text-sm text-muted-foreground">Add a note in the inspector.</p>
+                <p className="text-sm text-muted-foreground">{__('dash.add_note')}</p>
             )}
         </div>
     );
@@ -230,9 +231,9 @@ export function CategoryView({ widget, value, onChange, interactive = false }) {
     if (widget.status === 'empty') return <Note>{widget.message}</Note>;
     const options = widget.options || widget.labels || [];
     if (!interactive) {
-        return <p className="text-sm text-muted-foreground">{options.length ? `${options.length} values` : 'Choose a field'}</p>;
+        return <p className="text-sm text-muted-foreground">{options.length ? `${options.length} values` : __('dash.choose_field')}</p>;
     }
-    if (!options.length) return <Note>{widget.message || 'No values in this field yet.'}</Note>;
+    if (!options.length) return <Note>{widget.message || __('dash.no_values')}</Note>;
     return (
         <label className="block">
             <span className="sr-only">{widget.title}</span>
@@ -241,7 +242,7 @@ export function CategoryView({ widget, value, onChange, interactive = false }) {
                 value={value ?? ''}
                 onChange={(event) => onChange?.(event.target.value || null)}
             >
-                <option value="">All</option>
+                <option value="">{__('dash.all')}</option>
                 {options.map((option) => (
                     <option key={option} value={option}>
                         {option}
@@ -273,7 +274,7 @@ export function WidgetBody({ widget, filters, onFilterChange, interactiveFilters
             />
         );
     }
-    return <p className="text-muted">Unknown widget.</p>;
+    return <p className="text-muted">{__('dash.unknown_widget')}</p>;
 }
 
 export function mergeWidgetData(configWidgets, dataWidgets) {

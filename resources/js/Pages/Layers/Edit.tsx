@@ -1,4 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
+import { enumLabel } from '@/lib/enum-labels';
+import { useTranslation, __ } from '@/lib/i18n';
 import { useState } from 'react';
 
 import AppLayout from '@/layouts/app-layout';
@@ -46,13 +48,14 @@ function ColorControl({
                     className="size-6 cursor-pointer border-0 bg-transparent p-0"
                     onChange={(event) => onChange(event.target.value)}
                 />
-                <span className="text-sm tabular-nums">{value}</span>
+                <span dir="ltr" className="text-sm tabular-nums">{value}</span>
             </label>
         </Field>
     );
 }
 
 export default function Edit({ layer, projects = [] }: { layer: LayerRecord; projects?: ProjectOption[] }) {
+    const { t } = useTranslation();
     const styleConfig = layer.style_config || {};
     const details = useForm({
         name: layer.name || '',
@@ -92,19 +95,19 @@ export default function Edit({ layer, projects = [] }: { layer: LayerRecord; pro
     const opacity = Math.min(1, Math.max(0, Number(fillOpacity) || 0));
 
     return (
-        <AppLayout title={`Edit ${layer.name}`}>
-            <PageHeader title={`Edit ${layer.name}`} action={<GhostLink href={`/layers/${layer.id}`}>Back</GhostLink>} />
+        <AppLayout title={__('layers.edit.title', { name: layer.name })}>
+            <PageHeader title={__('layers.edit.title', { name: layer.name })} action={<GhostLink href={`/layers/${layer.id}`}>{t('actions.back')}</GhostLink>} />
             <Panel className="max-w-xl">
                 <form onSubmit={submit} className="space-y-4">
-                    <Field label="Layer name" error={details.errors.name}>
+                    <Field label={t('solution_packs.layer_name')} error={details.errors.name}>
                         <TextInput value={details.data.name} required onChange={(event) => details.setData('name', event.target.value)} />
                     </Field>
-                    <Field label="Description" error={details.errors.description}>
+                    <Field label={t('forms.description')} error={details.errors.description}>
                         <TextArea value={details.data.description} onChange={(event) => details.setData('description', event.target.value)} />
                     </Field>
-                    <Field label="Project" error={details.errors.project_id}>
+                    <Field label={t('layers.project')} error={details.errors.project_id}>
                         <Select value={details.data.project_id} onChange={(event) => details.setData('project_id', event.target.value)}>
-                            <option value="">No project</option>
+                            <option value="">{__('layers.edit.no_project')}</option>
                             {projects.map((project) => (
                                 <option key={project.id} value={project.id}>
                                     {project.name}
@@ -113,19 +116,21 @@ export default function Edit({ layer, projects = [] }: { layer: LayerRecord; pro
                         </Select>
                     </Field>
                     <dl className="grid gap-3 border-t pt-4 text-sm sm:grid-cols-2">
+                        {layer.table_name ? (
+                            <div>
+                                <dt className="text-xs text-muted-foreground">{t('layers.table')}</dt>
+                                <dd dir="ltr" className="mt-0.5 tabular-nums">{layer.table_name}</dd>
+                            </div>
+                        ) : null}
                         <div>
-                            <dt className="text-xs text-muted-foreground">Table</dt>
-                            <dd className="mt-0.5 tabular-nums">{layer.table_name || '—'}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs text-muted-foreground">Geometry</dt>
-                            <dd className="mt-0.5">{layer.geometry_type || 'Not detected'}</dd>
+                            <dt className="text-xs text-muted-foreground">{t('layers.geometry')}</dt>
+                            <dd className="mt-0.5">{layer.geometry_type ? enumLabel(layer.geometry_type) : t('layers.not_detected')}</dd>
                         </div>
                     </dl>
                     <div className="flex gap-3">
-                        <GhostLink href={`/layers/${layer.id}`}>Cancel</GhostLink>
+                        <GhostLink href={`/layers/${layer.id}`}>{t('actions.cancel')}</GhostLink>
                         <PrimaryButton type="submit" disabled={details.processing}>
-                            {details.processing ? 'Saving…' : 'Save layer'}
+                            {details.processing ? __('layers.edit.saving') : __('layers.edit.save')}
                         </PrimaryButton>
                     </div>
                 </form>
@@ -133,9 +138,9 @@ export default function Edit({ layer, projects = [] }: { layer: LayerRecord; pro
             <Panel className="max-w-xl">
                 <form onSubmit={saveStyle} className="space-y-4">
                     <div>
-                        <h2 className="text-lg font-semibold tracking-tight">Style</h2>
+                        <h2 className="text-lg font-semibold tracking-tight">{t('layers.style')}</h2>
                         <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-                            Fill and stroke are written to this layer. A published layer also updates its GeoServer style.
+                            {__('layers.edit.style_help')}
                         </p>
                     </div>
                     <div
@@ -148,17 +153,17 @@ export default function Edit({ layer, projects = [] }: { layer: LayerRecord; pro
                         aria-hidden="true"
                     />
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <ColorControl label="Fill" value={fillColor} onChange={setFillColor} />
-                        <ColorControl label="Stroke" value={strokeColor} onChange={setStrokeColor} />
-                        <Field label="Stroke width">
+                        <ColorControl label={__('layers.edit.fill')} value={fillColor} onChange={setFillColor} />
+                        <ColorControl label={__('layers.edit.stroke')} value={strokeColor} onChange={setStrokeColor} />
+                        <Field label={t('solution_packs.stroke_width')}>
                             <TextInput type="number" min="1" max="10" value={strokeWidth} onChange={(event) => setStrokeWidth(event.target.value)} />
                         </Field>
-                        <Field label="Fill opacity">
+                        <Field label={t('solution_packs.fill_opacity')}>
                             <TextInput type="number" min="0" max="1" step="0.1" value={fillOpacity} onChange={(event) => setFillOpacity(event.target.value)} />
                         </Field>
                     </div>
                     <PrimaryButton type="submit" disabled={savingStyle}>
-                        {savingStyle ? 'Saving style…' : 'Save style'}
+                        {savingStyle ? __('layers.edit.saving_style') : __('layers.edit.save_style')}
                     </PrimaryButton>
                 </form>
             </Panel>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { jsonHeaders } from '../utils/csrf';
 
+import { __ } from '@/lib/i18n';
+import { fieldLabel } from '@/lib/enum-labels';
 /**
  * Right-panel dock for create/edit feature attributes and identify + attachments.
  */
@@ -171,11 +173,11 @@ export default function FeatureDock({
 
     const save = async () => {
         if (!layer?.id) {
-            setError('Select a layer before saving.');
+            setError(__('dock.need_layer'));
             return;
         }
         if (isCreate && !geometryWkt) {
-            setError('No geometry to save.');
+            setError(__('dock.no_geometry'));
             return;
         }
 
@@ -202,11 +204,11 @@ export default function FeatureDock({
             const data = await response.json();
             if (!response.ok || data.error) {
                 const details = data.errors ? Object.values(data.errors).join(' ') : null;
-                throw new Error(details || data.error || 'Failed to save feature');
+                throw new Error(details || data.error || __('dock.save_failed'));
             }
             onSaved?.(data.feature || data.data || data);
         } catch (err) {
-            setError(err.message || 'Failed to save feature');
+            setError(err.message || __('dock.save_failed'));
         } finally {
             setSaving(false);
         }
@@ -235,7 +237,7 @@ export default function FeatureDock({
             );
             const data = await response.json();
             if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Upload failed');
+                throw new Error(data.error || __('dock.upload_failed'));
             }
             setAttachments((prev) => [data.attachment, ...prev]);
             event.target.value = '';
@@ -247,10 +249,10 @@ export default function FeatureDock({
     };
 
     const title = isIdentify
-        ? 'Identify'
+        ? __('tools.identify')
         : isEdit
-          ? `Edit feature #${featureId}`
-          : 'Feature properties';
+          ? __('dock.edit_feature', { id: featureId })
+          : __('dock.properties');
 
     const displayProps = isIdentify
         ? detail?.properties || properties || {}
@@ -260,12 +262,12 @@ export default function FeatureDock({
         <div className="data-dock" role="region" aria-label={title}>
             <div className="modal-header">
                 <h5>{title}</h5>
-                <button type="button" onClick={onClose} className="btn-close" aria-label="Close" />
+                <button type="button" onClick={onClose} className="btn-close" aria-label={__('common.close')} />
             </div>
             <div className="modal-body">
                 {!layer && (
                     <div className="alert alert-warning">
-                        Select a target layer in the layer panel.
+                        {__('dock.need_target')}
                     </div>
                 )}
                 {error && <div className="alert alert-danger">{error}</div>}
@@ -275,12 +277,12 @@ export default function FeatureDock({
                         <dl className="mb-0">
                             {Object.entries(displayProps).map(([key, value]) => (
                                 <div key={key} className="mb-2">
-                                    <dt className="text-muted small mb-0">{fieldDefs[key]?.alias || key}</dt>
+                                    <dt className="text-muted small mb-0">{fieldDefs[key]?.alias || fieldLabel(key)}</dt>
                                     <dd className="mb-0">{String(value ?? '')}</dd>
                                 </div>
                             ))}
                             {Object.keys(displayProps).length === 0 && (
-                                <p className="text-muted mb-0">No attributes.</p>
+                                <p className="text-muted mb-0">{__('maps.no_attributes')}</p>
                             )}
                         </dl>
                     </div>
@@ -295,7 +297,7 @@ export default function FeatureDock({
                                       : domain;
                               return (
                                   <div className="mb-3" key={key}>
-                                      <label className="form-label">{fieldDefs[key]?.alias || key}</label>
+                                      <label className="form-label">{fieldDefs[key]?.alias || fieldLabel(key)}</label>
                                       {domain.length > 0 ? (
                                           <select
                                               className="form-control"
@@ -366,7 +368,7 @@ export default function FeatureDock({
 
                 {(isIdentify || isEdit) && featureId && layer?.id && related.length > 0 ? (
                     <div className="mb-3">
-                        <h6 className="mb-2">Related records</h6>
+                        <h6 className="mb-2">{__('maps.related_records')}</h6>
                         {related.map(({ relationship, columns, features }) => (
                             <div key={relationship.id} className="mb-3">
                                 <div className="small text-muted mb-1">
@@ -376,7 +378,7 @@ export default function FeatureDock({
                                         : ''}
                                 </div>
                                 {features.length === 0 ? (
-                                    <p className="text-muted small mb-0">No related records.</p>
+                                    <p className="text-muted small mb-0">{__('maps.no_related')}</p>
                                 ) : (
                                     <div className="table-responsive">
                                         <table className="table table-sm align-middle mb-0">
@@ -406,7 +408,7 @@ export default function FeatureDock({
 
                 {(isIdentify || isEdit) && featureId && layer?.id ? (
                     <div className="mb-3">
-                        <h6 className="mb-2">Attachments</h6>
+                        <h6 className="mb-2">{__('maps.attachments')}</h6>
                         <ul className="list-unstyled mb-2">
                             {attachments.map((item) => (
                                 <li key={item.id} className="mb-1">
@@ -420,7 +422,7 @@ export default function FeatureDock({
                                 </li>
                             ))}
                             {attachments.length === 0 && (
-                                <li className="text-muted small">No attachments</li>
+                                <li className="text-muted small">{__('maps.no_attachments')}</li>
                             )}
                         </ul>
                         <input
@@ -435,7 +437,7 @@ export default function FeatureDock({
             {!isIdentify ? (
                 <div className="modal-footer">
                     <button type="button" onClick={onClose} className="btn btn-secondary">
-                        Cancel
+                        {__('dock.cancel')}
                     </button>
                     <button
                         type="button"
@@ -443,7 +445,7 @@ export default function FeatureDock({
                         className="btn btn-primary"
                         disabled={saving}
                     >
-                        {saving ? 'Saving…' : isEdit ? 'Update feature' : 'Save feature'}
+                        {saving ? __('dock.saving') : isEdit ? __('dock.update') : __('dock.save')}
                     </button>
                 </div>
             ) : null}
