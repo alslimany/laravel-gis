@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Models\Layer;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\User;
+use App\Services\FeatureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class LayerTest extends TestCase
@@ -14,8 +17,11 @@ class LayerTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected User $admin;
+
     protected Organization $organization;
+
     protected Project $project;
 
     protected function setUp(): void
@@ -23,12 +29,12 @@ class LayerTest extends TestCase
         parent::setUp();
 
         // Seed roles
-        $adminRole = \App\Models\Role::create(['name' => 'admin', 'description' => 'Administrator']);
-        $editorRole = \App\Models\Role::create(['name' => 'editor', 'description' => 'Editor']);
+        $adminRole = Role::create(['name' => 'admin', 'description' => 'Administrator']);
+        $editorRole = Role::create(['name' => 'editor', 'description' => 'Editor']);
 
         // Create organization and users
         $this->organization = Organization::factory()->create();
-        
+
         $this->user = User::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -89,6 +95,44 @@ class LayerTest extends TestCase
             'organization_id' => $this->organization->id,
             'table_name' => 'test_layer_table',
         ]);
+        $this->assertTrue(Schema::hasTable('test_layer_table'));
+        $this->assertTrue(Schema::hasColumn('test_layer_table', 'geom'));
+    }
+
+    public function test_creating_empty_layer_requires_geometry_type()
+    {
+        $response = $this->actingAs($this->user)->from(route('layers.create'))->post(route('layers.store'), [
+            'name' => 'No Geom',
+            'table_name' => 'no_geom_table',
+            'geometry_type' => '',
+        ]);
+
+        $response->assertRedirect(route('layers.create'));
+        $response->assertSessionHasErrors('geometry_type');
+        $this->assertDatabaseMissing('layers', ['table_name' => 'no_geom_table']);
+        $this->assertFalse(Schema::hasTable('no_geom_table'));
+    }
+
+    public function test_feature_create_provisions_missing_table()
+    {
+        $layer = Layer::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'table_name' => 'orphan_draw_table',
+            'geometry_type' => 'LineString',
+        ]);
+
+        $this->assertFalse(Schema::hasTable('orphan_draw_table'));
+
+        $feature = app(FeatureService::class)->create(
+            $layer,
+            [],
+            'LINESTRING(0 0, 1 1)'
+        );
+
+        $this->assertTrue(Schema::hasTable('orphan_draw_table'));
+        $this->assertArrayHasKey('id', $feature);
+        $this->assertSame(1, $layer->fresh()->feature_count);
     }
 
     public function test_user_can_view_layer_details()
@@ -116,6 +160,39 @@ class LayerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page->component('Layers/Edit')->where('layer.id', $layer->id));
+    }
+
+    public function test_user_can_open_layer_builder()
+    {
+        $layer = Layer::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'name' => 'Draw Here',
+            'table_name' => 'draw_here',
+            'geometry_type' => 'Point',
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('layers.builder', $layer));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Layers/Builder')
+            ->where('initialWorkspace.layerId', $layer->id)
+            ->where('initialWorkspace.workspaceMode', 'layer')
+            ->where('initialWorkspace.name', 'Draw Here')
+            ->has('initialWorkspace.layers', 1)
+            ->where('initialWorkspace.layers.0.type', 'mvt')
+            ->where('initialWorkspace.layers.0.id', $layer->id));
+    }
+
+    public function test_guest_cannot_open_layer_builder()
+    {
+        $layer = Layer::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $this->get(route('layers.builder', $layer))->assertRedirect(route('login'));
     }
 
     public function test_user_can_update_layer()
@@ -172,7 +249,7 @@ class LayerTest extends TestCase
     {
         $otherOrg = Organization::factory()->create();
         $otherUser = User::factory()->create(['organization_id' => $otherOrg->id]);
-        
+
         $layer = Layer::factory()->create([
             'user_id' => $otherUser->id,
             'organization_id' => $otherOrg->id,
@@ -245,7 +322,7 @@ class LayerTest extends TestCase
 
         $otherOrg = Organization::factory()->create();
         $otherUser = User::factory()->create(['organization_id' => $otherOrg->id]);
-        
+
         Layer::factory()->count(2)->create([
             'user_id' => $otherUser->id,
             'organization_id' => $otherOrg->id,

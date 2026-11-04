@@ -195,6 +195,27 @@ class PluginLifecycleTest extends TestCase
         $this->assertArrayNotHasKey('source_missing', $layer->fresh()->metadata);
     }
 
+    public function test_uninstall_drops_the_plugins_views_only(): void
+    {
+        $this->lifecycle()->install('hello');
+        DB::statement('CREATE VIEW hello_items_view AS SELECT id, name FROM hello_items');
+        DB::statement('CREATE VIEW layer_backing_view AS SELECT 1 AS id');
+        DB::statement('CREATE VIEW unrelated_view AS SELECT 1 AS id');
+        Layer::factory()->create([
+            'organization_id' => $this->org->id,
+            'user_id' => $this->super->id,
+            'table_name' => 'layer_backing_view',
+            'metadata' => ['plugin' => 'hello', 'sql_view' => true],
+        ]);
+
+        $this->artisan('plugin:uninstall', ['key' => 'hello'])->assertSuccessful();
+
+        $this->assertFalse(Schema::hasView('hello_items_view'));
+        $this->assertFalse(Schema::hasView('layer_backing_view'));
+        $this->assertTrue(Schema::hasView('unrelated_view'));
+        $this->assertTrue(Schema::hasTable('hello_items'));
+    }
+
     public function test_purge_requires_uninstalled_and_typed_confirmation(): void
     {
         $this->lifecycle()->install('hello');
