@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1d27c2c9093e171e50348dd617f386fd",
+    "content-hash": "a860d8a02ad03c016569c106dc14d67e",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -2771,6 +2771,451 @@
             "time": "2026-03-08T20:05:35+00:00"
         },
         {
+            "name": "lumina/desktop-connect",
+            "version": "0.1.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/desktop-connect",
+                "reference": "83a4ee2912f80b37583d5b70cb03fcd1a7f43059"
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "lumina": {
+                    "key": "desktop-connect",
+                    "name": "Desktop GIS Connect",
+                    "core": "^1.0",
+                    "provider": "Lumina\\DesktopConnect\\Providers\\DesktopConnectServiceProvider",
+                    "permissions": [
+                        "desktop-connect.view",
+                        "desktop-connect.manage"
+                    ],
+                    "module": {
+                        "label_en": "Desktop GIS Connect",
+                        "label_ar": "اتصال سطح المكتب",
+                        "description_en": "Desktop GIS connections, grants and OGC access",
+                        "description_ar": "اتصالات سطح المكتب والصلاحيات والوصول عبر OGC",
+                        "icon": "monitor",
+                        "accent": "slate",
+                        "home": "desktop-connect.index",
+                        "order": 120,
+                        "sections": [
+                            {
+                                "label_en": "Access",
+                                "label_ar": "الوصول",
+                                "items": [
+                                    {
+                                        "key": "desktop-connect",
+                                        "label_en": "Desktop connections",
+                                        "label_ar": "اتصالات سطح المكتب",
+                                        "route": "desktop-connect.index",
+                                        "icon": "monitor",
+                                        "permission": "desktop-connect.view"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "nav": [
+                        {
+                            "key": "desktop-connect",
+                            "label_en": "Desktop connections",
+                            "label_ar": "اتصالات سطح المكتب",
+                            "route": "desktop-connect.index",
+                            "icon": "monitor",
+                            "order": 120,
+                            "permission": "desktop-connect.view"
+                        }
+                    ],
+                    "settings": {
+                        "rules": [],
+                        "defaults": []
+                    },
+                    "data": {
+                        "prefix": "dc_",
+                        "tables": [],
+                        "global_tables": []
+                    }
+                },
+                "laravel": {
+                    "providers": [
+                        "Lumina\\DesktopConnect\\Providers\\DesktopConnectServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Lumina\\DesktopConnect\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Lumina Desktop GIS Connect plugin (first-party). See docs/adr/0001-plugin-architecture.md and docs/adr/0002-desktop-gis-connectivity.md.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "lumina/disaster",
+            "version": "0.5.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/disaster",
+                "reference": "823a768bf7d7329f52ab6de5bff05573d983a39f"
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "lumina": {
+                    "key": "disaster",
+                    "name": "Disaster & Emergency Management",
+                    "core": "^1.0",
+                    "provider": "Lumina\\Disaster\\Providers\\DisasterServiceProvider",
+                    "permissions": [
+                        "disaster.view",
+                        "disaster.manage",
+                        "disaster.field",
+                        "disaster.dispatch",
+                        "disaster.command",
+                        "disaster.telemetry",
+                        "disaster.ingest",
+                        "disaster.public_publish",
+                        "disaster.approve_evacuation",
+                        "disaster.registry"
+                    ],
+                    "module": {
+                        "label_en": "Disaster & EM",
+                        "label_ar": "الكوارث والطوارئ",
+                        "description_en": "Prevention assets, response incidents, vehicle tracking",
+                        "description_ar": "أصول الوقاية وبلاغات الاستجابة وتتبع المركبات",
+                        "icon": "siren",
+                        "accent": "orange",
+                        "home": "disaster.index",
+                        "order": 110,
+                        "sections": [
+                            {
+                                "label_en": "Prevention",
+                                "label_ar": "الوقاية",
+                                "items": [
+                                    {
+                                        "key": "disaster-overview",
+                                        "label_en": "Overview",
+                                        "label_ar": "نظرة عامة",
+                                        "route": "disaster.index",
+                                        "icon": "layout-dashboard",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-hazards",
+                                        "label_en": "Hazards",
+                                        "label_ar": "المخاطر",
+                                        "route": "disaster.hazards.index",
+                                        "icon": "waves",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-assets",
+                                        "label_en": "Assets",
+                                        "label_ar": "الأصول",
+                                        "route": "disaster.assets.index",
+                                        "icon": "building-2",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-planning",
+                                        "label_en": "Planning (evac)",
+                                        "label_ar": "التخطيط (إخلاء)",
+                                        "route": "disaster.planning.index",
+                                        "icon": "route",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-exposure",
+                                        "label_en": "Exposure",
+                                        "label_ar": "التعرض",
+                                        "route": "disaster.exposure.page",
+                                        "icon": "radar",
+                                        "permission": "disaster.view"
+                                    }
+                                ]
+                            },
+                            {
+                                "label_en": "Response",
+                                "label_ar": "الاستجابة",
+                                "items": [
+                                    {
+                                        "key": "disaster-cop",
+                                        "label_en": "COP / Overview",
+                                        "label_ar": "الصورة التشغيلية",
+                                        "route": "disaster.cop.index",
+                                        "icon": "scan",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-activations",
+                                        "label_en": "Activations",
+                                        "label_ar": "التفعيلات",
+                                        "route": "disaster.activations.index",
+                                        "icon": "bell-ring",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-escalation-rules",
+                                        "label_en": "Escalation rules",
+                                        "label_ar": "قواعد التصعيد",
+                                        "route": "disaster.escalation-rules.index",
+                                        "icon": "timer",
+                                        "permission": "disaster.manage"
+                                    },
+                                    {
+                                        "key": "disaster-evacuation-orders",
+                                        "label_en": "Evacuation orders",
+                                        "label_ar": "أوامر الإخلاء",
+                                        "route": "disaster.evacuation-orders.index",
+                                        "icon": "megaphone",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-incidents",
+                                        "label_en": "Incidents",
+                                        "label_ar": "البلاغات",
+                                        "route": "disaster.incidents.index",
+                                        "icon": "alert-triangle",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-resource-requests",
+                                        "label_en": "Resource requests",
+                                        "label_ar": "طلبات الموارد",
+                                        "route": "disaster.resource-requests.index",
+                                        "icon": "package",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-inventory",
+                                        "label_en": "Inventory",
+                                        "label_ar": "المخزون",
+                                        "route": "disaster.inventory.index",
+                                        "icon": "warehouse",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-volunteers",
+                                        "label_en": "Volunteers",
+                                        "label_ar": "المتطوعون",
+                                        "route": "disaster.volunteers.index",
+                                        "icon": "users",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-registry",
+                                        "label_en": "Registry",
+                                        "label_ar": "السجل",
+                                        "route": "disaster.registry.index",
+                                        "icon": "clipboard-list",
+                                        "permission": "disaster.registry"
+                                    },
+                                    {
+                                        "key": "disaster-closures",
+                                        "label_en": "Closures",
+                                        "label_ar": "الإغلاقات",
+                                        "route": "disaster.closures.index",
+                                        "icon": "ban",
+                                        "permission": "disaster.view"
+                                    },
+                                    {
+                                        "key": "disaster-avl",
+                                        "label_en": "AVL",
+                                        "label_ar": "تتبع المركبات",
+                                        "route": "disaster.avl.page",
+                                        "icon": "truck",
+                                        "permission": "disaster.telemetry"
+                                    },
+                                    {
+                                        "key": "disaster-public-tokens",
+                                        "label_en": "Public tokens",
+                                        "label_ar": "رموز البوابة العامة",
+                                        "route": "disaster.public-tokens.index",
+                                        "icon": "globe",
+                                        "permission": "disaster.public_publish"
+                                    }
+                                ]
+                            },
+                            {
+                                "label_en": "Recovery",
+                                "label_ar": "التعافي",
+                                "items": [
+                                    {
+                                        "key": "disaster-damage",
+                                        "label_en": "Damage reports",
+                                        "label_ar": "تقارير الأضرار",
+                                        "route": "disaster.damage.index",
+                                        "icon": "hammer",
+                                        "permission": "disaster.view"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "nav": [
+                        {
+                            "key": "disaster",
+                            "label_en": "Disaster & EM",
+                            "label_ar": "الكوارث والطوارئ",
+                            "route": "disaster.index",
+                            "icon": "siren",
+                            "order": 110,
+                            "permission": "disaster.view"
+                        }
+                    ],
+                    "frontend": {
+                        "entry": "resources/js/DisasterPanel.jsx",
+                        "slots": {
+                            "mapBuilder.panel": "DisasterPanel"
+                        }
+                    },
+                    "settings": {
+                        "rules": {
+                            "floodplain_layer_id": [
+                                "nullable",
+                                "integer",
+                                "min:1"
+                            ],
+                            "fault_layer_id": [
+                                "nullable",
+                                "integer",
+                                "min:1"
+                            ],
+                            "wildfire_layer_id": [
+                                "nullable",
+                                "integer",
+                                "min:1"
+                            ],
+                            "demographic_layer_id": [
+                                "nullable",
+                                "integer",
+                                "min:1"
+                            ],
+                            "ew_risk_layer_id": [
+                                "nullable",
+                                "integer",
+                                "min:1"
+                            ],
+                            "avl_max_skew_seconds": [
+                                "nullable",
+                                "integer",
+                                "min:0",
+                                "max:86400"
+                            ],
+                            "retention_avl_days": [
+                                "nullable",
+                                "integer",
+                                "min:1",
+                                "max:365"
+                            ],
+                            "is_official_authority": [
+                                "sometimes",
+                                "boolean"
+                            ]
+                        },
+                        "defaults": {
+                            "floodplain_layer_id": null,
+                            "fault_layer_id": null,
+                            "wildfire_layer_id": null,
+                            "demographic_layer_id": null,
+                            "ew_risk_layer_id": null,
+                            "avl_max_skew_seconds": 300,
+                            "retention_avl_days": 14,
+                            "is_official_authority": false
+                        }
+                    },
+                    "data": {
+                        "prefix": "dm_",
+                        "tables": [
+                            "dm_medical_facilities",
+                            "dm_staging_areas",
+                            "dm_critical_sites",
+                            "dm_evac_corridors",
+                            "dm_exposure_summaries",
+                            "dm_incidents",
+                            "dm_closures",
+                            "dm_avl_units",
+                            "dm_avl_pings",
+                            "dm_public_tokens",
+                            "dm_dissemination_logs",
+                            "dm_damage_points",
+                            "dm_activations",
+                            "dm_infrastructure_conditions",
+                            "dm_warning_recipients",
+                            "dm_warning_acks",
+                            "dm_escalation_rules",
+                            "dm_warning_audit_log",
+                            "dm_evacuation_orders",
+                            "dm_evacuation_order_events",
+                            "dm_operational_periods",
+                            "dm_incident_plans",
+                            "dm_incident_roles",
+                            "dm_tasks",
+                            "dm_event_log",
+                            "dm_sitreps",
+                            "dm_resource_types",
+                            "dm_warehouses",
+                            "dm_inventory_items",
+                            "dm_resource_requests",
+                            "dm_resource_assignments",
+                            "dm_inventory_ledger",
+                            "dm_volunteers",
+                            "dm_incident_workspaces",
+                            "dm_workspace_members",
+                            "dm_workspace_access_log",
+                            "dm_lifeline_components",
+                            "dm_lifeline_status",
+                            "dm_damage_photos",
+                            "dm_damage_form_schemas",
+                            "dm_incident_imagery",
+                            "dm_road_network_edges",
+                            "dm_evac_assignments",
+                            "dm_routing_runs",
+                            "dm_exchange_tokens",
+                            "dm_exchange_logs",
+                            "dm_message_templates",
+                            "dm_sms_deliveries",
+                            "dm_shelter_checkins",
+                            "dm_beneficiaries",
+                            "dm_missing_persons",
+                            "dm_person_reports",
+                            "dm_registry_access_log"
+                        ],
+                        "global_tables": []
+                    }
+                },
+                "laravel": {
+                    "providers": [
+                        "Lumina\\Disaster\\Providers\\DisasterServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Lumina\\Disaster\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Lumina Disaster & Emergency Management plugin (first-party). See docs/adr/0001-plugin-architecture.md.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
             "name": "lumina/early-warning",
             "version": "0.9.1",
             "dist": {
@@ -3295,6 +3740,180 @@
             "time": "2026-09-09T08:34:20+00:00"
         },
         {
+            "name": "mpdf/mpdf",
+            "version": "v8.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mpdf/mpdf.git",
+                "reference": "2a454ec334109911fdb323a284c19dbf3f049810"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mpdf/mpdf/zipball/2a454ec334109911fdb323a284c19dbf3f049810",
+                "reference": "2a454ec334109911fdb323a284c19dbf3f049810",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gd": "*",
+                "ext-mbstring": "*",
+                "mpdf/psr-http-message-shim": "^1.0 || ^2.0",
+                "mpdf/psr-log-aware-trait": "^2.0 || ^3.0",
+                "myclabs/deep-copy": "^1.7",
+                "paragonie/random_compat": "^1.4|^2.0|^9.99.99",
+                "php": "^5.6 || ^7.0 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/log": "^1.0 || ^2.0 || ^3.0",
+                "setasign/fpdi": "^2.1"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.3.0",
+                "mpdf/qrcode": "^1.1.0",
+                "squizlabs/php_codesniffer": "^3.5.0",
+                "tracy/tracy": "~2.5",
+                "yoast/phpunit-polyfills": "^1.0"
+            },
+            "suggest": {
+                "ext-bcmath": "Needed for generation of some types of barcodes",
+                "ext-imagick": "Needed if developing the Mpdf library",
+                "ext-xml": "Needed mainly for SVG manipulation",
+                "ext-zlib": "Needed for compression of embedded resources, such as fonts"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "Mpdf\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-only"
+            ],
+            "authors": [
+                {
+                    "name": "Matěj Humpál",
+                    "role": "Developer, maintainer"
+                },
+                {
+                    "name": "Ian Back",
+                    "role": "Developer (retired)"
+                }
+            ],
+            "description": "PHP library generating PDF files from UTF-8 encoded HTML",
+            "homepage": "https://mpdf.github.io",
+            "keywords": [
+                "pdf",
+                "php",
+                "utf-8"
+            ],
+            "support": {
+                "docs": "https://mpdf.github.io",
+                "issues": "https://github.com/mpdf/mpdf/issues",
+                "source": "https://github.com/mpdf/mpdf"
+            },
+            "funding": [
+                {
+                    "url": "https://www.paypal.me/mpdf",
+                    "type": "custom"
+                }
+            ],
+            "time": "2026-03-11T10:58:44+00:00"
+        },
+        {
+            "name": "mpdf/psr-http-message-shim",
+            "version": "v2.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mpdf/psr-http-message-shim.git",
+                "reference": "f25a0153d645e234f9db42e5433b16d9b113920f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mpdf/psr-http-message-shim/zipball/f25a0153d645e234f9db42e5433b16d9b113920f",
+                "reference": "f25a0153d645e234f9db42e5433b16d9b113920f",
+                "shasum": ""
+            },
+            "require": {
+                "psr/http-message": "^2.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Mpdf\\PsrHttpMessageShim\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mark Dorison",
+                    "email": "mark@chromatichq.com"
+                },
+                {
+                    "name": "Kristofer Widholm",
+                    "email": "kristofer@chromatichq.com"
+                },
+                {
+                    "name": "Nigel Cunningham",
+                    "email": "nigel.cunningham@technocrat.com.au"
+                }
+            ],
+            "description": "Shim to allow support of different psr/message versions.",
+            "support": {
+                "issues": "https://github.com/mpdf/psr-http-message-shim/issues",
+                "source": "https://github.com/mpdf/psr-http-message-shim/tree/v2.0.1"
+            },
+            "time": "2023-10-02T14:34:03+00:00"
+        },
+        {
+            "name": "mpdf/psr-log-aware-trait",
+            "version": "v3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mpdf/psr-log-aware-trait.git",
+                "reference": "a633da6065e946cc491e1c962850344bb0bf3e78"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mpdf/psr-log-aware-trait/zipball/a633da6065e946cc491e1c962850344bb0bf3e78",
+                "reference": "a633da6065e946cc491e1c962850344bb0bf3e78",
+                "shasum": ""
+            },
+            "require": {
+                "psr/log": "^3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Mpdf\\PsrLogAwareTrait\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mark Dorison",
+                    "email": "mark@chromatichq.com"
+                },
+                {
+                    "name": "Kristofer Widholm",
+                    "email": "kristofer@chromatichq.com"
+                }
+            ],
+            "description": "Trait to allow support of different psr/log versions.",
+            "support": {
+                "issues": "https://github.com/mpdf/psr-log-aware-trait/issues",
+                "source": "https://github.com/mpdf/psr-log-aware-trait/tree/v3.0.0"
+            },
+            "time": "2023-05-03T06:19:36+00:00"
+        },
+        {
             "name": "mtdowling/jmespath.php",
             "version": "2.9.2",
             "source": {
@@ -3359,6 +3978,66 @@
                 "source": "https://github.com/jmespath/jmespath.php/tree/2.9.2"
             },
             "time": "2026-07-06T18:56:19+00:00"
+        },
+        {
+            "name": "myclabs/deep-copy",
+            "version": "1.14.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/myclabs/DeepCopy.git",
+                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/myclabs/DeepCopy/zipball/8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
+                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0"
+            },
+            "conflict": {
+                "doctrine/collections": "<1.6.8",
+                "doctrine/common": "<2.13.3 || >=3 <3.2.2"
+            },
+            "require-dev": {
+                "doctrine/collections": "^1.6.8",
+                "doctrine/common": "^2.13.3 || ^3.2.2",
+                "phpspec/prophecy": "^1.10",
+                "phpunit/phpunit": "^7.5.20 || ^8.5.23 || ^9.5.13"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/DeepCopy/deep_copy.php"
+                ],
+                "psr-4": {
+                    "DeepCopy\\": "src/DeepCopy/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Create deep copies (clones) of your objects",
+            "keywords": [
+                "clone",
+                "copy",
+                "duplicate",
+                "object",
+                "object graph"
+            ],
+            "support": {
+                "issues": "https://github.com/myclabs/DeepCopy/issues",
+                "source": "https://github.com/myclabs/DeepCopy/tree/1.14.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-11T10:17:44+00:00"
         },
         {
             "name": "nesbot/carbon",
@@ -3766,6 +4445,56 @@
                 }
             ],
             "time": "2026-02-16T23:10:27+00:00"
+        },
+        {
+            "name": "paragonie/random_compat",
+            "version": "v9.99.100",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/paragonie/random_compat.git",
+                "reference": "996434e5492cb4c3edcb9168db6fbb1359ef965a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/paragonie/random_compat/zipball/996434e5492cb4c3edcb9168db6fbb1359ef965a",
+                "reference": "996434e5492cb4c3edcb9168db6fbb1359ef965a",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">= 7"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "4.*|5.*",
+                "vimeo/psalm": "^1"
+            },
+            "suggest": {
+                "ext-libsodium": "Provides a modern crypto API that can be used to generate random bytes."
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Paragon Initiative Enterprises",
+                    "email": "security@paragonie.com",
+                    "homepage": "https://paragonie.com"
+                }
+            ],
+            "description": "PHP 5.x polyfill for random_bytes() and random_int() from PHP 7",
+            "keywords": [
+                "csprng",
+                "polyfill",
+                "pseudorandom",
+                "random"
+            ],
+            "support": {
+                "email": "info@paragonie.com",
+                "issues": "https://github.com/paragonie/random_compat/issues",
+                "source": "https://github.com/paragonie/random_compat"
+            },
+            "time": "2020-10-15T08:29:30+00:00"
         },
         {
             "name": "phpoffice/phpspreadsheet",
@@ -4781,6 +5510,77 @@
                 "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v9.5.0"
             },
             "time": "2026-09-20T15:02:00+00:00"
+        },
+        {
+            "name": "setasign/fpdi",
+            "version": "v2.6.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Setasign/FPDI.git",
+                "reference": "d97ade6368aa0b51b6316d5dc16a567e2bf60167"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Setasign/FPDI/zipball/d97ade6368aa0b51b6316d5dc16a567e2bf60167",
+                "reference": "d97ade6368aa0b51b6316d5dc16a567e2bf60167",
+                "shasum": ""
+            },
+            "require": {
+                "ext-zlib": "*",
+                "php": ">=7.2 <=8.6.99999"
+            },
+            "conflict": {
+                "setasign/tfpdf": "<1.31"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^8.5.52",
+                "setasign/fpdf": "^1.9.0",
+                "setasign/tfpdf": "~1.33",
+                "tecnickcom/tcpdf": "^6.8"
+            },
+            "suggest": {
+                "setasign/fpdf": "FPDI will extend this class but as it is also possible to use TCPDF or tFPDF as an alternative. There's no fixed dependency configured."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "setasign\\Fpdi\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jan Slabon",
+                    "email": "jan.slabon@setasign.com",
+                    "homepage": "https://www.setasign.com"
+                },
+                {
+                    "name": "Maximilian Kresse",
+                    "email": "maximilian.kresse@setasign.com",
+                    "homepage": "https://www.setasign.com"
+                }
+            ],
+            "description": "FPDI is a collection of PHP classes facilitating developers to read pages from existing PDF documents and use them as templates in FPDF. Because it is also possible to use FPDI with TCPDF, there are no fixed dependencies defined. Please see suggestions for packages which evaluates the dependencies automatically.",
+            "homepage": "https://www.setasign.com/fpdi",
+            "keywords": [
+                "fpdf",
+                "fpdi",
+                "pdf"
+            ],
+            "support": {
+                "issues": "https://github.com/Setasign/FPDI/issues",
+                "source": "https://github.com/Setasign/FPDI/tree/v2.6.9"
+            },
+            "funding": [
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/setasign/fpdi",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-10-13T07:36:28+00:00"
         },
         {
             "name": "symfony/clock",
@@ -8312,66 +9112,6 @@
                 "source": "https://github.com/mockery/mockery"
             },
             "time": "2026-08-19T19:37:52+00:00"
-        },
-        {
-            "name": "myclabs/deep-copy",
-            "version": "1.14.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/myclabs/DeepCopy.git",
-                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/myclabs/DeepCopy/zipball/8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
-                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.0"
-            },
-            "conflict": {
-                "doctrine/collections": "<1.6.8",
-                "doctrine/common": "<2.13.3 || >=3 <3.2.2"
-            },
-            "require-dev": {
-                "doctrine/collections": "^1.6.8",
-                "doctrine/common": "^2.13.3 || ^3.2.2",
-                "phpspec/prophecy": "^1.10",
-                "phpunit/phpunit": "^7.5.20 || ^8.5.23 || ^9.5.13"
-            },
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "src/DeepCopy/deep_copy.php"
-                ],
-                "psr-4": {
-                    "DeepCopy\\": "src/DeepCopy/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Create deep copies (clones) of your objects",
-            "keywords": [
-                "clone",
-                "copy",
-                "duplicate",
-                "object",
-                "object graph"
-            ],
-            "support": {
-                "issues": "https://github.com/myclabs/DeepCopy/issues",
-                "source": "https://github.com/myclabs/DeepCopy/tree/1.14.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/mnapoli",
-                    "type": "github"
-                }
-            ],
-            "time": "2026-08-11T10:17:44+00:00"
         },
         {
             "name": "nunomaduro/collision",

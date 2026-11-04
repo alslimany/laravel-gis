@@ -26,14 +26,27 @@ class ConsoleProps
         $consoleModules = app(ConsoleModules::class);
         $modules = $user ? $consoleModules->for($user) : [];
 
+        $locale = app()->getLocale();
+
         return [
             'page' => $page,
             'csrf' => csrf_token(),
+            'locale' => $locale,
+            'localeOptions' => [
+                ['value' => 'en', 'label' => 'English', 'native' => 'English'],
+                ['value' => 'ar', 'label' => 'Arabic', 'native' => 'العربية'],
+            ],
+            'translations' => self::translations($locale),
+            'fallbackTranslations' => $locale !== 'en' ? self::translations('en') : [],
+            'isRtl' => $locale === 'ar',
+            'localeUpdateUrl' => route('locale.update'),
             'user' => $user ? [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_admin' => $user->isAdmin(),
+                // Env-var / artisan command hints are shown only to platform super admins.
+                'is_super_admin' => $user->isSuperAdmin(),
                 'roles' => $user->roles->pluck('name')->values()->all(),
             ] : null,
             'organization' => $membership ? [
@@ -76,6 +89,22 @@ class ConsoleProps
         $candidates = Organization::query()->orderBy('id')->limit(2)->get();
 
         return $candidates->count() === 1 ? $candidates->first() : null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected static function translations(string $locale): array
+    {
+        $path = lang_path("{$locale}.json");
+
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $decoded = json_decode((string) file_get_contents($path), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**

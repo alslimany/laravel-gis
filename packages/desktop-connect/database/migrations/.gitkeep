@@ -1,0 +1,3 @@
+# DG-1.4: migrations path is registered via DesktopConnectServiceProvider::migrationsPath().
+# No dc_* tables yet — grants (dc_grants, dc_grant_events) and checkouts arrive in DG-1.5+.
+# Plugin migrations must never alter core tables (ADR-0001 D11 / ADR-0002 §7).

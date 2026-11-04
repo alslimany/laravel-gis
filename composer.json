@@ -18,9 +18,12 @@
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
         "laravel/ui": "^4.6",
+        "lumina/desktop-connect": "^0.1",
+        "lumina/disaster": "^0.5",
+        "lumina/early-warning": "^0.9",
+        "mpdf/mpdf": "^8.2",
         "phpoffice/phpspreadsheet": "^5.10",
-        "predis/predis": "^2.0",
-        "lumina/early-warning": "^0.9"
+        "predis/predis": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -51,7 +54,9 @@
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
-            "Lumina\\EarlyWarning\\Tests\\": "packages/early-warning/tests/"
+            "Lumina\\EarlyWarning\\Tests\\": "packages/early-warning/tests/",
+            "Lumina\\Disaster\\Tests\\": "packages/disaster/tests/",
+            "Lumina\\DesktopConnect\\Tests\\": "packages/desktop-connect/tests/"
         }
     },
     "scripts": {

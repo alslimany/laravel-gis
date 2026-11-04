@@ -24,7 +24,8 @@ class AppServiceProvider extends ServiceProvider
             return new GeoServerService;
         });
 
-        $this->app->singleton(PluginManager::class);
+        // Scoped: reset per request / queued job, so the memoised registry key never goes stale in workers.
+        $this->app->scoped(PluginManager::class);
         $this->app->singleton(LayerCatalog::class, EloquentLayerCatalog::class);
         $this->app->singleton(LayerPublisher::class, CoreLayerPublisher::class);
     }

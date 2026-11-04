@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ReadOnlyLayerException;
 use App\Exceptions\SchemaValidationException;
 use App\Helpers\GeometryColumnHelper;
 use App\Helpers\SpatialHelper;
@@ -65,6 +66,7 @@ class FeatureService
 
     public function deleteByShape(Layer $layer, string $geometryType): int
     {
+        $this->assertWritable($layer);
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
         $type = $this->normalizeGeometryType($geometryType);
@@ -77,6 +79,16 @@ class FeatureService
         }
 
         return $deleted;
+    }
+
+    /**
+     * @throws ReadOnlyLayerException
+     */
+    public function assertWritable(Layer $layer): void
+    {
+        if ($layer->isSqlView()) {
+            throw new ReadOnlyLayerException;
+        }
     }
 
     protected function normalizeGeometryType(string $geometryType): string
@@ -116,6 +128,9 @@ class FeatureService
      */
     public function create(Layer $layer, array $attributes, ?string $wkt = null, ?array $geojson = null, array $skipRequired = []): array
     {
+        $this->assertWritable($layer);
+        app(FeatureTableProvisioner::class)->ensureFor($layer);
+
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
         $columns = $this->attributeColumns($table, $geom);
@@ -147,6 +162,7 @@ class FeatureService
      */
     public function update(Layer $layer, int|string $featureId, array $attributes = [], ?string $wkt = null, ?array $geojson = null): ?array
     {
+        $this->assertWritable($layer);
         $table = $layer->table_name;
         $geom = GeometryColumnHelper::resolve($table);
         $columns = $this->attributeColumns($table, $geom);
@@ -189,6 +205,7 @@ class FeatureService
      */
     public function delete(Layer $layer, int|string $featureId): bool
     {
+        $this->assertWritable($layer);
         $table = $layer->table_name;
         $deleted = DB::table($table)->where('id', $featureId)->delete() > 0;
         if ($deleted) {
@@ -204,6 +221,7 @@ class FeatureService
      */
     public function deleteMany(Layer $layer, array $ids): array
     {
+        $this->assertWritable($layer);
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if ($ids === []) {
             return [];
@@ -289,6 +307,14 @@ class FeatureService
         }
         $bindings[] = $layerName;
 
+        // Carry the style field so unique/graduated renderers can colour tiles.
+        $styleColumn = '';
+        $styleField = data_get($layer->style_config, 'field');
+        if (is_string($styleField) && preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $styleField)
+            && $styleField !== 'id' && $styleField !== $geom && Schema::hasColumn($table, $styleField)) {
+            $styleColumn = ', t."'.$styleField.'"';
+        }
+
         $sql = "
             WITH bounds AS (
                 SELECT ST_TileEnvelope(?, ?, ?) AS geom
@@ -302,7 +328,7 @@ class FeatureService
                         64,
                         true
                     ) AS geom,
-                    t.id
+                    t.id{$styleColumn}
                 FROM {$table} t, bounds
                 WHERE ST_Intersects(
                     ST_Transform(t.{$geom}, 3857),

@@ -185,6 +185,9 @@ class PluginLifecycle
 
         if ($manifest) {
             $this->provider($manifest)?->onUninstall(false);
+            // SQL-view layers are derived data: drop the plugin's views so nothing
+            // keeps reading (or blocking drops of) its tables after uninstall.
+            $this->dropPluginViews($key, $manifest);
         }
         $this->transition($row, InstalledPlugin::STATUS_UNINSTALLED, ['uninstalled_at' => now()]);
         $this->markSourceMissing($key);
@@ -230,6 +233,8 @@ class PluginLifecycle
             $backup = $this->backup->dump($key, $prefix, 'purge');
 
             [$layerIds, $dropped] = DB::transaction(function () use ($key, $manifest, $batches) {
+                $this->dropPluginViews($key, $manifest);
+
                 $layers = $this->pluginLayers($key);
                 $layerIds = $layers->pluck('id')->all();
                 $layers->each->delete();
@@ -427,6 +432,34 @@ class PluginLifecycle
     public function pluginLayers(string $key)
     {
         return Layer::query()->where('metadata->plugin', $key)->get();
+    }
+
+    /**
+     * Drop views owned by the plugin: views named with the plugin prefix,
+     * plus views backing the plugin's sql_view layers.
+     *
+     * @return list<string> dropped
+     */
+    public function dropPluginViews(string $key, array $manifest): array
+    {
+        $prefix = $this->prefix($manifest);
+        $layerTables = $this->pluginLayers($key)->pluck('table_name')->filter()->all();
+        $schema = DB::getDriverName() === 'pgsql' ? (DB::getConfig('search_path') ?: 'public') : null;
+
+        $views = collect(Schema::getViews())
+            ->filter(fn ($v) => $schema === null || ! isset($v['schema']) || $v['schema'] === $schema)
+            ->pluck('name')->unique()
+            ->filter(fn ($name) => ($prefix !== '' && str_starts_with((string) $name, $prefix))
+                || in_array($name, $layerTables, true));
+
+        $dropped = [];
+        foreach ($views as $view) {
+            $safe = str_replace('"', '', (string) $view);
+            DB::statement('DROP VIEW IF EXISTS "'.$safe.'"');
+            $dropped[] = $safe;
+        }
+
+        return $dropped;
     }
 
     /**

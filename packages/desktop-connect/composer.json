@@ -1,0 +1,81 @@
+{
+    "name": "lumina/desktop-connect",
+    "description": "Lumina Desktop GIS Connect plugin (first-party). See docs/adr/0001-plugin-architecture.md and docs/adr/0002-desktop-gis-connectivity.md.",
+    "version": "0.1.0",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lumina\\DesktopConnect\\": "src/"
+        }
+    },
+    "extra": {
+        "lumina": {
+            "key": "desktop-connect",
+            "name": "Desktop GIS Connect",
+            "core": "^1.0",
+            "provider": "Lumina\\DesktopConnect\\Providers\\DesktopConnectServiceProvider",
+            "permissions": [
+                "desktop-connect.view",
+                "desktop-connect.manage"
+            ],
+            "module": {
+                "label_en": "Desktop GIS Connect",
+                "label_ar": "اتصال سطح المكتب",
+                "description_en": "Desktop GIS connections, grants and OGC access",
+                "description_ar": "اتصالات سطح المكتب والصلاحيات والوصول عبر OGC",
+                "icon": "monitor",
+                "accent": "slate",
+                "home": "desktop-connect.grants.index",
+                "order": 120,
+                "sections": [
+                    {
+                        "label_en": "Access",
+                        "label_ar": "الوصول",
+                        "items": [
+                            {
+                                "key": "desktop-connect",
+                                "label_en": "Desktop connections",
+                                "label_ar": "اتصالات سطح المكتب",
+                                "route": "desktop-connect.grants.index",
+                                "icon": "monitor",
+                                "permission": "desktop-connect.view"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "nav": [
+                {
+                    "key": "desktop-connect",
+                    "label_en": "Desktop connections",
+                    "label_ar": "اتصالات سطح المكتب",
+                    "route": "desktop-connect.grants.index",
+                    "icon": "monitor",
+                    "order": 120,
+                    "permission": "desktop-connect.view"
+                }
+            ],
+            "settings": {
+                "rules": {},
+                "defaults": {}
+            },
+            "data": {
+                "prefix": "dc_",
+                "tables": [
+                    "dc_grants",
+                    "dc_grant_events"
+                ],
+                "global_tables": []
+            }
+        },
+        "laravel": {
+            "providers": [
+                "Lumina\\DesktopConnect\\Providers\\DesktopConnectServiceProvider"
+            ]
+        }
+    }
+}

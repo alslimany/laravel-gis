@@ -98,27 +98,27 @@ class ConsoleModules
 
         if ($user->organization_id) {
             $sections = $this->sections([
-                'Data' => [
-                    $this->item('Data imports', 'imports.index', 'imports'),
-                    $this->item('Layers', 'layers.index', 'layers'),
-                    $this->item('Catalog', 'catalog.index', 'catalog'),
+                __('nav.sections.data') => [
+                    $this->item(__('nav.imports'), 'imports.index', 'imports'),
+                    $this->item(__('nav.layers'), 'layers.index', 'layers'),
+                    $this->item(__('nav.catalog'), 'catalog.index', 'catalog'),
                 ],
-                'Maps & apps' => [
-                    $this->item('Maps', 'maps.index', 'maps', '/maps'),
-                    $this->item('Dashboards', 'dashboards.index', 'dashboards'),
-                    $this->item('Forms', 'forms.index', 'forms'),
-                    $this->item('Apps', 'apps.index', 'apps', '/apps'),
+                __('nav.sections.maps_apps') => [
+                    $this->item(__('nav.maps'), 'maps.index', 'maps', '/maps'),
+                    $this->item(__('nav.dashboards'), 'dashboards.index', 'dashboards'),
+                    $this->item(__('nav.forms'), 'forms.index', 'forms'),
+                    $this->item(__('nav.apps'), 'apps.index', 'apps', '/apps'),
                 ],
-                'Work' => [
-                    $this->item('Projects', 'projects.index', 'projects'),
+                __('nav.sections.work') => [
+                    $this->item(__('nav.projects'), 'projects.index', 'projects'),
                 ],
             ]);
         }
 
         return [
             'key' => self::CORE,
-            'label' => 'Core GIS',
-            'description' => 'Data, layers, maps and apps',
+            'label' => __('modules.core.label'),
+            'description' => __('modules.core.description'),
             'icon' => 'core',
             'accent' => 'primary',
             'kind' => 'core',
@@ -135,26 +135,26 @@ class ConsoleModules
         $isAdmin = $user->isAdmin();
 
         $sections = $this->sections([
-            'People' => [
-                $isAdmin ? $this->item('Users', 'users.index', 'users') : null,
-                $this->item('Groups', 'groups.index', 'groups'),
+            __('nav.sections.people') => [
+                $isAdmin ? $this->item(__('nav.users'), 'users.index', 'users') : null,
+                $this->item(__('nav.groups'), 'groups.index', 'groups'),
             ],
-            'Platform' => [
+            __('nav.sections.platform') => [
                 $user->organization && Gate::forUser($user)->allows('plugins.toggle', $user->organization)
-                    ? $this->item('Extensions', 'extensions.index', 'extensions')
+                    ? $this->item(__('nav.extensions'), 'extensions.index', 'extensions')
                     : null,
-                $isAdmin ? $this->item('Solution packs', 'solution-packs.index', 'packs', '/solution-packs') : null,
-                $this->item('API tokens', 'api-tokens.index', 'tokens'),
+                $isAdmin ? $this->item(__('nav.solution_packs'), 'solution-packs.index', 'packs', '/solution-packs') : null,
+                $this->item(__('nav.api_tokens'), 'api-tokens.index', 'tokens'),
             ],
-            'Organization' => [
-                $this->item('Settings', 'organization.settings', 'organization'),
+            __('nav.sections.organization') => [
+                $this->item(__('nav.settings'), 'organization.settings', 'organization'),
             ],
         ]);
 
         return [
             'key' => self::ADMIN,
-            'label' => $isAdmin ? 'Admin' : 'Organization',
-            'description' => $isAdmin ? 'People, extensions and organization' : 'Groups, tokens and organization',
+            'label' => $isAdmin ? __('modules.admin.label') : __('modules.organization.label'),
+            'description' => $isAdmin ? __('modules.admin.description') : __('modules.organization.description'),
             'icon' => 'admin',
             'accent' => 'slate',
             'kind' => 'admin',

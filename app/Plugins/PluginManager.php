@@ -23,6 +23,9 @@ class PluginManager
     /** Reserved: plugin_events rows for core actions (e.g. super-admin grants). */
     public const RESERVED_KEY = 'core';
 
+    /** Registry cache key, memoised for the lifetime of this (request- or job-scoped) instance. */
+    protected ?string $registryKey = null;
+
     public function __construct(protected ?string $installedJsonPath = null)
     {
         $this->installedJsonPath ??= base_path('vendor/composer/installed.json');
@@ -30,13 +33,15 @@ class PluginManager
 
     /**
      * Manifests (extra.lumina) of every plugin package present in vendor,
-     * keyed by plugin key. Cached by installed.json mtime+size.
+     * keyed by plugin key. Cached under a key that changes whenever installed.json,
+     * composer.lock or any plugin manifest (packages/NAME/composer.json) changes, with a bounded TTL
+     * so a missed bust can never pin stale labels for long.
      *
      * @return array<string, array<string, mixed>>
      */
     public function registry(): array
     {
-        return Cache::rememberForever($this->registryCacheKey(), fn () => $this->readRegistry());
+        return Cache::remember($this->registryCacheKey(), now()->addDay(), fn () => $this->readRegistry());
     }
 
     /**
@@ -227,14 +232,44 @@ class PluginManager
     public function forgetRegistry(): void
     {
         Cache::forget($this->registryCacheKey());
+        $this->flushRegistryKey();
     }
 
+    /** Drop the memoised key so the next read re-stats the files. */
+    public function flushRegistryKey(): void
+    {
+        $this->registryKey = null;
+    }
+
+    /**
+     * Cache key built from filemtime + size of installed.json, composer.lock and every
+     * plugin manifest (packages/NAME/composer.json). Cheap stat calls only, no file
+     * hashing, and computed once per instance (the manager is scoped per request/job).
+     */
     public function registryCacheKey(): string
     {
-        $path = $this->installedJsonPath;
-        $hash = is_file($path) ? md5($path.':'.filemtime($path).':'.filesize($path)) : 'missing';
+        return $this->registryKey ??= $this->computeRegistryCacheKey();
+    }
 
-        return "plugins:registry:{$hash}";
+    protected function computeRegistryCacheKey(): string
+    {
+        clearstatcache();
+
+        $path = $this->installedJsonPath;
+        if (! is_file($path)) {
+            return 'plugins:registry:missing';
+        }
+
+        $root = dirname($path, 3);
+        $files = [$path, $root.'/composer.lock', ...(glob($root.'/packages/*/composer.json') ?: [])];
+        $parts = [];
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                $parts[] = $file.':'.filemtime($file).':'.filesize($file);
+            }
+        }
+
+        return 'plugins:registry:'.md5(implode('|', $parts));
     }
 
     /**
@@ -251,6 +286,15 @@ class PluginManager
 
         $registry = [];
         foreach ($packages as $package) {
+            // Path-repo plugins (packages/*): read the live composer.json so label edits show
+            // without `composer update` (installed.json only snapshots extra at install time).
+            if (($package['dist']['type'] ?? null) === 'path' && isset($package['install-path'])) {
+                $live = dirname($this->installedJsonPath).'/'.$package['install-path'].'/composer.json';
+                $liveData = is_file($live) ? json_decode((string) file_get_contents($live), true) : null;
+                if (is_array($liveData['extra']['lumina'] ?? null)) {
+                    $package['extra']['lumina'] = $liveData['extra']['lumina'];
+                }
+            }
             $manifest = $package['extra']['lumina'] ?? null;
             if (! is_array($manifest) || empty($manifest['key']) || ! is_string($manifest['key'])) {
                 continue;
