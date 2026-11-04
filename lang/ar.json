@@ -1831,5 +1831,16 @@
   "abilities.layers_read": "عرض قائمة الطبقات وبياناتها الوصفية عبر /api/v1/layers",
   "abilities.features_read": "قراءة المعالم وGeoJSON للطبقات عبر /api/v1",
   "abilities.features_write": "إنشاء المعالم وتحديثها وحذفها عبر /api/v1",
-  "abilities.exports_read": "تنزيل صادرات الطبقات (GeoJSON وCSV وExcel) عبر /api/v1"
+  "abilities.exports_read": "تنزيل صادرات الطبقات (GeoJSON وCSV وExcel) عبر /api/v1",
+  "desktop.keys.flash_created": "تم إنشاء مفتاح سطح المكتب. انسخه الآن — لن يُعرض مرة أخرى.",
+  "desktop.keys.flash_revoked": "تم إلغاء مفتاح سطح المكتب.",
+  "desktop.keys.no_organization": "يجب أن تنتمي إلى مؤسسة لإنشاء مفتاح سطح المكتب.",
+  "desktop.keys.no_grants": "تحتاج إلى منحة طبقة سطح مكتب نشطة واحدة على الأقل قبل إنشاء مفتاح.",
+  "desktop.keys.expires_past": "يجب أن يكون تاريخ الانتهاء في المستقبل.",
+  "desktop.keys.label": "تسمية المفتاح",
+  "desktop.keys.create": "إنشاء مفتاح سطح المكتب",
+  "desktop.keys.list": "مفاتيح سطح المكتب الخاصة بك",
+  "desktop.keys.empty": "لا توجد مفاتيح سطح مكتب بعد.",
+  "desktop.keys.revoke": "إلغاء المفتاح",
+  "desktop.keys.plain_text_note": "انسخ هذا المفتاح الآن. لن يُعرض مرة أخرى."
 }

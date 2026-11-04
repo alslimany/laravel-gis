@@ -1831,5 +1831,16 @@
   "abilities.layers_read": "List and view layer metadata under /api/v1/layers",
   "abilities.features_read": "Read features and layer GeoJSON under /api/v1",
   "abilities.features_write": "Create, update, and delete features under /api/v1",
-  "abilities.exports_read": "Download layer exports (GeoJSON, CSV, Excel) under /api/v1"
+  "abilities.exports_read": "Download layer exports (GeoJSON, CSV, Excel) under /api/v1",
+  "desktop.keys.flash_created": "Desktop API key created. Copy it now — it will not be shown again.",
+  "desktop.keys.flash_revoked": "Desktop API key revoked.",
+  "desktop.keys.no_organization": "You must belong to an organization to mint a desktop key.",
+  "desktop.keys.no_grants": "You need at least one active desktop layer grant before minting a key.",
+  "desktop.keys.expires_past": "Expiry must be in the future.",
+  "desktop.keys.label": "Key label",
+  "desktop.keys.create": "Create desktop key",
+  "desktop.keys.list": "Your desktop keys",
+  "desktop.keys.empty": "No desktop keys yet.",
+  "desktop.keys.revoke": "Revoke key",
+  "desktop.keys.plain_text_note": "Copy this key now. It will not be shown again."
 }

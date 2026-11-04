@@ -11,16 +11,20 @@ use App\Http\Controllers\Controller;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Lumina\DesktopConnect\Models\ApiKey;
 use Lumina\DesktopConnect\Models\Grant;
+use Lumina\DesktopConnect\Services\DesktopKeyManager;
 use Lumina\DesktopConnect\Services\GrantManager;
 
 /**
  * Desktop connections access screen (DG-1.5): list / create / revoke grants.
+ * DG-1.6: also lists the caller's desktop API keys.
  */
 class GrantController extends Controller
 {
     public function __construct(
         protected GrantManager $grants,
+        protected DesktopKeyManager $keys,
     ) {}
 
     public function index(Request $request): Response
@@ -98,6 +102,20 @@ class GrantController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $apiKeys = ApiKey::query()
+            ->where('organization_id', $organizationId)
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->map(fn (ApiKey $key) => [
+                'id' => $key->id,
+                'label' => $key->label,
+                'expires_at' => $key->expires_at?->toIso8601String(),
+                'created_at' => $key->created_at?->toIso8601String(),
+                'destroy_url' => route('desktop-connect.keys.destroy', $key),
+            ]);
+
         return Inertia::render('DesktopConnect/Index', [
             'grants' => $grants,
             'layers' => $layers,
@@ -110,6 +128,10 @@ class GrantController extends Controller
             'store_url' => route('desktop-connect.grants.store'),
             'index_url' => route('desktop-connect.grants.index'),
             'can_manage' => $canManage,
+            'api_keys' => $apiKeys,
+            'keys_store_url' => route('desktop-connect.keys.store'),
+            'desktop_plain_text_key' => session('desktopPlainTextKey'),
+            'key_abilities_preview' => $this->keys->abilitiesFor($user),
         ]);
     }
 

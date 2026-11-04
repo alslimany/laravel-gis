@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Lumina\DesktopConnect\Http\Controllers\DesktopConnectController;
+use Lumina\DesktopConnect\Http\Controllers\DesktopKeyController;
 use Lumina\DesktopConnect\Http\Controllers\GrantController;
 
 /*
@@ -18,3 +19,6 @@ Route::get('/ping', [DesktopConnectController::class, 'ping'])->name('ping');
 Route::get('/grants', [GrantController::class, 'index'])->name('grants.index');
 Route::post('/grants', [GrantController::class, 'store'])->name('grants.store');
 Route::delete('/grants/{grant}', [GrantController::class, 'destroy'])->name('grants.destroy');
+
+Route::post('/keys', [DesktopKeyController::class, 'store'])->name('keys.store');
+Route::delete('/keys/{key}', [DesktopKeyController::class, 'destroy'])->name('keys.destroy');
